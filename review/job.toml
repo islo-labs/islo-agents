@@ -1,0 +1,128 @@
+[job]
+name = "islo-review"
+version = "0.1.0"
+description = "Run automated PR code review as a durable Islo job."
+
+[job.params.repo]
+type = "string"
+required = true
+description = "GitHub repository in owner/name form."
+pattern = "^[^/]+/[^/]+$"
+
+[job.params.pr_number]
+type = "integer"
+required = true
+description = "Pull request number to review."
+
+[job.params.head_ref]
+type = "string"
+required = true
+description = "PR head branch name."
+
+[job.params.base_ref]
+type = "string"
+required = true
+description = "PR base branch name."
+
+[job.params.sandbox_name]
+type = "string"
+required = true
+description = "Stable PR-scoped sandbox name to reuse across review runs."
+pattern = "^islo-review-[a-f0-9]{12}-[0-9]+$"
+
+[job.params.agents_ref]
+type = "string"
+required = true
+description = "islo-agents git ref to run, usually the action ref such as v1."
+pattern = "^[a-zA-Z0-9._/@^~-]+$"
+
+[job.params.model]
+type = "string"
+default = "claude-opus-4-6"
+description = "Claude model for the review agent."
+
+[job.params.max_turns]
+type = "integer"
+default = 50
+description = "Maximum agentic turns."
+
+[job.params.max_budget_usd]
+type = "number"
+default = 10
+description = "Maximum review budget in USD."
+
+[run]
+fail_fast = true
+fanout = false
+timeout = 900
+workdir = "/workspace"
+teardown_on_complete = false
+
+[run.sandbox]
+mode = "ensure"
+name = "{{sandbox_name}}"
+image = "docker.io/library/islo-runner:latest"
+snapshot_name = "islo-stack"
+vcpus = 4
+memory_mb = 4096
+gateway_profile = "default"
+init = { type = "full" }
+
+[run.sandbox.lifecycle]
+pause_after_idle = 1800
+delete_after = 604800
+
+[[run.tasks]]
+name = "review"
+
+[[run.tasks.steps]]
+name = "checkout-pr"
+timeout = 120
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
+cd /workspace
+[ -d "${REPO_SHORT}" ] || git clone "https://github.com/{{repo}}.git" "${REPO_SHORT}"
+cd "${REPO_SHORT}"
+git fetch origin "{{head_ref}}"
+git checkout -B "{{head_ref}}" FETCH_HEAD
+''',
+]
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 900
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace
+rm -rf islo-agents
+git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
+cd islo-agents
+git fetch --depth=1 origin "{{agents_ref}}"
+git -c advice.detachedHead=false checkout FETCH_HEAD
+npm ci
+REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
+npx tsx src/agent.ts \
+  --prompt review/prompt.md \
+  --cwd "/workspace/${REPO_SHORT}" \
+  --model "{{model}}" \
+  --max-turns "{{max_turns}}" \
+  --max-budget "{{max_budget_usd}}" \
+  --session-key "{{repo}}-{{pr_number}}" \
+  --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
+  --var REPO="{{repo}}" \
+  --var PR_NUMBER="{{pr_number}}" \
+  --var HEAD_REF="{{head_ref}}" \
+  --var BASE_REF="{{base_ref}}"
+''',
+]
+
+[[run.tasks.steps]]
+name = "pause-sandbox"
+pause = true

@@ -1,0 +1,84 @@
+name: 'Islo Babysit CI'
+description: 'Automated CI failure fixer powered by Islo jobs and Claude'
+
+inputs:
+  run_id:
+    description: 'GitHub Actions workflow run ID that failed'
+    required: true
+  model:
+    description: 'Claude model to use (e.g., claude-opus-4-6, claude-sonnet-4)'
+    required: false
+    default: 'claude-opus-4-6'
+  max_turns:
+    description: 'Maximum agentic turns (tool-use round trips)'
+    required: false
+    default: '50'
+  max_budget_usd:
+    description: 'Stop when cost estimate reaches this USD value'
+    required: false
+    default: '10'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install islo CLI
+      shell: bash
+      run: curl -fsSL https://islo.dev/install.sh | sh
+
+    - name: Resolve PR from run
+      id: pr
+      shell: bash
+      env:
+        REPO: ${{ github.repository }}
+        RUN_ID: ${{ inputs.run_id }}
+      run: |
+        set -euo pipefail
+        RUN_JSON="$(gh run view "${RUN_ID}" --repo "${REPO}" --json headBranch)"
+        HEAD_REF="$(printf '%s' "${RUN_JSON}" | jq -r .headBranch)"
+        PR_JSON="$(gh pr list --repo "${REPO}" --head "${HEAD_REF}" --json number,baseRefName --limit 1)"
+        PR_NUMBER="$(printf '%s' "${PR_JSON}" | jq -r '.[0].number')"
+        BASE_REF="$(printf '%s' "${PR_JSON}" | jq -r '.[0].baseRefName')"
+        if [ "${PR_NUMBER}" = "null" ] || [ -z "${PR_NUMBER}" ]; then
+          echo "No PR found for branch ${HEAD_REF}"
+          exit 1
+        fi
+        echo "pr_number=${PR_NUMBER}" >> "${GITHUB_OUTPUT}"
+        echo "head_ref=${HEAD_REF}" >> "${GITHUB_OUTPUT}"
+        echo "base_ref=${BASE_REF}" >> "${GITHUB_OUTPUT}"
+
+    - name: Babysit
+      shell: bash
+      env:
+        REPO: ${{ github.repository }}
+        RUN_ID: ${{ inputs.run_id }}
+        PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        HEAD_REF: ${{ steps.pr.outputs.head_ref }}
+        BASE_REF: ${{ steps.pr.outputs.base_ref }}
+        AGENTS_REF: ${{ github.action_ref || 'v1' }}
+        MODEL: ${{ inputs.model }}
+        MAX_TURNS: ${{ inputs.max_turns }}
+        MAX_BUDGET_USD: ${{ inputs.max_budget_usd }}
+      run: |
+        set -euo pipefail
+        REPO_HASH="$(node -e 'const crypto = require("crypto"); process.stdout.write(crypto.createHash("sha256").update(process.env.REPO).digest("hex").slice(0, 12));')"
+        SANDBOX_NAME="islo-babysit-${REPO_HASH}-${PR_NUMBER}"
+        echo "Using babysit sandbox ${SANDBOX_NAME}"
+        STATUS_JSON="$(islo status "${SANDBOX_NAME}" --output json 2>/dev/null || true)"
+        if [ -n "${STATUS_JSON}" ]; then
+          STATUS="$(printf '%s' "${STATUS_JSON}" | node -e 'const fs = require("fs"); const input = fs.readFileSync(0, "utf8"); process.stdout.write(JSON.parse(input).status || "");')"
+          if [ "${STATUS}" = "failed" ]; then
+            echo "Removing failed babysit sandbox ${SANDBOX_NAME} before retry"
+            islo rm "${SANDBOX_NAME}" --force || true
+          fi
+        fi
+        islo job run islo-babysit --watch \
+          --param repo="${REPO}" \
+          --param run_id="${RUN_ID}" \
+          --param pr_number="${PR_NUMBER}" \
+          --param head_ref="${HEAD_REF}" \
+          --param base_ref="${BASE_REF}" \
+          --param sandbox_name="${SANDBOX_NAME}" \
+          --param agents_ref="${AGENTS_REF}" \
+          --param model="${MODEL}" \
+          --param max_turns="${MAX_TURNS}" \
+          --param max_budget_usd="${MAX_BUDGET_USD}"
