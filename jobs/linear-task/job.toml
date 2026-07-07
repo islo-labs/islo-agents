@@ -20,8 +20,9 @@ description = "Issue description/body."
 
 [job.params.issue_identifier]
 type = "string"
-default = ""
+required = true
 description = "Human-readable issue identifier (e.g. ENG-123)."
+pattern = "^[A-Z][A-Z0-9]+-[0-9]+$"
 
 [job.params.issue_url]
 type = "string"
@@ -58,7 +59,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "linear-task-{{issue_id}}"
+name = "implement-{{issue_identifier}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-stack"
 vcpus = 4
@@ -91,7 +92,7 @@ npm ci
 npx tsx src/agent.ts \
   --prompt task/linear/prompt.md \
   --cwd /workspace \
-  --session-key "linear-{{issue_id}}" \
+  --session-key "implement-{{issue_identifier}}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \

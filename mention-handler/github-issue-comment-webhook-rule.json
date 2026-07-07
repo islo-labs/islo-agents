@@ -1,0 +1,40 @@
+{
+  "name": "github-mentions",
+  "auth": { "auth_type": "none" },
+  "target": {
+    "target_type": "fixed_sandbox_name",
+    "sandbox_name": "mention-handler"
+  },
+  "idempotency": { "source": "header", "name": "X-GitHub-Delivery" },
+  "rules": [
+    {
+      "when": {
+        "op": "all",
+        "conditions": [
+          { "op": "equals", "json_path": "$.action", "value": "created" },
+          { "op": "exists", "json_path": "$.issue.pull_request" },
+          { "op": "matches", "json_path": "$.comment.body", "pattern": "(?i)(^|\\s)@islo\\b" }
+        ]
+      },
+      "actions": [
+        {
+          "action_type": "trigger_job",
+          "job_name": "mention-handler",
+          "params": {
+            "source": {
+              "parts": [{ "type": "literal", "value": "github" }]
+            },
+            "event_type": {
+              "parts": [{ "type": "literal", "value": "issue_comment" }]
+            },
+            "raw_payload": { "source": { "source": "raw_body" } },
+            "delivery_id": {
+              "source": { "source": "header", "name": "X-GitHub-Delivery" }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "status": "active"
+}

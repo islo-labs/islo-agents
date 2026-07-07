@@ -49,9 +49,11 @@ runs:
         HEAD_REF="$(printf '%s' "${PR_JSON}" | jq -r .headRefName)"
         BASE_REF="$(printf '%s' "${PR_JSON}" | jq -r .baseRefName)"
         PR_TITLE="$(printf '%s' "${PR_JSON}" | jq -r .title)"
+        ISSUE_IDENTIFIER="$(PR_TITLE="${PR_TITLE}" HEAD_REF="${HEAD_REF}" node -e 'const text = `${process.env.PR_TITLE}\n${process.env.HEAD_REF}`; const match = text.match(/\b[A-Z][A-Z0-9]+-[0-9]+\b/); process.stdout.write(match ? match[0] : "");')"
         echo "head_ref=${HEAD_REF}" >> "${GITHUB_OUTPUT}"
         echo "base_ref=${BASE_REF}" >> "${GITHUB_OUTPUT}"
         echo "pr_title=${PR_TITLE}" >> "${GITHUB_OUTPUT}"
+        echo "issue_identifier=${ISSUE_IDENTIFIER}" >> "${GITHUB_OUTPUT}"
 
     - name: Verify
       shell: bash
@@ -61,6 +63,7 @@ runs:
         HEAD_REF: ${{ steps.pr.outputs.head_ref }}
         BASE_REF: ${{ steps.pr.outputs.base_ref }}
         PR_TITLE: ${{ steps.pr.outputs.pr_title }}
+        ISSUE_IDENTIFIER: ${{ steps.pr.outputs.issue_identifier }}
         RELATED_PRS: ${{ inputs.related_prs }}
         BOOT_COMMAND: ${{ inputs.boot_command }}
         ENV_FILE: ${{ inputs.env_file }}
@@ -70,8 +73,12 @@ runs:
         MAX_BUDGET_USD: ${{ inputs.max_budget_usd }}
       run: |
         set -euo pipefail
-        REPO_HASH="$(node -e 'const crypto = require("crypto"); process.stdout.write(crypto.createHash("sha256").update(process.env.REPO).digest("hex").slice(0, 12));')"
-        SANDBOX_NAME="islo-verify-${REPO_HASH}-${PR_NUMBER}"
+        if [ -n "${ISSUE_IDENTIFIER}" ]; then
+          SANDBOX_NAME="verify-${ISSUE_IDENTIFIER}"
+        else
+          REPO_HASH="$(node -e 'const crypto = require("crypto"); process.stdout.write(crypto.createHash("sha256").update(process.env.REPO).digest("hex").slice(0, 12));')"
+          SANDBOX_NAME="islo-verify-${REPO_HASH}-${PR_NUMBER}"
+        fi
         echo "Using verify sandbox ${SANDBOX_NAME}"
         STATUS_JSON="$(islo status "${SANDBOX_NAME}" --output json 2>/dev/null || true)"
         if [ -n "${STATUS_JSON}" ]; then
@@ -87,6 +94,7 @@ runs:
           --param head_ref="${HEAD_REF}" \
           --param base_ref="${BASE_REF}" \
           --param pr_title="${PR_TITLE}" \
+          --param issue_identifier="${ISSUE_IDENTIFIER}" \
           --param related_prs="${RELATED_PRS}" \
           --param sandbox_name="${SANDBOX_NAME}" \
           --param agents_ref="${AGENTS_REF}" \

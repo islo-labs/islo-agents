@@ -9,6 +9,7 @@ src/agent.ts          — generic harness (prompt + vars → Claude Agent SDK)
 review/               — PR code review (job + action + prompt)
 babysit/              — CI failure fixer (job + action + prompt)
 verify/               — E2E verification (job + action + prompt)
+mention-handler/      — persistent handler for human @islo mentions
 task/                 — integration-triggered tasks
   prompt.md           — shared "implement this issue" prompt
   linear/             — Linear agent integration (activity emissions)
@@ -87,7 +88,26 @@ islo job deploy islo-review    # from review/job.toml
 islo job deploy islo-babysit   # from babysit/job.toml
 islo job deploy islo-verify    # from verify/job.toml
 islo job deploy linear-task    # from task/linear/job.toml
+islo job deploy mention-handler # from mention-handler/job.toml
 ```
+
+## Worker sandbox names
+
+Linear implementation work uses issue-scoped sandboxes and session keys:
+
+```text
+implement-ISL-646
+```
+
+Review, verify, and babysit jobs use issue-scoped names when a PR title or branch includes an issue ID:
+
+```text
+review-ISL-646
+verify-ISL-646
+babysit-ISL-646
+```
+
+They keep their existing PR-scoped fallback names for PRs without a Linear issue ID.
 
 ## Customizing Review Context
 

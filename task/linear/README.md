@@ -10,7 +10,7 @@ Add "islo" label → Linear Issue webhook → bear-agent (webhook-level filter) 
 
 - **Trigger**: Issue update webhook with compound `when` conditions — only fires when the "islo" label is specifically just added
 - **Agent**: Generic `src/agent.ts` with `task/linear/prompt.md`
-- **Sandbox**: Uses the `islo-stack` snapshot with all repos pre-cloned in `/workspace/`
+- **Sandbox**: Uses `implement-<issue-id>` with the `islo-stack` snapshot and all repos pre-cloned in `/workspace/`
 - **Output**: Creates GitHub PR(s) and posts a comment on the Linear issue
 
 ## Setup
@@ -109,6 +109,16 @@ Only when all four conditions match does the webhook trigger a job run. Other is
 ## Re-triggering
 
 To re-trigger the agent on the same issue, remove the `islo` label and add it again.
+
+## Follow-up mentions
+
+The implementation sandbox and session key both use:
+
+```text
+implement-<issue-id>
+```
+
+The task prompt requires PR titles to start with the issue ID, such as `ISL-646: fix webhook routing`. Later `@islo` mentions use that visible convention to find the original implementation sandbox.
 
 ## Updating
 

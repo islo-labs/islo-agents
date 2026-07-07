@@ -33,7 +33,7 @@ Repos are pre-cloned under `/workspace/`. The change may span one repo or severa
 
 3. **Verify.** Run tests, linters, type checks as appropriate for each repo you changed.
 
-4. **Create PR(s).** One PR per repo you changed:
+4. **Create PR(s).** One PR per repo you changed. The PR title must start with `{{ISSUE_IDENTIFIER}}:` and the branch name should include `{{ISSUE_IDENTIFIER}}`. This visible convention is how later `@islo` mentions find the right implementation sandbox.
    ```bash
    cd /workspace/<repo>
    git checkout -b feat/{{ISSUE_IDENTIFIER}}
@@ -63,3 +63,4 @@ Include what you implemented, link(s) to the PR(s), and any assumptions or open 
 - Follow each project's existing code style and conventions.
 - Be thorough — handle edge cases, add error handling.
 - Always post a comment, even if you couldn't complete the task.
+- Do not invent hidden routing metadata. Use the visible PR title and branch convention above.
