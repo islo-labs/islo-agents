@@ -87,17 +87,17 @@ exec = [
   '''
 PAYLOAD='{{raw_payload}}'
 
-# Not a label change? Skip.
-jq -e '.updatedFrom.labelIds' <<< "$PAYLOAD" >/dev/null 2>&1 || exit 0
+# Not a label change? Reject.
+jq -e '.updatedFrom.labelIds' <<< "$PAYLOAD" >/dev/null 2>&1 || { echo "not a label change"; exit 1; }
 
 # Get islo's label ID from current labels (has names)
 ISLO_ID=$(jq -r '.data.labels[]? | select(.name == "islo") | .id' <<< "$PAYLOAD")
 
-# islo not on the issue? Skip.
-[ -z "$ISLO_ID" ] && exit 0
+# islo not on the issue? Reject.
+[ -z "$ISLO_ID" ] && { echo "islo label not on issue"; exit 1; }
 
-# islo was already there before? Skip.
-jq -e --arg id "$ISLO_ID" '.updatedFrom.labelIds[] | select(. == $id)' <<< "$PAYLOAD" >/dev/null 2>&1 && exit 0
+# islo was already there before? Reject.
+jq -e --arg id "$ISLO_ID" '.updatedFrom.labelIds[] | select(. == $id)' <<< "$PAYLOAD" >/dev/null 2>&1 && { echo "islo label was already present"; exit 1; }
 
 echo "islo label just added -- proceeding"
 ''',
