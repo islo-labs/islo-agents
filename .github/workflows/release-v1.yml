@@ -1,0 +1,29 @@
+name: Release v1
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-v1
+  cancel-in-progress: false
+
+jobs:
+  update-v1-tag:
+    name: Update v1 tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Move v1 tag to merged commit
+        run: |
+          set -euo pipefail
+          git tag -f v1 "${GITHUB_SHA}"
+          git push origin refs/tags/v1 --force
