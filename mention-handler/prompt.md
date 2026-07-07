@@ -20,7 +20,7 @@ Handle the mention like a teammate. Your main job is to route work, not to do wo
 - If the mention is ambiguous, ask one concise clarifying question.
 - If the mention is noise or not meant for Islo, do nothing.
 
-Do not create a decision file. Make the decision and act on it. Do not post a routing acknowledgement by default.
+Make the decision and act on it. Do not post a message just to say you delegated the request.
 
 ## Context Gathering
 
@@ -58,7 +58,7 @@ From the PR, derive:
 - Head branch.
 - Possible issue IDs, such as `ISL-646`.
 
-Candidate sandbox names can include both current deployed names and newer issue-scoped names:
+Candidate sandbox names can include both PR-scoped and issue-scoped names:
 
 ```text
 implement-ISL-646

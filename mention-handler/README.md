@@ -124,5 +124,4 @@ The Islo webhook rule filters to PR comments where the body mentions `@islo`.
 ## Notes
 
 - The handler uses GitHub credentials through the existing gateway integration.
-- The handler should not invent hidden routing metadata.
 - PR titles should include the Linear issue ID, for example `ISL-646: fix sandbox routing`.
