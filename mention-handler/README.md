@@ -2,7 +2,7 @@
 
 Handle human mentions like `@islo please update this PR`.
 
-The mention handler is a persistent sandbox that receives conversational events from GitHub, Linear, and later Slack. It can answer directly, ask for clarification, ignore noise, or identify a worker sandbox for follow-up work.
+The mention handler is a persistent sandbox that receives conversational events from GitHub, Linear, and later Slack. It routes requests to worker sandboxes, answers simple standalone questions, asks for clarification when routing is unclear, or ignores noise.
 
 ## Architecture
 
@@ -28,33 +28,26 @@ mention-handler
 
 It uses the `islo-stack` snapshot so it has the repos available for context.
 
-## Phase 1
-
-Phase 1 is dry-run for delegation.
+## Behavior
 
 The handler can:
 
-- Answer simple questions directly.
+- Delegate requests into a matching worker sandbox.
+- Answer simple standalone questions directly when they are unrelated to prior work.
 - Ask one clarification question.
 - Ignore noise.
-- Explain which worker sandbox it would delegate to and why.
-
-It does not run `islo use` while `dry_run` is `true`.
-
-## Phase 2
-
-After compute-plane self-auth lands, set `dry_run` to `false`.
 
 The handler should list accessible sandboxes and choose the best candidate from PR metadata, possible Linear issue IDs, and current sandbox state:
 
 ```bash
-islo ls --all --output json
+islo ls --all --status running --status paused --output json
 ```
 
-Before delegating, it should inspect the selected sandbox session state:
+Before delegating, it should inspect the selected sandbox's agent sessions so it can continue the existing context:
 
 ```bash
-islo use <sandbox> -- bash -lc 'ls -la /workspace/.islo-agents/sessions 2>/dev/null || true'
+islo logs <sandbox> --type agent --output json
+islo logs <sandbox> <session-id> --output json
 ```
 
 Then it can delegate with:
@@ -62,6 +55,8 @@ Then it can delegate with:
 ```bash
 islo use <sandbox> -- bash -lc '<run follow-up agent command>'
 ```
+
+The follow-up command should usually resume an existing `cursor`, `claude`, or other agent session rather than starting from scratch.
 
 ## Worker Sandbox Discovery
 
@@ -124,7 +119,7 @@ The Islo webhook rule filters to PR comments where the body mentions `@islo`.
 
 2. Confirm the `mention-handler` job ran.
 3. Confirm the same `mention-handler` sandbox is reused.
-4. Confirm it posts an answer or dry-run delegation comment.
+4. Confirm it posts an answer or delegates to the matching worker sandbox.
 
 ## Notes
 

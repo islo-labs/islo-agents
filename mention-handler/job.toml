@@ -25,12 +25,6 @@ type = "string"
 default = ""
 description = "External delivery ID for idempotency and debugging."
 
-[job.params.dry_run]
-type = "string"
-default = "true"
-description = "Whether to explain intended delegation instead of running it."
-pattern = "^(true|false)$"
-
 [job.params.agents_ref]
 type = "string"
 default = "v1"
@@ -105,7 +99,6 @@ npx tsx src/agent.ts \
   --var SOURCE="{{source}}" \
   --var EVENT_TYPE="{{event_type}}" \
   --var DELIVERY_ID="{{delivery_id}}" \
-  --var DRY_RUN="{{dry_run}}" \
   --var RAW_PAYLOAD_PATH="/workspace/.islo-agents/mention-handler/payload.json"
 ''',
 ]
