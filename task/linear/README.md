@@ -29,8 +29,6 @@ Go to your Linear workspace and create a label named `islo` (workspace-level or 
 
 ```bash
 # From the islo-agents repo root
-mkdir -p jobs/linear-task
-cp task/linear/job.toml jobs/linear-task/job.toml
 islo job deploy linear-task
 ```
 
@@ -125,7 +123,6 @@ The task prompt requires PR titles to start with the issue ID, such as `ISL-646:
 After modifying `task/linear/job.toml`, redeploy:
 
 ```bash
-cp task/linear/job.toml jobs/linear-task/job.toml
 islo job deploy linear-task
 ```
 

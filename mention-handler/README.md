@@ -78,8 +78,6 @@ From the repo root:
 islo job deploy mention-handler
 ```
 
-The CLI reads the deployable manifest from `jobs/mention-handler/job.toml`. Keep it in sync with `mention-handler/job.toml` when editing.
-
 Verify:
 
 ```bash
