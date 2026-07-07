@@ -83,13 +83,15 @@ Choose the sandbox based on the user's intent:
 
 ## Delegation
 
-Inspect agent sessions in the selected target sandbox before delegating:
+Delegation should wake up the right worker context and then get out of the way. Do not rewrite the user's request into a detailed task plan unless you are quoting source comments verbatim.
+
+Before delegating, inspect agent sessions in the selected target sandbox:
 
 ```bash
 islo logs <sandbox> --type agent --output json
 ```
 
-Prefer continuing an existing agent session. Delegation usually means resuming the worker's existing context with the right CLI, such as `cursor`, `claude`, or another agent command already used in that sandbox. Do not invent a new sandbox or session when a relevant running or paused sandbox already exists.
+Choose a relevant existing session whenever possible. Use `cwd`, `git_branch`, `first_user_text`, `last_timestamp`, and the PR/repo/issue context to pick the best session. A relevant older implementation session is usually better than a fresh handoff session.
 
 If you need to inspect one session in more detail, use:
 
@@ -97,19 +99,32 @@ If you need to inspect one session in more detail, use:
 islo logs <sandbox> <session-id> --output json
 ```
 
-Only fall back to reading session state files if the CLI logs command is unavailable:
+For Claude Code sessions, resume by `session_name`. Do not run plain `claude "..."` when a relevant session exists, because that starts a new session:
 
 ```bash
-islo use <sandbox> -- bash -lc 'find /workspace/.islo-agents/sessions -maxdepth 1 -type f -name "*.json" -print -exec cat {} \; 2>/dev/null || true'
+islo use <sandbox> -- bash -lc 'cd <session-cwd-or-repo> && claude --resume <session_name> --model sonnet "<handoff prompt>"'
 ```
 
-Then run a command in the target sandbox with `islo use`:
+If you must start a new Claude session because no relevant session exists, use Sonnet by default:
 
 ```bash
-islo use <sandbox> -- bash -lc '<run follow-up agent command>'
+islo use <sandbox> -- bash -lc 'cd <repo-or-workspace> && claude --model sonnet "<handoff prompt>"'
 ```
 
-The worker command should use the worker's existing agent entry point and session key when you can infer them from session state. If the sandbox has a clear previous `cursor`, `claude`, or other agent session, continue that session instead of starting over. If you cannot infer the right command safely, ask one clarification question.
+For non-Claude sessions, use the worker's existing agent entry point and resume mechanism when you can infer it from session metadata.
+
+The handoff prompt should be short and event-shaped. Include the source thread and the exact user mention, then ask the worker to inspect the thread and continue. Example:
+
+```text
+You were mentioned on PR islo-labs/islo-cli#477.
+
+User comment:
+"@islo make it clearer please"
+
+Please inspect the PR discussion/review thread and continue the existing work in this session. Reply on the source thread when you have a useful update.
+```
+
+Do not include your own detailed summary of review findings unless the worker cannot access the source thread. Do not run extra follow-up commands after a successful delegation. Let the resumed worker continue from there.
 
 ## Posting Back
 

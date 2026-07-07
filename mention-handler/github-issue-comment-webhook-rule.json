@@ -12,8 +12,14 @@
         "op": "all",
         "conditions": [
           { "op": "equals", "json_path": "$.action", "value": "created" },
-          { "op": "exists", "json_path": "$.issue.pull_request" },
-          { "op": "matches", "json_path": "$.comment.body", "pattern": "(?i)(^|\\s)@islo\\b" }
+          {
+            "op": "any",
+            "conditions": [
+              { "op": "exists", "json_path": "$.issue.pull_request" },
+              { "op": "exists", "json_path": "$.pull_request" }
+            ]
+          },
+          { "op": "matches", "json_path": "$.comment.body", "pattern": "(?i)@islo" }
         ]
       },
       "actions": [
@@ -25,7 +31,7 @@
               "parts": [{ "type": "literal", "value": "github" }]
             },
             "event_type": {
-              "parts": [{ "type": "literal", "value": "issue_comment" }]
+              "parts": [{ "type": "literal", "value": "github_pr_comment" }]
             },
             "raw_payload": { "source": { "source": "raw_body" } },
             "delivery_id": {

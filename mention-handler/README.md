@@ -52,13 +52,13 @@ islo logs <sandbox> --type agent --output json
 islo logs <sandbox> <session-id> --output json
 ```
 
-Then it can delegate with:
+For Claude Code workers, it should resume the selected `session_name` instead of starting a fresh session:
 
 ```bash
-islo use <sandbox> -- bash -lc '<run follow-up agent command>'
+islo use <sandbox> -- bash -lc 'cd <session-cwd-or-repo> && claude --resume <session_name> --model sonnet "<handoff prompt>"'
 ```
 
-The follow-up command should usually resume an existing `cursor`, `claude`, or other agent session rather than starting from scratch.
+The handoff should be brief: include the source PR/thread and the exact user mention, then ask the worker to inspect the thread and continue. The handler should avoid rewriting review comments into its own task list. If no relevant Claude session exists, it should start a new one with Sonnet by default.
 
 ## Worker Sandbox Discovery
 
