@@ -21,32 +21,19 @@ curl -s https://api.linear.app/graphql \
 
 ## Environment
 
-You are inside an isolated sandbox VM with all repos pre-cloned under `/workspace/`. You have full root access — install packages, start services, build and run anything you need.
+You are inside an isolated sandbox VM. You have full root access and can do whatever you need — install packages, start services, build and run anything. This is your sandbox, use it freely.
 
-Available repos in `/workspace/`:
-- `bear-agent` — VM lifecycle manager (Rust)
-- `islo-web-api` — API service (Python/FastAPI)
-- `islo-cli` — CLI tool (Rust)
-- `islo-gateway` — Egress proxy (Rust)
-- `islo-frontend` — React dashboard
-- `islo-devops` — Infrastructure (Terraform/Ansible)
-- `e2e-tests` — End-to-end test suite
-- `islo-agents` — Agent prompts and job manifests
-
-Each repo has its own `CLAUDE.md` or `AGENTS.md` with architecture, conventions, and dev commands. **Read it before making changes.**
+Repos are pre-cloned under `/workspace/`. The change may span one repo or several — explore what's available and determine scope from the issue.
 
 ## Implementation
 
-1. **Determine scope.** Read the issue carefully. The change may span one repo or several. Explore the relevant codebase(s) in `/workspace/` to understand what needs changing.
+1. **Understand the change.** Read the issue carefully. Explore the relevant codebase(s) in `/workspace/`. If other repos are available, check them for cross-repo impact.
 
-2. **Understand the code.** Read existing code, check for patterns and conventions. Each repo documents its architecture — follow it.
+2. **Implement the change.** Clean, focused, following each project's existing patterns and conventions.
 
-3. **Implement the change.** Clean, focused, following each project's patterns. If the change spans multiple repos, work through them methodically.
+3. **Verify.** Run tests, linters, type checks as appropriate for each repo you changed.
 
-4. **Verify.** Run tests, linters, type checks as appropriate for each repo you changed.
-
-5. **Create PR(s).** One PR per repo you changed. Use the issue identifier in the branch name for traceability:
-
+4. **Create PR(s).** One PR per repo you changed:
    ```bash
    cd /workspace/<repo>
    git checkout -b feat/{{ISSUE_IDENTIFIER}}
@@ -55,8 +42,7 @@ Each repo has its own `CLAUDE.md` or `AGENTS.md` with architecture, conventions,
    git push -u origin HEAD
    gh pr create --title "{{ISSUE_IDENTIFIER}}: <short description>" --body "<what changed and why>"
    ```
-
-   If the change spans multiple repos, cross-reference the PRs in each PR body so reviewers see the full picture.
+   If the change spans multiple repos, cross-reference the PRs in each PR body.
 
 ## Report Back
 
@@ -69,15 +55,11 @@ curl -s https://api.linear.app/graphql \
   -d '{"query": "mutation { commentCreate(input: { issueId: \"{{ISSUE_ID}}\", body: \"YOUR_RESPONSE_HERE\" }) { success } }"}'
 ```
 
-Include:
-- What you implemented
-- Link(s) to the PR(s) — list all if multi-repo
-- Any assumptions or open questions
+Include what you implemented, link(s) to the PR(s), and any assumptions or open questions.
 
 ## Rules
 
 - Stay focused on what the issue asks for. Don't refactor unrelated code.
 - Follow each project's existing code style and conventions.
 - Be thorough — handle edge cases, add error handling.
-- If a change touches multiple repos, make sure they are compatible with each other.
 - Always post a comment, even if you couldn't complete the task.
