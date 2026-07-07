@@ -28,6 +28,8 @@ mention-handler
 
 It uses the `islo-stack` snapshot so it has the repos available for context.
 
+Each webhook delivery gets its own run directory under `/workspace/.islo-agents/mention-handler/runs/`. The sandbox reuses one shared `islo-agents` checkout, guarded by a lock so concurrent deliveries do not mutate it at the same time.
+
 ## Behavior
 
 The handler can:

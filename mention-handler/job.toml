@@ -78,27 +78,48 @@ exec = [
   '''
 set -euo pipefail
 cd /workspace
-mkdir -p /workspace/.islo-agents/mention-handler
-cat > /workspace/.islo-agents/mention-handler/payload.json <<'EOF'
+
+DELIVERY_ID="{{delivery_id}}"
+if [ -n "${DELIVERY_ID}" ]; then
+  RUN_ID="$(printf '%s' "${DELIVERY_ID}" | tr -cs 'A-Za-z0-9_.-' '-' | sed 's/^-//; s/-$//')"
+else
+  RUN_ID="manual-$(date +%s)-$$"
+fi
+[ -n "${RUN_ID}" ] || RUN_ID="manual-$(date +%s)-$$"
+
+BASE_DIR="/workspace/.islo-agents"
+RUN_DIR="${BASE_DIR}/mention-handler/runs/${RUN_ID}"
+CHECKOUT="${BASE_DIR}/checkouts/islo-agents"
+LOCK="${BASE_DIR}/checkouts/islo-agents.lock"
+PAYLOAD_PATH="${RUN_DIR}/payload.json"
+
+mkdir -p "${RUN_DIR}" "$(dirname "${CHECKOUT}")"
+cat > "${PAYLOAD_PATH}" <<'EOF'
 {{raw_payload}}
 EOF
-rm -rf islo-agents
-git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
-cd islo-agents
+
+(
+flock -x 9
+if [ ! -d "${CHECKOUT}/.git" ]; then
+  rm -rf "${CHECKOUT}"
+  git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git "${CHECKOUT}"
+fi
+cd "${CHECKOUT}"
 git fetch --depth=1 origin "{{agents_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
 npm ci
 npx tsx src/agent.ts \
   --prompt mention-handler/prompt.md \
   --cwd /workspace \
-  --session-key "mention-handler" \
+  --session-key "mention-handler-${RUN_ID}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
-  --context-file "/workspace/.islo-agents/mention-handler/payload.json" \
+  --context-file "${PAYLOAD_PATH}" \
   --var SOURCE="{{source}}" \
   --var EVENT_TYPE="{{event_type}}" \
   --var DELIVERY_ID="{{delivery_id}}" \
-  --var RAW_PAYLOAD_PATH="/workspace/.islo-agents/mention-handler/payload.json"
+  --var RAW_PAYLOAD_PATH="${PAYLOAD_PATH}"
+) 9>"${LOCK}"
 ''',
 ]
