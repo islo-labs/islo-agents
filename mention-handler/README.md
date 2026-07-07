@@ -45,30 +45,33 @@ It does not run `islo use` while `dry_run` is `true`.
 
 After compute-plane self-auth lands, set `dry_run` to `false`.
 
-The handler should inspect the target sandbox session state before delegating:
+The handler should list accessible sandboxes and choose the best candidate from PR metadata, possible Linear issue IDs, and current sandbox state:
 
 ```bash
-islo use implement-ISL-646 -- bash -lc 'ls -la /workspace/.islo-agents/sessions && cat /workspace/.islo-agents/sessions/implement-ISL-646.json 2>/dev/null || true'
+islo ls --all --output json
+```
+
+Before delegating, it should inspect the selected sandbox session state:
+
+```bash
+islo use <sandbox> -- bash -lc 'ls -la /workspace/.islo-agents/sessions 2>/dev/null || true'
 ```
 
 Then it can delegate with:
 
 ```bash
-islo use implement-ISL-646 -- bash -lc '<run follow-up agent command>'
+islo use <sandbox> -- bash -lc '<run follow-up agent command>'
 ```
 
-## Worker Sandbox Names
+## Worker Sandbox Discovery
 
-Worker sandboxes are role and issue scoped:
+The implementation worker uses an issue-scoped name:
 
 ```text
 implement-ISL-646
-review-ISL-646
-verify-ISL-646
-babysit-ISL-646
 ```
 
-Review and verify jobs can keep their existing PR-scoped names as fallback when no Linear issue ID is available.
+Review, verify, and babysit workers may use their current PR-scoped names or future issue-scoped names. The handler should treat names as hints and prefer any running or paused sandbox that clearly matches the repo, PR, issue ID, or requested intent.
 
 ## Deploy
 

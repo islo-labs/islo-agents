@@ -42,45 +42,66 @@ gh pr view "${PR_NUMBER}" --repo "${REPO}" --json title,body,headRefName,baseRef
 
 Use the PR title first to resolve a Linear issue identifier. Then try branch name, PR body, Linear URLs, and recent comments. Prefer visible conventions over guessing.
 
-## Sandbox Conventions
+## Sandbox Discovery
 
-Worker sandboxes are issue-scoped and role-specific:
+Do not assume there is exactly one naming scheme. Build a candidate set from PR metadata, possible Linear issue IDs, and live sandbox state.
+
+Start by listing accessible sandboxes:
+
+```bash
+islo ls --all --output json
+```
+
+From the PR, derive:
+
+- Repository full name, such as `islo-labs/islo-cli`.
+- Repository short name, such as `islo-cli`.
+- PR number.
+- Head branch.
+- Possible issue IDs, such as `ISL-646`.
+
+Candidate sandbox names can include both current deployed names and newer issue-scoped names:
 
 ```text
 implement-ISL-646
 review-ISL-646
 verify-ISL-646
 babysit-ISL-646
+review-islo-cli-477
+islo-verify-<repo-hash>-477
+islo-babysit-<repo-hash>-477
 ```
 
-Use the same string as the session key.
+Treat naming conventions as hints, not requirements. A running or paused sandbox whose name clearly matches the PR, repo, issue, or intent is more important than a perfect name.
 
-Examples:
+Prefer candidates in this order:
 
-- A request to fix or update implementation work should target `implement-<issue-id>`.
-- A request asking whether a review finding is valid should usually be answered directly. If deeper review state is needed, target `review-<issue-id>`.
-- A request to verify behavior should target `verify-<issue-id>`.
-- A request to keep CI green should target `babysit-<issue-id>`.
+- If the request asks to fix, update, implement, or address feedback, prefer an implementation sandbox like `implement-<issue-id>`.
+- If the request asks about review findings or reviewer state, prefer a review sandbox that matches the PR, such as `review-<repo-name>-<pr-number>`, unless an obvious issue-scoped review sandbox exists.
+- If the request asks to verify behavior, prefer a verify sandbox that matches the PR or issue.
+- If the request asks about CI or keeping the PR green, prefer a babysit sandbox that matches the PR or issue.
+- If multiple candidates fit, prefer a running or paused sandbox with existing session state.
+- If no candidate clearly fits, answer directly or ask one clarification question. Do not invent a sandbox just to force delegation.
 
 ## Delegation
 
 When dry run is true, do not run `islo use`. Post what you would do instead.
 
-When dry run is false, inspect the target sandbox before delegating:
+When dry run is false, inspect the selected target sandbox before delegating:
 
 ```bash
-islo use implement-ISL-646 -- bash -lc 'ls -la /workspace/.islo-agents/sessions && cat /workspace/.islo-agents/sessions/implement-ISL-646.json 2>/dev/null || true'
+islo use <sandbox> -- bash -lc 'ls -la /workspace/.islo-agents/sessions 2>/dev/null || true; for f in /workspace/.islo-agents/sessions/*.json; do [ -f "$f" ] && echo "=== $f ===" && cat "$f"; done'
 ```
 
-Prefer continuing an existing session. Do not invent a new sandbox or session when a matching role and issue sandbox already exists.
+Prefer continuing an existing session. Do not invent a new sandbox or session when a relevant running or paused sandbox already exists.
 
 Then run a command in the target sandbox with `islo use`:
 
 ```bash
-islo use implement-ISL-646 -- bash -lc '<run follow-up agent command>'
+islo use <sandbox> -- bash -lc '<run follow-up agent command>'
 ```
 
-The worker command should use `src/agent.ts` with the same session key so it can resume the existing agent session.
+The worker command should use the worker's existing agent entry point and session key when you can infer them from session state. If you cannot infer the right command safely, ask for clarification or explain what you would do in dry-run mode.
 
 ## Posting Back
 

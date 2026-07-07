@@ -40,14 +40,11 @@ runs:
         PR_NUMBER: ${{ inputs.pr_number }}
       run: |
         set -euo pipefail
-        PR_JSON="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json headRefName,baseRefName,title)"
+        PR_JSON="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json headRefName,baseRefName)"
         HEAD_REF="$(printf '%s' "${PR_JSON}" | jq -r .headRefName)"
         BASE_REF="$(printf '%s' "${PR_JSON}" | jq -r .baseRefName)"
-        PR_TITLE="$(printf '%s' "${PR_JSON}" | jq -r .title)"
-        ISSUE_IDENTIFIER="$(PR_TITLE="${PR_TITLE}" HEAD_REF="${HEAD_REF}" node -e 'const text = `${process.env.PR_TITLE}\n${process.env.HEAD_REF}`; const match = text.match(/\b[A-Z][A-Z0-9]+-[0-9]+\b/); process.stdout.write(match ? match[0] : "");')"
         echo "head_ref=${HEAD_REF}" >> "${GITHUB_OUTPUT}"
         echo "base_ref=${BASE_REF}" >> "${GITHUB_OUTPUT}"
-        echo "issue_identifier=${ISSUE_IDENTIFIER}" >> "${GITHUB_OUTPUT}"
 
     - name: Review
       shell: bash
@@ -56,19 +53,14 @@ runs:
         PR_NUMBER: ${{ inputs.pr_number }}
         HEAD_REF: ${{ steps.pr.outputs.head_ref }}
         BASE_REF: ${{ steps.pr.outputs.base_ref }}
-        ISSUE_IDENTIFIER: ${{ steps.pr.outputs.issue_identifier }}
         AGENTS_REF: ${{ github.action_ref || 'v1' }}
         MODEL: ${{ inputs.model }}
         MAX_TURNS: ${{ inputs.max_turns }}
         MAX_BUDGET_USD: ${{ inputs.max_budget_usd }}
       run: |
         set -euo pipefail
-        if [ -n "${ISSUE_IDENTIFIER}" ]; then
-          SANDBOX_NAME="review-${ISSUE_IDENTIFIER}"
-        else
-          REPO_HASH="$(node -e 'const crypto = require("crypto"); process.stdout.write(crypto.createHash("sha256").update(process.env.REPO).digest("hex").slice(0, 12));')"
-          SANDBOX_NAME="islo-review-${REPO_HASH}-${PR_NUMBER}"
-        fi
+        REPO_HASH="$(node -e 'const crypto = require("crypto"); process.stdout.write(crypto.createHash("sha256").update(process.env.REPO).digest("hex").slice(0, 12));')"
+        SANDBOX_NAME="islo-review-${REPO_HASH}-${PR_NUMBER}"
         echo "Using review sandbox ${SANDBOX_NAME}"
         STATUS_JSON="$(islo status "${SANDBOX_NAME}" --output json 2>/dev/null || true)"
         if [ -n "${STATUS_JSON}" ]; then
@@ -83,7 +75,6 @@ runs:
           --param pr_number="${PR_NUMBER}" \
           --param head_ref="${HEAD_REF}" \
           --param base_ref="${BASE_REF}" \
-          --param issue_identifier="${ISSUE_IDENTIFIER}" \
           --param sandbox_name="${SANDBOX_NAME}" \
           --param agents_ref="${AGENTS_REF}" \
           --param model="${MODEL}" \

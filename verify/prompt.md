@@ -2,7 +2,6 @@ You are verifying PR #{{PR_NUMBER}} in {{REPO}}.
 
 PR title: "{{PR_TITLE}}"
 Branch: {{HEAD_REF}} → {{BASE_REF}}
-Linear issue: {{ISSUE_IDENTIFIER}}
 Related PRs: {{RELATED_PRS}}
 
 You are inside an isolated sandbox VM with a full application stack running locally. You have full root access and can do whatever you need. This is your sandbox, use it freely.

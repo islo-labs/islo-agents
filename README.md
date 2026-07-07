@@ -91,7 +91,7 @@ islo job deploy linear-task    # from task/linear/job.toml
 islo job deploy mention-handler # from mention-handler/job.toml
 ```
 
-## Worker sandbox names
+## Worker sandbox routing
 
 Linear implementation work uses issue-scoped sandboxes and session keys:
 
@@ -99,15 +99,7 @@ Linear implementation work uses issue-scoped sandboxes and session keys:
 implement-ISL-646
 ```
 
-Review, verify, and babysit jobs use issue-scoped names when a PR title or branch includes an issue ID:
-
-```text
-review-ISL-646
-verify-ISL-646
-babysit-ISL-646
-```
-
-They keep their existing PR-scoped fallback names for PRs without a Linear issue ID.
+The mention handler does not assume one naming scheme for review, verify, or babysit work. It looks at PR metadata, possible Linear issue IDs, and currently running or paused sandboxes, then picks the best matching worker when a request needs delegation.
 
 ## Customizing Review Context
 

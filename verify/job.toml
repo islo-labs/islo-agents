@@ -29,12 +29,6 @@ type = "string"
 required = true
 description = "PR title for context."
 
-[job.params.issue_identifier]
-type = "string"
-default = ""
-description = "Optional Linear issue identifier for issue-scoped verify sandboxes."
-pattern = "^$|^[A-Z][A-Z0-9]+-[0-9]+$"
-
 [job.params.related_prs]
 type = "string"
 default = ""
@@ -44,7 +38,7 @@ description = "Comma-separated repo:ref pairs for multi-repo verification."
 type = "string"
 required = true
 description = "Stable PR-scoped sandbox name."
-pattern = "^(islo-verify-[a-f0-9]{12}-[0-9]+|verify-[A-Z][A-Z0-9]+-[0-9]+)$"
+pattern = "^islo-verify-[a-f0-9]{12}-[0-9]+$"
 
 [job.params.agents_ref]
 type = "string"
@@ -150,19 +144,12 @@ npm ci
 REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
 ENV_FILE="{{env_file}}"
 [ -f "${ENV_FILE}" ] && source "${ENV_FILE}" || true
-ISSUE_IDENTIFIER="{{issue_identifier}}"
-if [ -n "${ISSUE_IDENTIFIER}" ]; then
-  SESSION_KEY="verify-${ISSUE_IDENTIFIER}"
-else
-  SESSION_KEY="{{repo}}-{{pr_number}}"
-fi
 npx tsx src/agent.ts \
   --prompt verify/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
-  --session-key "${SESSION_KEY}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
   --context-file "/workspace/${REPO_SHORT}/VERIFY.md" \
   --var REPO="{{repo}}" \
@@ -171,7 +158,6 @@ npx tsx src/agent.ts \
   --var HEAD_REF="{{head_ref}}" \
   --var BASE_REF="{{base_ref}}" \
   --var PR_TITLE="{{pr_title}}" \
-  --var ISSUE_IDENTIFIER="{{issue_identifier}}" \
   --var RELATED_PRS="{{related_prs}}"
 ''',
 ]

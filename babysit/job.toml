@@ -9,7 +9,7 @@ required = true
 description = "GitHub repository in owner/name form."
 pattern = "^[^/]+/[^/]+$"
 
-[job.params.workflow_run_id]
+[job.params.run_id]
 type = "string"
 required = true
 description = "GitHub Actions workflow run ID that failed."
@@ -29,17 +29,11 @@ type = "string"
 required = true
 description = "PR base branch name."
 
-[job.params.issue_identifier]
-type = "string"
-default = ""
-description = "Optional Linear issue identifier for issue-scoped babysit sandboxes."
-pattern = "^$|^[A-Z][A-Z0-9]+-[0-9]+$"
-
 [job.params.sandbox_name]
 type = "string"
 required = true
-description = "Stable sandbox name."
-pattern = "^(islo-babysit-[a-f0-9]{12}-[0-9]+|babysit-[A-Z][A-Z0-9]+-[0-9]+)$"
+description = "Stable PR-scoped sandbox name."
+pattern = "^islo-babysit-[a-f0-9]{12}-[0-9]+$"
 
 [job.params.agents_ref]
 type = "string"
@@ -137,24 +131,16 @@ git fetch --depth=1 origin "{{agents_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
 npm ci
 REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
-ISSUE_IDENTIFIER="{{issue_identifier}}"
-if [ -n "${ISSUE_IDENTIFIER}" ]; then
-  SESSION_KEY="babysit-${ISSUE_IDENTIFIER}"
-else
-  SESSION_KEY="{{repo}}-{{pr_number}}"
-fi
 npx tsx src/agent.ts \
   --prompt babysit/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
-  --session-key "${SESSION_KEY}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
   --var REPO="{{repo}}" \
   --var PR_NUMBER="{{pr_number}}" \
-  --var RUN_ID="{{workflow_run_id}}" \
-  --var ISSUE_IDENTIFIER="{{issue_identifier}}"
+  --var RUN_ID="{{run_id}}"
 ''',
 ]
 

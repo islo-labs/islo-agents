@@ -1,7 +1,6 @@
 CI has failed for PR #{{PR_NUMBER}} in {{REPO}}. Your job is to fix the failure and get CI green.
 
 Failed run ID: {{RUN_ID}}
-Linear issue: {{ISSUE_IDENTIFIER}}
 
 You are inside an isolated sandbox VM. You have full root access and can do whatever you need — install packages, start services, reproduce issues locally. This is your sandbox, use it freely.
 
