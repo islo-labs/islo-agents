@@ -63,4 +63,3 @@ Include what you implemented, link(s) to the PR(s), and any assumptions or open 
 - Follow each project's existing code style and conventions.
 - Be thorough — handle edge cases, add error handling.
 - Always post a comment, even if you couldn't complete the task.
-- Do not invent hidden routing metadata. Use the visible PR title and branch convention above.
