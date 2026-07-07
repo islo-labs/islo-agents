@@ -1,0 +1,25 @@
+{
+  "name": "linear-issues",
+  "auth": { "auth_type": "none" },
+  "target": {
+    "target_type": "fixed_sandbox_name",
+    "sandbox_name": "linear-task"
+  },
+  "idempotency": { "source": "header", "name": "Linear-Delivery" },
+  "rules": [{
+    "when": { "json_path": "$.action", "equals": "update" },
+    "actions": [{
+      "action_type": "trigger_job",
+      "job_name": "linear-task",
+      "params": {
+        "issue_id": { "source": { "source": "json_path", "path": "$.data.id" } },
+        "issue_title": { "source": { "source": "json_path", "path": "$.data.title" } },
+        "issue_description": { "source": { "source": "json_path", "path": "$.data.description" } },
+        "issue_identifier": { "source": { "source": "json_path", "path": "$.data.identifier" } },
+        "issue_url": { "source": { "source": "json_path", "path": "$.url" } },
+        "raw_payload": { "source": { "source": "raw_body" } }
+      }
+    }]
+  }],
+  "status": "active"
+}
