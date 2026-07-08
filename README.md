@@ -1,13 +1,13 @@
 # islo-agents
 
-Reusable agent templates for Islo jobs. Each template owns a prompt, an Islo job file, and any thin wrapper needed to launch the same job. All templates share `src/agent.ts`, a generic runner that loads a prompt, substitutes variables, and runs the Claude Agent SDK.
+Reusable agent templates for Islo jobs. Each template owns a prompt, an Islo job file, and any integration-specific launchers when they are useful. All templates share `src/agent.ts`, a generic runner that loads a prompt, substitutes variables, and runs the Claude Agent SDK.
 
 ## Structure
 
 ```
 src/agent.ts          — generic harness (prompt + vars → Claude Agent SDK)
 reviewer/             — code review agents
-  github/             — GitHub PR reviewer (job + optional action + prompt)
+  github/             — GitHub PR reviewer (job + prompt)
 babysit/              — CI failure fixer (job + action + prompt)
 verify/               — E2E verification (job + action + prompt)
 task/                 — integration-triggered tasks
@@ -17,28 +17,11 @@ task/                 — integration-triggered tasks
 
 ## Quick Start
 
-Add an `ISLO_API_KEY` secret to your repo, deploy the relevant job(s) in Islo, then add workflow files.
+Deploy the relevant job manifest in Islo, then connect your trigger through Islo webhooks, schedules, manual runs, or a wrapper that launches the same job.
 
 ### PR Review
 
-See `reviewer/github/README.md` for Islo incoming webhook setup, trigger rules, sandbox lifecycle, and review output behavior.
-
-```yaml
-name: PR Review
-on:
-  pull_request:
-    types: [opened, reopened]
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: islo-labs/islo-agents/reviewer/github@v1
-        with:
-          pr_number: ${{ github.event.pull_request.number }}
-        env:
-          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
-```
+Use `reviewer/github/job.toml` and `reviewer/github/prompt.md`.
 
 ### CI Babysit
 
@@ -98,13 +81,3 @@ Repeat the same pattern for other templates such as `babysit/job.toml`, `verify/
 
 Create a `REVIEW.md` at your repo root to inject extra context into reviewer and babysit prompts. For verify, also add a `VERIFY.md`.
 
-## Migration from islo-reviewer
-
-Replace action references in your workflow files:
-
-```diff
--- uses: islo-labs/islo-reviewer/review@v1
-+- uses: islo-labs/islo-agents/reviewer/github@v1
-```
-
-The required `pr_number` input remains compatible. Model, turn, and budget defaults now live in `reviewer/github/job.toml`; fork the template to change them.
