@@ -1,7 +1,7 @@
 [job]
 name = "islo-review"
 version = "0.1.0"
-description = "Run automated PR code review as a durable Islo job."
+description = "Run automated GitHub PR code review as a durable Islo job."
 
 [job.params.repo]
 type = "string"
@@ -33,7 +33,7 @@ pattern = "^islo-review-[a-f0-9]{12}-[0-9]+$"
 [job.params.agents_ref]
 type = "string"
 required = true
-description = "islo-agents git ref to run, usually the action ref such as v1."
+description = "islo-agents git ref to run, for example v1 or a branch name."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.model]
@@ -93,8 +93,8 @@ git checkout -B "{{head_ref}}" FETCH_HEAD
 ]
 
 [[run.tasks.steps]]
-name = "run-agent"
-timeout = 900
+name = "checkout-agents"
+timeout = 120
 exec = [
   "bash",
   "-lc",
@@ -106,10 +106,34 @@ git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
 cd islo-agents
 git fetch --depth=1 origin "{{agents_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
+''',
+]
+
+[[run.tasks.steps]]
+name = "install-agent-deps"
+timeout = 300
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
 npm ci
+''',
+]
+
+[[run.tasks.steps]]
+name = "run-reviewer"
+timeout = 900
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
 REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
 npx tsx src/agent.ts \
-  --prompt review/prompt.md \
+  --prompt agents/review/github/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \

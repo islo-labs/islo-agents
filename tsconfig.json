@@ -10,6 +10,6 @@
     "rootDir": ".",
     "declaration": true
   },
-  "include": ["src/**/*.ts", "task/**/*.ts"],
+  "include": ["src/**/*.ts", "agents/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

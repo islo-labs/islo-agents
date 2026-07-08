@@ -89,7 +89,7 @@ git fetch --depth=1 origin "{{agents_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
 npm ci
 npx tsx src/agent.ts \
-  --prompt task/linear/prompt.md \
+  --prompt agents/task/linear/prompt.md \
   --cwd /workspace \
   --session-key "linear-{{issue_id}}" \
   --model "{{model}}" \
