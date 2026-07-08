@@ -5,9 +5,6 @@ const REQUIRED_PARAMS = new Map([
   ["base_ref", "string"],
   ["sandbox_name", "string"],
   ["agents_ref", "string"],
-  ["model", "string"],
-  ["max_turns", "integer"],
-  ["max_budget_usd", "number"],
 ]);
 const REQUIRED_PARAM_NAMES = new Set([
   "repo",
@@ -113,7 +110,7 @@ async function main() {
     for (const error of errors) {
       console.error(`- ${error}`);
     }
-    console.error("Deploy a compatible islo-review job from review/job.toml.");
+    console.error("Deploy a compatible islo-review job from reviewer/github/job.toml.");
     process.exit(1);
   }
 

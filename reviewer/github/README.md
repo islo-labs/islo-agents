@@ -1,25 +1,25 @@
-# Islo PR Review
+# GitHub PR Reviewer
 
-This directory owns the reusable PR review template. Users can run it as-is or fork `islo-agents` and change the job, prompt, or harness behavior.
+This template reviews GitHub pull requests from an Islo job. Users can run it as-is or fork `islo-agents` and change the job, prompt, or wrapper behavior.
 
 ## Data shape
 
 ```text
 GitHub pull_request event
--> Islo incoming webhook filter or wrapper
+-> Islo incoming webhook or wrapper
 -> islo-review job params
 -> stable PR-scoped sandbox
--> src/agent.ts with review/prompt.md
+-> src/agent.ts with reviewer/github/prompt.md
 -> GitHub PR review
 ```
 
-## Ownership
+## Files
 
-- `review/job.toml` owns durable job params, sandbox mode, lifecycle, and steps.
-- `review/prompt.md` owns review behavior and GitHub PR review instructions.
-- `src/agent.ts` owns prompt loading, variable substitution, session reuse, and Claude Agent SDK execution.
-- `review/validate-job.mjs` owns deployed job compatibility checks.
-- `review/action.yml` is a GitHub wrapper for users who choose that integration path. Keep Islo incoming webhooks as the preferred event path when the user wants Islo to own the trigger.
+- `job.toml` owns durable job params, sandbox mode, lifecycle, model, budget, and steps.
+- `prompt.md` owns review behavior and GitHub PR review instructions.
+- `action.yml` is an optional GitHub wrapper that launches the same Islo job.
+- `validate-job.mjs` checks that the deployed job matches the wrapper expectations.
+- `../../src/agent.ts` owns prompt loading, variable substitution, session reuse, and Claude Agent SDK execution.
 
 ## Webhook and job boundary
 
@@ -48,9 +48,8 @@ The current review job expects:
 - `base_ref`
 - `sandbox_name`
 - `agents_ref`
-- `model`
-- `max_turns`
-- `max_budget_usd`
+
+The job controls model, budget, sandbox, gateway, and lifecycle defaults. Users who need different defaults should fork the template.
 
 ## Sandbox lifecycle
 
@@ -83,7 +82,7 @@ Do not use `init = "full"`.
 Do not run PR review jobs by calling the sandbox Claude CLI directly. This template runs:
 
 ```bash
-npx tsx src/agent.ts --prompt review/prompt.md ...
+npx tsx src/agent.ts --prompt reviewer/github/prompt.md ...
 ```
 
 `src/agent.ts` uses the Claude Agent SDK. That keeps review behavior in this repo and avoids depending on the sandbox `claude` binary path.
@@ -96,9 +95,10 @@ The primary review output belongs on GitHub as a PR review with inline comments 
 
 When asked to set up webhook-driven review, do the full setup unless the user narrows the scope:
 
-1. Run `islo job deploy islo-review --dry-run`.
-2. Deploy `islo-review`.
-3. Generate an HMAC secret, for example with `openssl rand -hex 32`.
-4. Create the Islo incoming webhook.
-5. Register the GitHub repo webhook with `gh api` after confirming the token has repo-hook permissions.
-6. Verify a real delivery or job run.
+1. Put this template manifest at `jobs/islo-review/job.toml`; the current Islo CLI deploy command reads manifests from `jobs/<name>/job.toml`.
+2. Run `islo job deploy islo-review --dry-run`.
+3. Deploy `islo-review`.
+4. Generate an HMAC secret, for example with `openssl rand -hex 32`.
+5. Create the Islo incoming webhook.
+6. Register the GitHub repo webhook with `gh api` after confirming the token has repo-hook permissions.
+7. Verify a real delivery or job run.

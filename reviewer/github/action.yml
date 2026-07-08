@@ -1,22 +1,10 @@
-name: 'Islo PR Review'
-description: 'Automated PR review powered by Islo jobs and Claude'
+name: 'Islo GitHub PR Reviewer'
+description: 'Automated GitHub PR review powered by an Islo job'
 
 inputs:
   pr_number:
     description: 'PR number to review'
     required: true
-  model:
-    description: 'Claude model to use (e.g., claude-opus-4-6, claude-sonnet-4)'
-    required: false
-    default: 'claude-opus-4-6'
-  max_turns:
-    description: 'Maximum agentic turns (tool-use round trips)'
-    required: false
-    default: '50'
-  max_budget_usd:
-    description: 'Stop when cost estimate reaches this USD value'
-    required: false
-    default: '10'
 
 runs:
   using: 'composite'
@@ -54,9 +42,6 @@ runs:
         HEAD_REF: ${{ steps.pr.outputs.head_ref }}
         BASE_REF: ${{ steps.pr.outputs.base_ref }}
         AGENTS_REF: ${{ github.action_ref || 'v1' }}
-        MODEL: ${{ inputs.model }}
-        MAX_TURNS: ${{ inputs.max_turns }}
-        MAX_BUDGET_USD: ${{ inputs.max_budget_usd }}
       run: |
         set -euo pipefail
         REPO_HASH="$(node -e 'const crypto = require("crypto"); process.stdout.write(crypto.createHash("sha256").update(process.env.REPO).digest("hex").slice(0, 12));')"
@@ -76,7 +61,4 @@ runs:
           --param head_ref="${HEAD_REF}" \
           --param base_ref="${BASE_REF}" \
           --param sandbox_name="${SANDBOX_NAME}" \
-          --param agents_ref="${AGENTS_REF}" \
-          --param model="${MODEL}" \
-          --param max_turns="${MAX_TURNS}" \
-          --param max_budget_usd="${MAX_BUDGET_USD}"
+          --param agents_ref="${AGENTS_REF}"
