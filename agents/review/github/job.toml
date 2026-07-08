@@ -36,6 +36,21 @@ required = true
 description = "islo-agents git ref to run, for example v1 or a branch name."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
+[job.params.model]
+type = "string"
+default = "claude-opus-4-6"
+description = "Claude model for the review agent."
+
+[job.params.max_turns]
+type = "integer"
+default = 50
+description = "Maximum agentic turns."
+
+[job.params.max_budget_usd]
+type = "number"
+default = 10
+description = "Maximum review budget in USD."
+
 [run]
 fail_fast = true
 fanout = false
@@ -118,11 +133,11 @@ set -euo pipefail
 cd /workspace/islo-agents
 REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
 npx tsx src/agent.ts \
-  --prompt reviewer/github/prompt.md \
+  --prompt agents/review/github/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \
-  --model "claude-opus-4-6" \
-  --max-turns "50" \
-  --max-budget "10" \
+  --model "{{model}}" \
+  --max-turns "{{max_turns}}" \
+  --max-budget "{{max_budget_usd}}" \
   --session-key "{{repo}}-{{pr_number}}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
   --var REPO="{{repo}}" \

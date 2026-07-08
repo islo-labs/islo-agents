@@ -6,13 +6,13 @@ Reusable agent templates for Islo jobs. Each template owns a prompt, an Islo job
 
 ```
 src/agent.ts          — generic harness (prompt + vars → Claude Agent SDK)
-reviewer/             — code review agents
-  github/             — GitHub PR reviewer (job + prompt)
-babysit/              — CI failure fixer (job + action + prompt)
-verify/               — E2E verification (job + action + prompt)
-task/                 — integration-triggered tasks
-  prompt.md           — shared "implement this issue" prompt
-  linear/             — Linear agent integration (activity emissions)
+agents/               — reusable agent templates
+  review/github/      — GitHub PR reviewer (job + prompt)
+  babysit/            — CI failure fixer (job + action + prompt)
+  verify/             — E2E verification (job + action + prompt)
+  task/               — integration-triggered tasks
+    prompt.md         — shared "implement this issue" prompt
+    linear/           — Linear agent integration (activity emissions)
 ```
 
 ## Quick Start
@@ -21,7 +21,7 @@ Deploy the relevant job manifest in Islo, then connect your trigger through Islo
 
 ### PR Review
 
-Use `reviewer/github/job.toml` and `reviewer/github/prompt.md`.
+Use `agents/review/github/job.toml` and `agents/review/github/prompt.md`.
 
 ### CI Babysit
 
@@ -37,7 +37,7 @@ jobs:
     timeout-minutes: 15
     if: github.event.workflow_run.conclusion == 'failure'
     steps:
-      - uses: islo-labs/islo-agents/babysit@v1
+      - uses: islo-labs/islo-agents/agents/babysit@v1
         with:
           run_id: ${{ github.event.workflow_run.id }}
         env:
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: islo-labs/islo-agents/verify@v1
+      - uses: islo-labs/islo-agents/agents/verify@v1
         with:
           pr_number: ${{ github.event.pull_request.number }}
         env:
@@ -70,14 +70,14 @@ Each template has a colocated `job.toml` manifest. The current Islo CLI deploy c
 
 ```bash
 mkdir -p jobs/islo-review
-cp reviewer/github/job.toml jobs/islo-review/job.toml
+cp agents/review/github/job.toml jobs/islo-review/job.toml
 islo job deploy islo-review --dry-run
 islo job deploy islo-review
 ```
 
-Repeat the same pattern for other templates such as `babysit/job.toml`, `verify/job.toml`, and `task/linear/job.toml`.
+Repeat the same pattern for other templates such as `agents/babysit/job.toml`, `agents/verify/job.toml`, and `agents/task/linear/job.toml`.
 
 ## Customizing Review Context
 
-Create a `REVIEW.md` at your repo root to inject extra context into reviewer and babysit prompts. For verify, also add a `VERIFY.md`.
+Create a `REVIEW.md` at your repo root to inject extra context into review and babysit prompts. For verify, also add a `VERIFY.md`.
 

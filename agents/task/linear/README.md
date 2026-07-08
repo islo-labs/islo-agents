@@ -9,7 +9,7 @@ Add "islo" label → Linear Issue webhook → bear-agent (webhook-level filter) 
 ```
 
 - **Trigger**: Issue update webhook with compound `when` conditions — only fires when the "islo" label is specifically just added
-- **Agent**: Generic `src/agent.ts` with `task/linear/prompt.md`
+- **Agent**: Generic `src/agent.ts` with `agents/task/linear/prompt.md`
 - **Sandbox**: Uses the `islo-stack` snapshot with all repos pre-cloned in `/workspace/`
 - **Output**: Creates GitHub PR(s) and posts a comment on the Linear issue
 
@@ -30,7 +30,7 @@ Go to your Linear workspace and create a label named `islo` (workspace-level or 
 ```bash
 # From the islo-agents repo root
 mkdir -p jobs/linear-task
-cp task/linear/job.toml jobs/linear-task/job.toml
+cp agents/task/linear/job.toml jobs/linear-task/job.toml
 islo job deploy linear-task
 ```
 
@@ -47,14 +47,14 @@ islo job get linear-task
 If creating fresh:
 
 ```bash
-islo webhook incoming create --request-json @task/linear/webhook-rule.json
+islo webhook incoming create --request-json @agents/task/linear/webhook-rule.json
 ```
 
 If updating the existing webhook:
 
 ```bash
 islo webhook incoming update <webhook-id> \
-  --request-json @task/linear/webhook-rule.json
+  --request-json @agents/task/linear/webhook-rule.json
 ```
 
 Note the webhook **ID** and **URL** from the output.
@@ -112,16 +112,16 @@ To re-trigger the agent on the same issue, remove the `islo` label and add it ag
 
 ## Updating
 
-After modifying `task/linear/job.toml`, redeploy:
+After modifying `agents/task/linear/job.toml`, redeploy:
 
 ```bash
-cp task/linear/job.toml jobs/linear-task/job.toml
+cp agents/task/linear/job.toml jobs/linear-task/job.toml
 islo job deploy linear-task
 ```
 
-After modifying `task/linear/webhook-rule.json`, update the webhook:
+After modifying `agents/task/linear/webhook-rule.json`, update the webhook:
 
 ```bash
 islo webhook incoming update <webhook-id> \
-  --request-json @task/linear/webhook-rule.json
+  --request-json @agents/task/linear/webhook-rule.json
 ```
