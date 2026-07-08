@@ -20,6 +20,8 @@ Add an `ISLO_API_KEY` secret to your repo, deploy the relevant job(s) in Islo, t
 
 ### PR Review
 
+See `review/README.md` for Islo incoming webhook setup, trigger rules, sandbox lifecycle, and review output behavior.
+
 ```yaml
 name: PR Review
 on:
