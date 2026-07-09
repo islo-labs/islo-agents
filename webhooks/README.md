@@ -2,6 +2,8 @@
 
 Assembled Islo incoming receivers. One file per external source (GitHub, Linear, …).
 
+Files under `webhooks/` are **example** create/update bodies built from this pack’s trigger fragments. Personalize `agents/*/trigger-rules/*.json` for your org, reassemble, then deploy to *your* tenant. Do not treat the committed JSON as live Islo Labs production config (that lives in `islo-agents-internal`).
+
 **Trigger rule fragments live with the agent** that should wake up:
 
 ```text
@@ -14,7 +16,7 @@ webhooks/<source>-….json                    # full create/update body (assembl
 After editing any `agents/*/trigger-rules/*.json`:
 
 ```bash
-node scripts/assemble-webhooks.js
+npm run assemble-webhooks
 ```
 
 That rebuilds:
@@ -65,6 +67,6 @@ Same pattern with `Linear-Signature` / hex encoding (no `sha256=` prefix). Enabl
 ## Adding a trigger rule
 
 1. Add or edit `agents/<role>/trigger-rules/<source>.json` (JSON array of rules).
-2. Run `node scripts/assemble-webhooks.js`.
+2. Run `npm run assemble-webhooks`.
 3. `islo webhook incoming update <id> --request-json @webhooks/<file>.json`.
 4. Re-apply HMAC if the update body resets `auth` to `none`.

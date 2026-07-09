@@ -5,11 +5,11 @@
       "conditions": [
         { "op": "equals", "json_path": "$.action", "value": "update" },
         { "op": "exists", "json_path": "$.updatedFrom.labelIds" },
-        { "op": "contains", "json_path": "$.data.labelIds", "value": "90399f02-187d-4608-b269-abf3c75b7778" },
+        { "op": "contains", "json_path": "$.data.labelIds", "value": "REPLACE_WITH_YOUR_LINEAR_LABEL_ID" },
         { "op": "not", "condition": {
           "op": "contains",
           "json_path": "$.updatedFrom.labelIds",
-          "value": "90399f02-187d-4608-b269-abf3c75b7778"
+          "value": "REPLACE_WITH_YOUR_LINEAR_LABEL_ID"
         }}
       ]
     },

@@ -7,12 +7,12 @@ Fixes CI failures on PR branches.
 
 ## Trigger scope
 
-Only failed `workflow_run` events from **allowlisted workflow names** (mirrors the old per-repo GHA `on.workflow_run.workflows` lists):
+Only failed `workflow_run` events from **allowlisted workflow names**, with `event == pull_request`.
 
-- `CI`, `Test`, `Build`, `PR Title Lint`
-- `Terraform Validate`, `Ansible`
-- `Lint, Format, and Unit Tests`, `Storybook Tests`
+This starter pack ships a minimal example allowlist (`"CI"` only). Edit `trigger-rules/github.json` to match the workflow names in your repos, then reassemble webhooks:
 
-Also requires `event == pull_request`. Fork PRs are skipped in the job via `head_repository`.
+```bash
+npm run assemble-webhooks
+```
 
-If a repo adds a new CI workflow name, add it to the allowlist in `trigger-rules/github.json` and reassemble.
+Fork PRs are skipped in the job via `head_repository`.

@@ -10,8 +10,10 @@ mkdir -p jobs/linear-implementor
 cp agents/implementor/job.toml jobs/linear-implementor/job.toml
 islo job deploy linear-implementor
 
-node scripts/assemble-webhooks.js
+npm run assemble-webhooks
 islo webhook incoming create --request-json @webhooks/linear-issues.json
 ```
 
-Update the `islo` label UUID in `trigger-rules/linear.json` if your workspace differs, then reassemble.
+## Label ID
+
+Replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` in `trigger-rules/linear.json` with the UUID of the label that should start the implementor (e.g. your workspace’s `islo` label). Then reassemble webhooks.
