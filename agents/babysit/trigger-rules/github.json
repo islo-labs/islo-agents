@@ -5,7 +5,20 @@
       "conditions": [
         { "op": "equals", "json_path": "$.action", "value": "completed" },
         { "op": "equals", "json_path": "$.workflow_run.conclusion", "value": "failure" },
-        { "op": "equals", "json_path": "$.workflow_run.event", "value": "pull_request" }
+        { "op": "equals", "json_path": "$.workflow_run.event", "value": "pull_request" },
+        {
+          "op": "any",
+          "conditions": [
+            { "op": "equals", "json_path": "$.workflow_run.name", "value": "CI" },
+            { "op": "equals", "json_path": "$.workflow_run.name", "value": "Test" },
+            { "op": "equals", "json_path": "$.workflow_run.name", "value": "Build" },
+            { "op": "equals", "json_path": "$.workflow_run.name", "value": "PR Title Lint" },
+            { "op": "equals", "json_path": "$.workflow_run.name", "value": "Terraform Validate" },
+            { "op": "equals", "json_path": "$.workflow_run.name", "value": "Ansible" },
+            { "op": "equals", "json_path": "$.workflow_run.name", "value": "Lint, Format, and Unit Tests" },
+            { "op": "equals", "json_path": "$.workflow_run.name", "value": "Storybook Tests" }
+          ]
+        }
       ]
     },
     "actions": [
