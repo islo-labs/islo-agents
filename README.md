@@ -10,9 +10,8 @@ agents/               — reusable agent templates
   review/github/      — GitHub PR reviewer (job + prompt)
   babysit/            — CI failure fixer (job + action + prompt)
   verify/             — E2E verification (job + action + prompt)
-  task/               — integration-triggered tasks
-    prompt.md         — shared "implement this issue" prompt
-    linear/           — Linear agent integration (activity emissions)
+  implementor/        — implement issues from project tools
+    linear/           — Linear label → implementor job + webhook
   delegator/          — routes @islo mentions to worker sandboxes/jobs
 webhooks/             — shared Islo incoming webhooks that fan out to multiple jobs
   github-events.json  — GitHub PR review + @islo → delegator
@@ -78,7 +77,7 @@ islo job deploy islo-review --dry-run
 islo job deploy islo-review
 ```
 
-Repeat the same pattern for other templates such as `agents/babysit/job.toml`, `agents/verify/job.toml`, and `agents/task/linear/job.toml`.
+Repeat the same pattern for other templates such as `agents/babysit/job.toml`, `agents/verify/job.toml`, and `agents/implementor/linear/job.toml`.
 
 ## Customizing Review Context
 

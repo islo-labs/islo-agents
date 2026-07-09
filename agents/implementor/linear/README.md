@@ -1,6 +1,6 @@
-# Linear Task Integration
+# Linear Implementor
 
-Trigger an Islo agent by adding the `islo` label to a Linear issue. The agent implements the issue (potentially across multiple repos), creates PR(s), and posts a comment with the result.
+Trigger an Islo implementor by adding the `islo` label to a Linear issue. The agent implements the issue (potentially across multiple repos), creates PR(s), and posts a comment with the result.
 
 ## Architecture
 
@@ -9,7 +9,7 @@ Add "islo" label → Linear Issue webhook → bear-agent (webhook-level filter) 
 ```
 
 - **Trigger**: Issue update webhook with compound `when` conditions — only fires when the "islo" label is specifically just added
-- **Agent**: Generic `src/agent.ts` with `agents/task/linear/prompt.md`
+- **Agent**: Generic `src/agent.ts` with `agents/implementor/linear/prompt.md`
 - **Sandbox**: Uses the `islo-stack` snapshot with all repos pre-cloned in `/workspace/`
 - **Output**: Creates GitHub PR(s) and posts a comment on the Linear issue
 
@@ -29,15 +29,15 @@ Go to your Linear workspace and create a label named `islo` (workspace-level or 
 
 ```bash
 # From the islo-agents repo root
-mkdir -p jobs/linear-task
-cp agents/task/linear/job.toml jobs/linear-task/job.toml
-islo job deploy linear-task
+mkdir -p jobs/linear-implementor
+cp agents/implementor/linear/job.toml jobs/linear-implementor/job.toml
+islo job deploy linear-implementor
 ```
 
 Verify:
 
 ```bash
-islo job get linear-task
+islo job get linear-implementor
 ```
 
 ### Step 2: Create (or update) the incoming webhook
@@ -47,14 +47,14 @@ islo job get linear-task
 If creating fresh:
 
 ```bash
-islo webhook incoming create --request-json @agents/task/linear/webhook-rule.json
+islo webhook incoming create --request-json @agents/implementor/linear/webhook-rule.json
 ```
 
 If updating the existing webhook:
 
 ```bash
 islo webhook incoming update <webhook-id> \
-  --request-json @agents/task/linear/webhook-rule.json
+  --request-json @agents/implementor/linear/webhook-rule.json
 ```
 
 Note the webhook **ID** and **URL** from the output.
@@ -93,7 +93,7 @@ islo webhook incoming update <webhook-id> --request-json '{
 
 1. Go to any issue in your Linear workspace
 2. Add the `islo` label
-3. Check: `islo job runs linear-task`
+3. Check: `islo job runs linear-implementor`
 
 ## How the Webhook Filter Works
 
@@ -112,16 +112,16 @@ To re-trigger the agent on the same issue, remove the `islo` label and add it ag
 
 ## Updating
 
-After modifying `agents/task/linear/job.toml`, redeploy:
+After modifying `agents/implementor/linear/job.toml`, redeploy:
 
 ```bash
-cp agents/task/linear/job.toml jobs/linear-task/job.toml
-islo job deploy linear-task
+cp agents/implementor/linear/job.toml jobs/linear-implementor/job.toml
+islo job deploy linear-implementor
 ```
 
-After modifying `agents/task/linear/webhook-rule.json`, update the webhook:
+After modifying `agents/implementor/linear/webhook-rule.json`, update the webhook:
 
 ```bash
 islo webhook incoming update <webhook-id> \
-  --request-json @agents/task/linear/webhook-rule.json
+  --request-json @agents/implementor/linear/webhook-rule.json
 ```

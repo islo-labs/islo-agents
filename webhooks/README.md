@@ -3,7 +3,7 @@
 Shared Islo incoming-webhook configs that route provider events to jobs.
 
 Agent-specific triggers that only serve one integration can stay next to that
-agent (for example `agents/task/linear/webhook-rule.json`). Cross-cutting
+agent (for example `agents/implementor/linear/webhook-rule.json`). Cross-cutting
 ingress that fans out to multiple jobs lives here.
 
 ## `github-events`

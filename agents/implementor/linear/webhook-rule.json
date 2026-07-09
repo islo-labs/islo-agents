@@ -3,7 +3,7 @@
   "auth": { "auth_type": "none" },
   "target": {
     "target_type": "fixed_sandbox_name",
-    "sandbox_name": "linear-task"
+    "sandbox_name": "linear-implementor"
   },
   "idempotency": { "source": "header", "name": "Linear-Delivery" },
   "rules": [{
@@ -22,7 +22,7 @@
     },
     "actions": [{
       "action_type": "trigger_job",
-      "job_name": "linear-task",
+      "job_name": "linear-implementor",
       "params": {
         "issue_id": { "source": { "source": "json_path", "path": "$.data.id" } },
         "issue_title": { "source": { "source": "json_path", "path": "$.data.title" } },

@@ -14,7 +14,7 @@ GitHub @islo comment
      or islo job run / create worker sandbox
 ```
 
-Deterministic events stay on their own triggers (Linear `islo` label → `linear-task`, PR open → `islo-review`, etc.). Mentions go through the delegator because a human message needs interpretation.
+Deterministic events stay on their own triggers (Linear `islo` label → `linear-implementor`, PR open → `islo-review`, etc.). Mentions go through the delegator because a human message needs interpretation.
 
 ## Sandbox
 
