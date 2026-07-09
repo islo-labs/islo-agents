@@ -2,16 +2,16 @@
 
 Assembled Islo incoming receivers. One file per external source (GitHub, Linear, …).
 
-**Rule fragments live with the agent** that should wake up:
+**Trigger rule fragments live with the agent** that should wake up:
 
 ```text
-agents/<role>/rules/<source>.json   # array of IncomingWebhookRule
-webhooks/<source>-….json            # full create/update body (assembled)
+agents/<role>/trigger_rules/<source>.json   # array of IncomingWebhookRule
+webhooks/<source>-….json                    # full create/update body (assembled)
 ```
 
 ## Assemble
 
-After editing any `agents/*/rules/*.json`:
+After editing any `agents/*/trigger_rules/*.json`:
 
 ```bash
 node scripts/assemble-webhooks.js
@@ -21,8 +21,8 @@ That rebuilds:
 
 | Output | Fragments |
 |--------|-----------|
-| `github-events.json` | `agents/*/rules/github.json` |
-| `linear-issues.json` | `agents/*/rules/linear.json` |
+| `github-events.json` | `agents/*/trigger_rules/github.json` |
+| `linear-issues.json` | `agents/*/trigger_rules/linear.json` |
 
 ## Deploy
 
@@ -62,9 +62,9 @@ Point the GitHub org/repo webhook at the `receiver_url`, content type `applicati
 
 Same pattern with `Linear-Signature` / hex encoding (no `sha256=` prefix). Enable **Issues** only on the Linear webhook.
 
-## Adding a rule
+## Adding a trigger rule
 
-1. Add or edit `agents/<role>/rules/<source>.json` (JSON array of rules).
+1. Add or edit `agents/<role>/trigger_rules/<source>.json` (JSON array of rules).
 2. Run `node scripts/assemble-webhooks.js`.
 3. `islo webhook incoming update <id> --request-json @webhooks/<file>.json`.
 4. Re-apply HMAC if the update body resets `auth` to `none`.
