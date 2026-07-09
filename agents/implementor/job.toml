@@ -1,6 +1,6 @@
 [job]
 name = "linear-implementor"
-version = "0.3.0"
+version = "0.4.0"
 description = "Implement a Linear issue triggered by adding the 'islo' label."
 
 [job.params.issue_id]
@@ -28,10 +28,10 @@ type = "string"
 default = ""
 description = "URL of the issue in Linear."
 
-[job.params.agents_ref]
+[job.params.agents_git_ref]
 type = "string"
-default = "v1"
-description = "islo-agents git ref to run."
+default = "main"
+description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.model]
@@ -74,8 +74,8 @@ delete_after = 604800
 name = "linear-implementor"
 
 [[run.tasks.steps]]
-name = "run-agent"
-timeout = 3600
+name = "checkout-pack"
+timeout = 120
 exec = [
   "bash",
   "-lc",
@@ -85,9 +85,33 @@ cd /workspace
 rm -rf islo-agents
 git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
 cd islo-agents
-git fetch --depth=1 origin "{{agents_ref}}"
+git fetch --depth=1 origin "{{agents_git_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
+''',
+]
+
+[[run.tasks.steps]]
+name = "install-deps"
+timeout = 300
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
 npm ci
+''',
+]
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 3600
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
 npx tsx src/agent.ts \
   --prompt agents/implementor/prompt.md \
   --cwd /workspace \
@@ -102,3 +126,7 @@ npx tsx src/agent.ts \
   --var ISSUE_URL="{{issue_url}}"
 ''',
 ]
+
+[[run.tasks.steps]]
+name = "pause-sandbox"
+pause = true

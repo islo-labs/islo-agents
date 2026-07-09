@@ -1,6 +1,6 @@
 [job]
 name = "islo-babysit"
-version = "0.2.0"
+version = "0.3.0"
 description = "Automatically fix CI failures on a PR branch."
 
 [job.params.repo]
@@ -30,10 +30,10 @@ type = "string"
 default = ""
 description = "full_name of the workflow head repository. Used to skip fork PRs."
 
-[job.params.agents_ref]
+[job.params.agents_git_ref]
 type = "string"
-default = "v1"
-description = "islo-agents git ref to run."
+default = "main"
+description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.model]
@@ -76,25 +76,36 @@ delete_after = 604800
 name = "babysit"
 
 [[run.tasks.steps]]
-name = "resolve-and-run"
-timeout = 900
+name = "guard-fork"
+timeout = 30
 exec = [
   "bash",
   "-lc",
   '''
 set -euo pipefail
+mkdir -p /workspace/.islo-job
+REPO="{{repo}}"
+HEAD_REPOSITORY="{{head_repository}}"
+if [ -n "${HEAD_REPOSITORY}" ] && [ "${HEAD_REPOSITORY}" != "${REPO}" ]; then
+  echo "Skipping babysit for fork PR head ${HEAD_REPOSITORY} (repo is ${REPO})"
+  echo "fork" > /workspace/.islo-job/skip
+fi
+''',
+]
 
+[[run.tasks.steps]]
+name = "resolve-pr"
+timeout = 60
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+if [ -f /workspace/.islo-job/skip ]; then echo "skipped"; exit 0; fi
 REPO="{{repo}}"
 RUN_ID="{{workflow_run_id}}"
 HEAD_REF="{{head_ref}}"
-HEAD_REPOSITORY="{{head_repository}}"
 REPO_SHORT="$(echo "${REPO}" | cut -d/ -f2)"
-
-# Skip fork PRs (same filter as the old GHA babysit workflow).
-if [ -n "${HEAD_REPOSITORY}" ] && [ "${HEAD_REPOSITORY}" != "${REPO}" ]; then
-  echo "Skipping babysit for fork PR head ${HEAD_REPOSITORY} (repo is ${REPO})"
-  exit 0
-fi
 
 if [ -z "${HEAD_REF}" ]; then
   HEAD_REF="$(gh run view "${RUN_ID}" --repo "${REPO}" --json headBranch --jq .headBranch)"
@@ -108,25 +119,97 @@ if [ -z "${PR_NUMBER}" ]; then
   exit 1
 fi
 
+cat > /workspace/.islo-job/env <<EOF
+export REPO="${REPO}"
+export RUN_ID="${RUN_ID}"
+export HEAD_REF="${HEAD_REF}"
+export BASE_REF="${BASE_REF}"
+export PR_NUMBER="${PR_NUMBER}"
+export REPO_SHORT="${REPO_SHORT}"
+EOF
+''',
+]
+
+[[run.tasks.steps]]
+name = "checkout-pr"
+timeout = 120
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+if [ -f /workspace/.islo-job/skip ]; then echo "skipped"; exit 0; fi
+source /workspace/.islo-job/env
 cd /workspace
 [ -d "${REPO_SHORT}" ] || git clone "https://github.com/${REPO}.git" "${REPO_SHORT}"
 cd "${REPO_SHORT}"
 git fetch origin "${HEAD_REF}"
 git checkout -B "${HEAD_REF}" FETCH_HEAD
+''',
+]
 
+[[run.tasks.steps]]
+name = "bot-commit-guard"
+timeout = 30
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+if [ -f /workspace/.islo-job/skip ]; then echo "skipped"; exit 0; fi
+source /workspace/.islo-job/env
+cd "/workspace/${REPO_SHORT}"
 BOT_COMMITS=$(git log --oneline --author="islo-agents" -10 | wc -l | tr -d ' ')
 if [ "${BOT_COMMITS}" -ge 3 ]; then
   echo "Bot has already made ${BOT_COMMITS} fix attempts. Stopping to avoid infinite loop."
-  exit 0
+  echo "bot-limit" > /workspace/.islo-job/skip
 fi
+''',
+]
 
+[[run.tasks.steps]]
+name = "checkout-pack"
+timeout = 120
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+if [ -f /workspace/.islo-job/skip ]; then echo "skipped"; exit 0; fi
 cd /workspace
 rm -rf islo-agents
 git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
 cd islo-agents
-git fetch --depth=1 origin "{{agents_ref}}"
+git fetch --depth=1 origin "{{agents_git_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
+''',
+]
+
+[[run.tasks.steps]]
+name = "install-deps"
+timeout = 300
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+if [ -f /workspace/.islo-job/skip ]; then echo "skipped"; exit 0; fi
+cd /workspace/islo-agents
 npm ci
+''',
+]
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 900
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+if [ -f /workspace/.islo-job/skip ]; then echo "skipped"; exit 0; fi
+source /workspace/.islo-job/env
+cd /workspace/islo-agents
 npx tsx src/agent.ts \
   --prompt agents/babysit/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \

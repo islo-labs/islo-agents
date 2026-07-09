@@ -1,6 +1,6 @@
 [job]
 name = "islo-review"
-version = "0.2.0"
+version = "0.3.0"
 description = "Run automated GitHub PR code review as a durable Islo job."
 
 [job.params.repo]
@@ -30,10 +30,10 @@ type = "string"
 default = ""
 description = "PR base branch name. Resolved from the PR when empty."
 
-[job.params.agents_ref]
+[job.params.agents_git_ref]
 type = "string"
-default = "v1"
-description = "islo-agents git ref to run, for example v1 or a branch name."
+default = "main"
+description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.model]
@@ -76,14 +76,14 @@ delete_after = 604800
 name = "review"
 
 [[run.tasks.steps]]
-name = "run-reviewer"
-timeout = 900
+name = "resolve-refs"
+timeout = 60
 exec = [
   "bash",
   "-lc",
   '''
 set -euo pipefail
-
+mkdir -p /workspace/.islo-job
 REPO="{{repo}}"
 PR_NUMBER="{{pr_number}}"
 HEAD_REF="{{head_ref}}"
@@ -96,19 +96,73 @@ if [ -z "${HEAD_REF}" ] || [ -z "${BASE_REF}" ]; then
   [ -n "${BASE_REF}" ] || BASE_REF="$(printf '%s' "${PR_META}" | jq -r .baseRefName)"
 fi
 
+cat > /workspace/.islo-job/env <<EOF
+export REPO="${REPO}"
+export PR_NUMBER="${PR_NUMBER}"
+export HEAD_REF="${HEAD_REF}"
+export BASE_REF="${BASE_REF}"
+export REPO_SHORT="${REPO_SHORT}"
+EOF
+''',
+]
+
+[[run.tasks.steps]]
+name = "checkout-pr"
+timeout = 120
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+source /workspace/.islo-job/env
 cd /workspace
 [ -d "${REPO_SHORT}" ] || git clone "https://github.com/${REPO}.git" "${REPO_SHORT}"
 cd "${REPO_SHORT}"
 git fetch origin "${HEAD_REF}"
 git checkout -B "${HEAD_REF}" FETCH_HEAD
+''',
+]
 
+[[run.tasks.steps]]
+name = "checkout-pack"
+timeout = 120
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
 cd /workspace
 rm -rf islo-agents
 git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
 cd islo-agents
-git fetch --depth=1 origin "{{agents_ref}}"
+git fetch --depth=1 origin "{{agents_git_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
+''',
+]
+
+[[run.tasks.steps]]
+name = "install-deps"
+timeout = 300
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
 npm ci
+''',
+]
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 900
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+source /workspace/.islo-job/env
+cd /workspace/islo-agents
 npx tsx src/agent.ts \
   --prompt agents/review/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \

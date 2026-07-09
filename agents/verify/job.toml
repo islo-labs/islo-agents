@@ -1,6 +1,6 @@
 [job]
 name = "islo-verify"
-version = "0.2.0"
+version = "0.3.0"
 description = "Empirical E2E verification of a PR against a full running stack."
 
 [job.params.repo]
@@ -40,10 +40,10 @@ type = "string"
 default = ""
 description = "Comma-separated repo:ref pairs for multi-repo verification."
 
-[job.params.agents_ref]
+[job.params.agents_git_ref]
 type = "string"
-default = "v1"
-description = "islo-agents git ref to run."
+default = "main"
+description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.boot_command]
@@ -127,8 +127,8 @@ eval "${RESOLVED_CMD}"
 ]
 
 [[run.tasks.steps]]
-name = "run-agent"
-timeout = 2400
+name = "checkout-pack"
+timeout = 120
 exec = [
   "bash",
   "-lc",
@@ -138,9 +138,33 @@ cd /workspace
 rm -rf islo-agents
 git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
 cd islo-agents
-git fetch --depth=1 origin "{{agents_ref}}"
+git fetch --depth=1 origin "{{agents_git_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
+''',
+]
+
+[[run.tasks.steps]]
+name = "install-deps"
+timeout = 300
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
 npm ci
+''',
+]
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 2400
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
 REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
 ENV_FILE="{{env_file}}"
 [ -f "${ENV_FILE}" ] && source "${ENV_FILE}" || true

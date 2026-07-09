@@ -1,6 +1,6 @@
 [job]
 name = "delegator"
-version = "0.1.0"
+version = "0.2.0"
 description = "Route human mentions to the right worker sandbox or kick off a new agent job."
 
 [job.params.source]
@@ -25,10 +25,10 @@ type = "string"
 default = ""
 description = "External delivery ID for idempotency and debugging."
 
-[job.params.agents_ref]
+[job.params.agents_git_ref]
 type = "string"
-default = "v1"
-description = "islo-agents git ref to run."
+default = "main"
+description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.model]
@@ -65,6 +65,50 @@ init = { type = "full" }
 name = "delegator"
 
 [[run.tasks.steps]]
+name = "write-payload"
+timeout = 30
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cat > /workspace/payload.json <<'EOF'
+{{raw_payload}}
+EOF
+''',
+]
+
+[[run.tasks.steps]]
+name = "checkout-pack"
+timeout = 120
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace
+rm -rf islo-agents
+git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
+cd islo-agents
+git fetch --depth=1 origin "{{agents_git_ref}}"
+git -c advice.detachedHead=false checkout FETCH_HEAD
+''',
+]
+
+[[run.tasks.steps]]
+name = "install-deps"
+timeout = 300
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
+npm ci
+''',
+]
+
+[[run.tasks.steps]]
 name = "run-agent"
 timeout = 900
 exec = [
@@ -72,29 +116,17 @@ exec = [
   "-lc",
   '''
 set -euo pipefail
-cd /workspace
-
-PAYLOAD_PATH="/workspace/payload.json"
-cat > "${PAYLOAD_PATH}" <<'EOF'
-{{raw_payload}}
-EOF
-
-rm -rf islo-agents
-git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
-cd islo-agents
-git fetch --depth=1 origin "{{agents_ref}}"
-git -c advice.detachedHead=false checkout FETCH_HEAD
-npm ci
+cd /workspace/islo-agents
 npx tsx src/agent.ts \
   --prompt agents/delegator/prompt.md \
   --cwd /workspace/islo-agents \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
-  --context-file "${PAYLOAD_PATH}" \
+  --context-file /workspace/payload.json \
   --var SOURCE="{{source}}" \
   --var EVENT_TYPE="{{event_type}}" \
   --var DELIVERY_ID="{{delivery_id}}" \
-  --var RAW_PAYLOAD_PATH="${PAYLOAD_PATH}"
+  --var RAW_PAYLOAD_PATH="/workspace/payload.json"
 ''',
 ]
