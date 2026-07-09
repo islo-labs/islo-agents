@@ -14,7 +14,7 @@ One GitHub → Islo receiver for PR review and `@islo` mention routing.
 |--------------|------|-----|
 | `pull_request` opened / reopened | PR exists + action | `islo-review` |
 | `pull_request` labeled `islo-review` | PR exists + label | `islo-review` |
-| `issue_comment` created with `@islo` on a PR | comment filter | `mention-handler` |
+| `issue_comment` created with `@islo` on a PR | comment filter | `delegator` |
 
 Do **not** put runner / `deliver_to_port` traffic on this webhook. Keep
 `gh-runner-*` receivers separate.

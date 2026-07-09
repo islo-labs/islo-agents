@@ -13,8 +13,9 @@ agents/               — reusable agent templates
   task/               — integration-triggered tasks
     prompt.md         — shared "implement this issue" prompt
     linear/           — Linear agent integration (activity emissions)
+  delegator/          — routes @islo mentions to worker sandboxes/jobs
 webhooks/             — shared Islo incoming webhooks that fan out to multiple jobs
-  github-events.json  — GitHub PR review + @islo mentions
+  github-events.json  — GitHub PR review + @islo → delegator
 ```
 
 ## Quick Start

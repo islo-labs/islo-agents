@@ -103,7 +103,7 @@
       "actions": [
         {
           "action_type": "trigger_job",
-          "job_name": "mention-handler",
+          "job_name": "delegator",
           "params": {
             "source": {
               "parts": [{ "type": "literal", "value": "github" }]
