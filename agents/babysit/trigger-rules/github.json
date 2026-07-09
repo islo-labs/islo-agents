@@ -5,13 +5,7 @@
       "conditions": [
         { "op": "equals", "json_path": "$.action", "value": "completed" },
         { "op": "equals", "json_path": "$.workflow_run.conclusion", "value": "failure" },
-        { "op": "equals", "json_path": "$.workflow_run.event", "value": "pull_request" },
-        {
-          "op": "any",
-          "conditions": [
-            { "op": "equals", "json_path": "$.workflow_run.name", "value": "CI" }
-          ]
-        }
+        { "op": "equals", "json_path": "$.workflow_run.event", "value": "pull_request" }
       ]
     },
     "actions": [

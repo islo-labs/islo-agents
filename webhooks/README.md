@@ -2,7 +2,7 @@
 
 Assembled Islo incoming receivers. One file per external source (GitHub, Linear, …).
 
-Files under `webhooks/` are **example** create/update bodies built from this pack’s trigger fragments. Personalize `agents/*/trigger-rules/*.json` for your org, reassemble, then deploy to *your* tenant. Do not treat the committed JSON as live Islo Labs production config (that lives in `islo-agents-internal`).
+Files under `webhooks/` are assembled create/update bodies built from this pack’s trigger fragments. Edit `agents/*/trigger-rules/*.json` (e.g. Linear label UUID), reassemble, then deploy to your tenant.
 
 **Trigger rule fragments live with the agent** that should wake up:
 

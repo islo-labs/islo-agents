@@ -7,12 +7,6 @@ Fixes CI failures on PR branches.
 
 ## Trigger scope
 
-Only failed `workflow_run` events from **allowlisted workflow names**, with `event == pull_request`.
-
-This starter pack ships a minimal example allowlist (`"CI"` only). Edit `trigger-rules/github.json` to match the workflow names in your repos, then reassemble webhooks:
-
-```bash
-npm run assemble-webhooks
-```
+Fires on any completed `workflow_run` with `conclusion == failure` and `event == pull_request` — one babysit per failed workflow (not per job inside a workflow). Multiple failing workflows on the same PR can start multiple babysit runs.
 
 Fork PRs are skipped in the job via `head_repository`.

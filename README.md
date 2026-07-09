@@ -1,8 +1,6 @@
 # islo-agents
 
-**Starter pack** for Islo agent jobs: prompts, durable job manifests, and example webhook trigger rules. Fork or copy this repo, personalize prompts and triggers for your org, then deploy jobs and assemble webhooks from *your* checkout.
-
-Islo Labs production uses a separate internal pack (`islo-agents-internal`). Customers should treat this public repo as the template.
+Shared agent templates for Islo jobs: prompts, durable job manifests, and webhook trigger-rule fragments. Deploy jobs and assemble webhooks from this checkout. Workspace-specific values that cannot be generalized (today: the Linear label UUID) ship as placeholders — replace them before deploy, or override in a thin private overlay later.
 
 ## Structure
 
@@ -13,7 +11,7 @@ agents/                             — one directory per role
     prompt.md                       — agent behavior
     job.toml                        — durable job (sandbox + steps)
     trigger-rules/<source>.json     — webhook rule fragments for that source
-webhooks/                           — assembled receivers (example configs)
+webhooks/                           — assembled receivers
   github-events.json
   linear-issues.json
 scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.json → webhooks/
@@ -32,18 +30,15 @@ Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; de
 
 ## Quick start
 
-### 1. Personalize triggers
+### 1. Replace placeholders
 
-- **Babysit:** edit `agents/babysit/trigger-rules/github.json` — replace the example `"CI"` allowlist with your workflow names.
-- **Implementor:** edit `agents/implementor/trigger-rules/linear.json` — replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` with your Linear label UUID.
-
-Then rebuild example receivers:
+- **Implementor:** in `agents/implementor/trigger-rules/linear.json`, replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` with your Linear label UUID, then reassemble:
 
 ```bash
 npm run assemble-webhooks
 ```
 
-Assembled files under `webhooks/` are **examples** built from those fragments — not live Islo Labs config. Deploy *your* assembled JSON to your tenant.
+Babysit triggers on any failed PR `workflow_run` (no workflow-name allowlist).
 
 ### 2. Deploy a job
 
