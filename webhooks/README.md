@@ -1,53 +1,54 @@
 # Webhooks
 
-Shared Islo incoming-webhook configs that route provider events to jobs.
+Assembled Islo incoming receivers. One file per external source (GitHub, Linear, …).
 
-Agent-specific triggers that only serve one integration can stay next to that
-agent (for example `agents/implementor/linear/webhook-rule.json`). Cross-cutting
-ingress that fans out to multiple jobs lives here.
+**Rule fragments live with the agent** that should wake up:
 
-## `github-events`
+```text
+agents/<role>/rules/<source>.json   # array of IncomingWebhookRule
+webhooks/<source>-….json            # full create/update body (assembled)
+```
 
-One GitHub → Islo receiver for PR review and `@islo` mention routing.
+## Assemble
 
-| GitHub event | Rule | Job |
-|--------------|------|-----|
-| `pull_request` opened / reopened | PR exists + action | `islo-review` |
-| `pull_request` labeled `islo-review` | PR exists + label | `islo-review` |
-| `issue_comment` created with `@islo` on a PR | comment filter | `delegator` |
-
-Do **not** put runner / `deliver_to_port` traffic on this webhook. Keep
-`gh-runner-*` receivers separate.
-
-### Create
+After editing any `agents/*/rules/*.json`:
 
 ```bash
+node scripts/assemble-webhooks.js
+```
+
+That rebuilds:
+
+| Output | Fragments |
+|--------|-----------|
+| `github-events.json` | `agents/*/rules/github.json` |
+| `linear-issues.json` | `agents/*/rules/linear.json` |
+
+## Deploy
+
+```bash
+# create
 islo webhook incoming create --request-json @webhooks/github-events.json
+islo webhook incoming create --request-json @webhooks/linear-issues.json
+
+# update rules on an existing receiver
+islo webhook incoming update <webhook-id> \
+  --request-json @webhooks/github-events.json
 ```
 
-Note the webhook **ID** and **receiver_url** from the output.
+Auth secrets are applied after create (do not commit them). See HMAC notes below.
 
-### Enable GitHub HMAC
-
-Generate a secret (do not commit it):
+### GitHub HMAC
 
 ```bash
-openssl rand -hex 32
-```
+openssl rand -hex 32   # do not commit
 
-```bash
 islo webhook incoming update <webhook-id> --request-json '{
   "auth": {
     "auth_type": "hmac",
     "algorithm": "sha256",
-    "secret": {
-      "name": "github-events-webhook-secret",
-      "value": "<secret>"
-    },
-    "signature": {
-      "source": "header",
-      "name": "X-Hub-Signature-256"
-    },
+    "secret": { "name": "github-events-webhook-secret", "value": "<secret>" },
+    "signature": { "source": "header", "name": "X-Hub-Signature-256" },
     "signed_payload": { "type": "raw_body" },
     "encoding": "hex",
     "prefix": "sha256="
@@ -55,23 +56,15 @@ islo webhook incoming update <webhook-id> --request-json '{
 }'
 ```
 
-### Point GitHub at it
+Point the GitHub org/repo webhook at the `receiver_url`, content type `application/json`, events: **Pull requests**, **Issue comments**.
 
-Create (or update) an org/repo webhook:
+### Linear HMAC
 
-- **Payload URL**: the `receiver_url` from create (for example `https://wh-in-….ca.webhook.islo.dev`)
-- **Content type**: `application/json`
-- **Secret**: the same HMAC secret
-- **Events**: `Pull requests`, `Issue comments`
+Same pattern with `Linear-Signature` / hex encoding (no `sha256=` prefix). Enable **Issues** only on the Linear webhook.
 
-After cutover, disable the old `github-mentions` and `github-pr-review-opened`
-Islo receivers so you do not double-fire jobs.
+## Adding a rule
 
-### Update rules
-
-```bash
-islo webhook incoming update <webhook-id> \
-  --request-json @webhooks/github-events.json
-```
-
-Re-apply HMAC auth afterward if the update body resets `auth` to `none`.
+1. Add or edit `agents/<role>/rules/<source>.json` (JSON array of rules).
+2. Run `node scripts/assemble-webhooks.js`.
+3. `islo webhook incoming update <id> --request-json @webhooks/<file>.json`.
+4. Re-apply HMAC if the update body resets `auth` to `none`.

@@ -1,86 +1,62 @@
 # islo-agents
 
-Reusable agent templates for Islo jobs. Each template owns a prompt, an Islo job file, and any integration-specific launchers when they are useful. All templates share `src/agent.ts`, a generic runner that loads a prompt, substitutes variables, and runs the Claude Agent SDK.
+Reusable agent templates for Islo jobs. Each role owns a prompt, a job manifest, and optional webhook rule fragments. Triggers are Islo incoming webhooks (not GitHub Actions). All roles share `src/agent.ts`.
 
 ## Structure
 
 ```
-src/agent.ts          — generic harness (prompt + vars → Claude Agent SDK)
-agents/               — reusable agent templates
-  review/github/      — GitHub PR reviewer (job + prompt)
-  babysit/            — CI failure fixer (job + action + prompt)
-  verify/             — E2E verification (job + action + prompt)
-  implementor/        — shared implementor prompt + per-source triggers
-    prompt.md         — implement issue, fetch more context from trigger source
-    linear/           — Linear label → job + webhook (no separate prompt)
-  delegator/          — routes @islo mentions to worker sandboxes/jobs
-webhooks/             — shared Islo incoming webhooks that fan out to multiple jobs
-  github-events.json  — GitHub PR review + @islo → delegator
+src/agent.ts                 — generic harness (prompt + vars → Claude Agent SDK)
+agents/                      — one directory per role
+  <role>/
+    prompt.md                — agent behavior
+    job.toml                 — durable job (sandbox + steps)
+    rules/<source>.json      — webhook rule fragments for that source
+webhooks/                    — assembled receivers (one URL per source)
+  github-events.json
+  linear-issues.json
+scripts/assemble-webhooks.js — merge agents/*/rules/<source>.json → webhooks/
 ```
 
-## Quick Start
+Roles today: `review`, `implementor`, `verify`, `babysit`, `delegator`.
 
-Deploy the relevant job manifest in Islo, then connect your trigger through Islo webhooks, schedules, manual runs, or a wrapper that launches the same job.
+## Axes
 
-### PR Review
+| Axis | Meaning | Lives in |
+|------|---------|----------|
+| **Role** | What the agent does | `agents/<role>/` |
+| **Source** | Which system fires the event | `webhooks/<source>-….json` + `rules/<source>.json` |
 
-Use `agents/review/github/job.toml` and `agents/review/github/prompt.md`.
+A role can have rules for many sources. A source receiver merges every role’s fragments for that source.
 
-### CI Babysit
+## Quick start
 
-```yaml
-name: Babysit CI
-on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-jobs:
-  babysit:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    if: github.event.workflow_run.conclusion == 'failure'
-    steps:
-      - uses: islo-labs/islo-agents/agents/babysit@v1
-        with:
-          run_id: ${{ github.event.workflow_run.id }}
-        env:
-          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
-```
-
-### E2E Verification
-
-```yaml
-name: Verify
-on:
-  pull_request:
-    types: [labeled]
-jobs:
-  verify:
-    if: github.event.label.name == 'islo-verify'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: islo-labs/islo-agents/agents/verify@v1
-        with:
-          pr_number: ${{ github.event.pull_request.number }}
-        env:
-          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
-```
-
-## Deploying Jobs
-
-Each template has a colocated `job.toml` manifest. The current Islo CLI deploy command reads manifests from `jobs/<name>/job.toml`, so put the chosen template manifest at that path before deploying.
+### Deploy a job
 
 ```bash
 mkdir -p jobs/islo-review
-cp agents/review/github/job.toml jobs/islo-review/job.toml
-islo job deploy islo-review --dry-run
+cp agents/review/job.toml jobs/islo-review/job.toml
 islo job deploy islo-review
 ```
 
-Repeat the same pattern for other templates such as `agents/babysit/job.toml`, `agents/verify/job.toml`, and `agents/implementor/linear/job.toml`.
+Same pattern for `implementor` → `jobs/linear-implementor`, `delegator`, `verify`, `babysit`.
 
-## Customizing Review Context
+### Wire webhooks
 
-Create a `REVIEW.md` at your repo root to inject extra context into review and babysit prompts. For verify, also add a `VERIFY.md`.
+```bash
+node scripts/assemble-webhooks.js
+islo webhook incoming create --request-json @webhooks/github-events.json
+islo webhook incoming create --request-json @webhooks/linear-issues.json
+```
 
+See `webhooks/README.md` for HMAC and GitHub/Linear setup.
+
+### Manual run
+
+```bash
+islo job run islo-review --param repo=islo-labs/islo-cli --param pr_number=1 …
+islo job run linear-implementor --param issue_id=… …
+```
+
+## Customizing context
+
+Create a `REVIEW.md` at your repo root for review/babysit. For verify, add `VERIFY.md`.

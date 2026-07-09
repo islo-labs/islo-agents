@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "agent": "tsx src/agent.ts"
+    "agent": "tsx src/agent.ts",
+    "assemble-webhooks": "node scripts/assemble-webhooks.js"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.139"
