@@ -1,0 +1,124 @@
+{
+  "name": "github-events",
+  "auth": { "auth_type": "none" },
+  "target": {
+    "target_type": "fixed_sandbox_name",
+    "sandbox_name": "github-events"
+  },
+  "idempotency": { "source": "header", "name": "X-GitHub-Delivery" },
+  "rules": [
+    {
+      "when": {
+        "op": "all",
+        "conditions": [
+          { "op": "exists", "json_path": "$.pull_request" },
+          { "op": "equals", "json_path": "$.action", "value": "opened" }
+        ]
+      },
+      "actions": [
+        {
+          "action_type": "trigger_job",
+          "job_name": "islo-review",
+          "params": {
+            "repo": {
+              "source": { "source": "json_path", "path": "$.repository.full_name" }
+            },
+            "repo_name": {
+              "source": { "source": "json_path", "path": "$.repository.name" }
+            },
+            "pr_number": {
+              "source": { "source": "json_path", "path": "$.pull_request.number" }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "when": {
+        "op": "all",
+        "conditions": [
+          { "op": "exists", "json_path": "$.pull_request" },
+          { "op": "equals", "json_path": "$.action", "value": "reopened" }
+        ]
+      },
+      "actions": [
+        {
+          "action_type": "trigger_job",
+          "job_name": "islo-review",
+          "params": {
+            "repo": {
+              "source": { "source": "json_path", "path": "$.repository.full_name" }
+            },
+            "repo_name": {
+              "source": { "source": "json_path", "path": "$.repository.name" }
+            },
+            "pr_number": {
+              "source": { "source": "json_path", "path": "$.pull_request.number" }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "when": {
+        "op": "all",
+        "conditions": [
+          { "op": "exists", "json_path": "$.pull_request" },
+          { "op": "equals", "json_path": "$.label.name", "value": "islo-review" }
+        ]
+      },
+      "actions": [
+        {
+          "action_type": "trigger_job",
+          "job_name": "islo-review",
+          "params": {
+            "repo": {
+              "source": { "source": "json_path", "path": "$.repository.full_name" }
+            },
+            "repo_name": {
+              "source": { "source": "json_path", "path": "$.repository.name" }
+            },
+            "pr_number": {
+              "source": { "source": "json_path", "path": "$.pull_request.number" }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "when": {
+        "op": "all",
+        "conditions": [
+          { "op": "equals", "json_path": "$.action", "value": "created" },
+          {
+            "op": "any",
+            "conditions": [
+              { "op": "exists", "json_path": "$.issue.pull_request" },
+              { "op": "exists", "json_path": "$.pull_request" }
+            ]
+          },
+          { "op": "matches", "json_path": "$.comment.body", "pattern": "(?i)@islo" }
+        ]
+      },
+      "actions": [
+        {
+          "action_type": "trigger_job",
+          "job_name": "mention-handler",
+          "params": {
+            "source": {
+              "parts": [{ "type": "literal", "value": "github" }]
+            },
+            "event_type": {
+              "parts": [{ "type": "literal", "value": "github_pr_comment" }]
+            },
+            "raw_payload": { "source": { "source": "raw_body" } },
+            "delivery_id": {
+              "source": { "source": "header", "name": "X-GitHub-Delivery" }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "status": "active"
+}

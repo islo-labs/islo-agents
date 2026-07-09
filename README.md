@@ -13,6 +13,8 @@ agents/               — reusable agent templates
   task/               — integration-triggered tasks
     prompt.md         — shared "implement this issue" prompt
     linear/           — Linear agent integration (activity emissions)
+webhooks/             — shared Islo incoming webhooks that fan out to multiple jobs
+  github-events.json  — GitHub PR review + @islo mentions
 ```
 
 ## Quick Start
