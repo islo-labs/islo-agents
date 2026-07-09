@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Assemble webhooks/<source>-*.json from agents/<role>/trigger_rules/<source>.json fragments.
+ * Assemble webhooks/<source>-*.json from agents/<role>/trigger-rules/<source>.json fragments.
  *
  * Usage: node scripts/assemble-webhooks.js
  */
@@ -49,14 +49,14 @@ function collectRules(source) {
     .sort();
 
   for (const agent of agents) {
-    const path = join(agentsDir, agent, "trigger_rules", `${source}.json`);
+    const path = join(agentsDir, agent, "trigger-rules", `${source}.json`);
     if (!existsSync(path)) continue;
     const fragment = JSON.parse(readFileSync(path, "utf8"));
     if (!Array.isArray(fragment)) {
       throw new Error(`${path} must be a JSON array of webhook rules`);
     }
     rules.push(...fragment);
-    console.log(`+ ${agent}/trigger_rules/${source}.json (${fragment.length} rule(s))`);
+    console.log(`+ ${agent}/trigger-rules/${source}.json (${fragment.length} rule(s))`);
   }
   return rules;
 }

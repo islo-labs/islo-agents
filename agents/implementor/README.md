@@ -3,7 +3,7 @@
 Implements a tracked issue: enrich context from the trigger source, change code, open PR(s), report back.
 
 - **Prompt / job:** `prompt.md`, `job.toml` (deployed as `linear-implementor` today)
-- **Linear trigger:** `trigger_rules/linear.json` → assembled into `webhooks/linear-issues.json`
+- **Linear trigger:** `trigger-rules/linear.json` → assembled into `webhooks/linear-issues.json`
 
 ```bash
 mkdir -p jobs/linear-implementor
@@ -14,4 +14,4 @@ node scripts/assemble-webhooks.js
 islo webhook incoming create --request-json @webhooks/linear-issues.json
 ```
 
-Update the `islo` label UUID in `trigger_rules/linear.json` if your workspace differs, then reassemble.
+Update the `islo` label UUID in `trigger-rules/linear.json` if your workspace differs, then reassemble.

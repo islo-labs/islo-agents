@@ -16,7 +16,7 @@ GitHub @islo comment
 
 Deterministic events stay on their own triggers (Linear `islo` label → `linear-implementor`, PR open → `islo-review`, etc.). Mentions go through the delegator because a human message needs interpretation.
 
-GitHub mention routing is defined in `trigger_rules/github.json` and assembled into `webhooks/github-events.json`.
+GitHub mention routing is defined in `trigger-rules/github.json` and assembled into `webhooks/github-events.json`.
 
 ## Sandbox
 

@@ -10,11 +10,11 @@ agents/                             — one directory per role
   <role>/
     prompt.md                       — agent behavior
     job.toml                        — durable job (sandbox + steps)
-    trigger_rules/<source>.json     — webhook rule fragments for that source
+    trigger-rules/<source>.json     — webhook rule fragments for that source
 webhooks/                           — assembled receivers (one URL per source)
   github-events.json
   linear-issues.json
-scripts/assemble-webhooks.js        — merge agents/*/trigger_rules/<source>.json → webhooks/
+scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.json → webhooks/
 ```
 
 Roles today: `review`, `implementor`, `verify`, `babysit`, `delegator`.
@@ -24,7 +24,7 @@ Roles today: `review`, `implementor`, `verify`, `babysit`, `delegator`.
 | Axis | Meaning | Lives in |
 |------|---------|----------|
 | **Role** | What the agent does | `agents/<role>/` |
-| **Source** | Which system fires the event | `webhooks/<source>-….json` + `trigger_rules/<source>.json` |
+| **Source** | Which system fires the event | `webhooks/<source>-….json` + `trigger-rules/<source>.json` |
 
 A role can have trigger rules for many sources. A source receiver merges every role’s fragments for that source.
 
