@@ -9,7 +9,7 @@ Add "islo" label → Linear Issue webhook → bear-agent (webhook-level filter) 
 ```
 
 - **Trigger**: Issue update webhook with compound `when` conditions — only fires when the "islo" label is specifically just added
-- **Agent**: Generic `src/agent.ts` with `agents/implementor/linear/prompt.md`
+- **Agent**: Generic `src/agent.ts` with shared `agents/implementor/prompt.md`
 - **Sandbox**: Uses the `islo-stack` snapshot with all repos pre-cloned in `/workspace/`
 - **Output**: Creates GitHub PR(s) and posts a comment on the Linear issue
 
