@@ -1,6 +1,6 @@
 [job]
 name = "islo-babysit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Automatically fix CI failures on a PR branch."
 
 [job.params.repo]
@@ -9,35 +9,30 @@ required = true
 description = "GitHub repository in owner/name form."
 pattern = "^[^/]+/[^/]+$"
 
-[job.params.run_id]
+[job.params.repo_name]
+type = "string"
+required = true
+description = "Repository name without owner, used in the sandbox name."
+pattern = "^[a-z0-9][a-z0-9._-]*$"
+
+[job.params.workflow_run_id]
 type = "string"
 required = true
 description = "GitHub Actions workflow run ID that failed."
 
-[job.params.pr_number]
-type = "integer"
-required = true
-description = "Pull request number."
-
 [job.params.head_ref]
 type = "string"
-required = true
-description = "PR head branch name."
+default = ""
+description = "PR head branch name. Resolved from the failed run when empty."
 
-[job.params.base_ref]
+[job.params.head_repository]
 type = "string"
-required = true
-description = "PR base branch name."
-
-[job.params.sandbox_name]
-type = "string"
-required = true
-description = "Stable PR-scoped sandbox name."
-pattern = "^islo-babysit-[a-f0-9]{12}-[0-9]+$"
+default = ""
+description = "full_name of the workflow head repository. Used to skip fork PRs."
 
 [job.params.agents_ref]
 type = "string"
-required = true
+default = "v1"
 description = "islo-agents git ref to run."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
@@ -65,7 +60,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "{{sandbox_name}}"
+name = "babysit-{{repo_name}}-{{workflow_run_id}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-stack"
 vcpus = 4
@@ -81,48 +76,50 @@ delete_after = 604800
 name = "babysit"
 
 [[run.tasks.steps]]
-name = "checkout-pr"
-timeout = 120
-exec = [
-  "bash",
-  "-lc",
-  '''
-set -euo pipefail
-REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
-cd /workspace
-[ -d "${REPO_SHORT}" ] || git clone "https://github.com/{{repo}}.git" "${REPO_SHORT}"
-cd "${REPO_SHORT}"
-git fetch origin "{{head_ref}}"
-git checkout -B "{{head_ref}}" FETCH_HEAD
-''',
-]
-
-[[run.tasks.steps]]
-name = "bot-commit-guard"
-timeout = 30
-exec = [
-  "bash",
-  "-lc",
-  '''
-set -euo pipefail
-REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
-cd "/workspace/${REPO_SHORT}"
-BOT_COMMITS=$(git log --oneline --author="islo-agents" -10 | wc -l | tr -d ' ')
-if [ "${BOT_COMMITS}" -ge 3 ]; then
-  echo "Bot has already made ${BOT_COMMITS} fix attempts. Stopping to avoid infinite loop."
-  exit 0
-fi
-''',
-]
-
-[[run.tasks.steps]]
-name = "run-agent"
+name = "resolve-and-run"
 timeout = 900
 exec = [
   "bash",
   "-lc",
   '''
 set -euo pipefail
+
+REPO="{{repo}}"
+RUN_ID="{{workflow_run_id}}"
+HEAD_REF="{{head_ref}}"
+HEAD_REPOSITORY="{{head_repository}}"
+REPO_SHORT="$(echo "${REPO}" | cut -d/ -f2)"
+
+# Skip fork PRs (same filter as the old GHA babysit workflow).
+if [ -n "${HEAD_REPOSITORY}" ] && [ "${HEAD_REPOSITORY}" != "${REPO}" ]; then
+  echo "Skipping babysit for fork PR head ${HEAD_REPOSITORY} (repo is ${REPO})"
+  exit 0
+fi
+
+if [ -z "${HEAD_REF}" ]; then
+  HEAD_REF="$(gh run view "${RUN_ID}" --repo "${REPO}" --json headBranch --jq .headBranch)"
+fi
+
+PR_JSON="$(gh pr list --repo "${REPO}" --head "${HEAD_REF}" --json number,baseRefName --limit 1)"
+PR_NUMBER="$(printf '%s' "${PR_JSON}" | jq -r '.[0].number // empty')"
+BASE_REF="$(printf '%s' "${PR_JSON}" | jq -r '.[0].baseRefName // empty')"
+if [ -z "${PR_NUMBER}" ]; then
+  echo "No open PR found for head branch ${HEAD_REF} in ${REPO}"
+  exit 1
+fi
+
+cd /workspace
+[ -d "${REPO_SHORT}" ] || git clone "https://github.com/${REPO}.git" "${REPO_SHORT}"
+cd "${REPO_SHORT}"
+git fetch origin "${HEAD_REF}"
+git checkout -B "${HEAD_REF}" FETCH_HEAD
+
+BOT_COMMITS=$(git log --oneline --author="islo-agents" -10 | wc -l | tr -d ' ')
+if [ "${BOT_COMMITS}" -ge 3 ]; then
+  echo "Bot has already made ${BOT_COMMITS} fix attempts. Stopping to avoid infinite loop."
+  exit 0
+fi
+
 cd /workspace
 rm -rf islo-agents
 git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
@@ -130,7 +127,6 @@ cd islo-agents
 git fetch --depth=1 origin "{{agents_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
 npm ci
-REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
 npx tsx src/agent.ts \
   --prompt agents/babysit/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \
@@ -138,9 +134,9 @@ npx tsx src/agent.ts \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
-  --var REPO="{{repo}}" \
-  --var PR_NUMBER="{{pr_number}}" \
-  --var RUN_ID="{{run_id}}"
+  --var REPO="${REPO}" \
+  --var PR_NUMBER="${PR_NUMBER}" \
+  --var RUN_ID="${RUN_ID}"
 ''',
 ]
 

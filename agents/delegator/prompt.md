@@ -45,9 +45,9 @@ Your cwd is the `islo-agents` checkout. Use it as the catalog of agents you can 
 | Intent | Agent / job | Typical sandbox naming |
 |--------|-------------|------------------------|
 | Implement / fix / address feedback | `linear-implementor` / `agents/implementor` | `linear-implementor-<issue-id>` or `implement-<ISSUE>` |
-| Review a PR | `islo-review` / `agents/review` | `review-<repo>-<pr>` or `islo-review-…` |
-| Verify E2E | `islo-verify` / `agents/verify` | `islo-verify-…` |
-| Fix CI | `islo-babysit` / `agents/babysit` | `islo-babysit-…` |
+| Review a PR | `islo-review` / `agents/review` | `review-<repo>-<pr>` |
+| Verify E2E | `islo-verify` / `agents/verify` | `islo-verify-<repo>-<pr>` |
+| Fix CI | `islo-babysit` / `agents/babysit` | `babysit-<repo>-<workflow-run-id>` |
 
 Read the relevant `job.toml` / `prompt.md` under `agents/` when you need exact params or behavior. Treat naming as hints, not hard requirements.
 

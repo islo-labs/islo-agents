@@ -1,6 +1,6 @@
 [job]
 name = "islo-verify"
-version = "0.1.0"
+version = "0.2.0"
 description = "Empirical E2E verification of a PR against a full running stack."
 
 [job.params.repo]
@@ -8,6 +8,12 @@ type = "string"
 required = true
 description = "GitHub repository in owner/name form."
 pattern = "^[^/]+/[^/]+$"
+
+[job.params.repo_name]
+type = "string"
+required = true
+description = "Repository name without owner, used in the sandbox name."
+pattern = "^[a-z0-9][a-z0-9._-]*$"
 
 [job.params.pr_number]
 type = "integer"
@@ -34,15 +40,9 @@ type = "string"
 default = ""
 description = "Comma-separated repo:ref pairs for multi-repo verification."
 
-[job.params.sandbox_name]
-type = "string"
-required = true
-description = "Stable PR-scoped sandbox name."
-pattern = "^islo-verify-[a-f0-9]{12}-[0-9]+$"
-
 [job.params.agents_ref]
 type = "string"
-required = true
+default = "v1"
 description = "islo-agents git ref to run."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
@@ -80,7 +80,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "{{sandbox_name}}"
+name = "islo-verify-{{repo_name}}-{{pr_number}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-fullstack"
 vcpus = 8

@@ -1,6 +1,6 @@
 [job]
 name = "islo-review"
-version = "0.1.0"
+version = "0.2.0"
 description = "Run automated GitHub PR code review as a durable Islo job."
 
 [job.params.repo]
@@ -9,6 +9,12 @@ required = true
 description = "GitHub repository in owner/name form."
 pattern = "^[^/]+/[^/]+$"
 
+[job.params.repo_name]
+type = "string"
+required = true
+description = "Repository name without owner, used in the sandbox name."
+pattern = "^[a-z0-9][a-z0-9._-]*$"
+
 [job.params.pr_number]
 type = "integer"
 required = true
@@ -16,23 +22,17 @@ description = "Pull request number to review."
 
 [job.params.head_ref]
 type = "string"
-required = true
-description = "PR head branch name."
+default = ""
+description = "PR head branch name. Resolved from the PR when empty."
 
 [job.params.base_ref]
 type = "string"
-required = true
-description = "PR base branch name."
-
-[job.params.sandbox_name]
-type = "string"
-required = true
-description = "Stable PR-scoped sandbox name to reuse across review runs."
-pattern = "^islo-review-[a-f0-9]{12}-[0-9]+$"
+default = ""
+description = "PR base branch name. Resolved from the PR when empty."
 
 [job.params.agents_ref]
 type = "string"
-required = true
+default = "v1"
 description = "islo-agents git ref to run, for example v1 or a branch name."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
@@ -60,7 +60,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "{{sandbox_name}}"
+name = "review-{{repo_name}}-{{pr_number}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-stack"
 vcpus = 4
@@ -76,53 +76,6 @@ delete_after = 604800
 name = "review"
 
 [[run.tasks.steps]]
-name = "checkout-pr"
-timeout = 120
-exec = [
-  "bash",
-  "-lc",
-  '''
-set -euo pipefail
-REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
-cd /workspace
-[ -d "${REPO_SHORT}" ] || git clone "https://github.com/{{repo}}.git" "${REPO_SHORT}"
-cd "${REPO_SHORT}"
-git fetch origin "{{head_ref}}"
-git checkout -B "{{head_ref}}" FETCH_HEAD
-''',
-]
-
-[[run.tasks.steps]]
-name = "checkout-agents"
-timeout = 120
-exec = [
-  "bash",
-  "-lc",
-  '''
-set -euo pipefail
-cd /workspace
-rm -rf islo-agents
-git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
-cd islo-agents
-git fetch --depth=1 origin "{{agents_ref}}"
-git -c advice.detachedHead=false checkout FETCH_HEAD
-''',
-]
-
-[[run.tasks.steps]]
-name = "install-agent-deps"
-timeout = 300
-exec = [
-  "bash",
-  "-lc",
-  '''
-set -euo pipefail
-cd /workspace/islo-agents
-npm ci
-''',
-]
-
-[[run.tasks.steps]]
 name = "run-reviewer"
 timeout = 900
 exec = [
@@ -130,20 +83,44 @@ exec = [
   "-lc",
   '''
 set -euo pipefail
-cd /workspace/islo-agents
-REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
+
+REPO="{{repo}}"
+PR_NUMBER="{{pr_number}}"
+HEAD_REF="{{head_ref}}"
+BASE_REF="{{base_ref}}"
+REPO_SHORT="$(echo "${REPO}" | cut -d/ -f2)"
+
+if [ -z "${HEAD_REF}" ] || [ -z "${BASE_REF}" ]; then
+  PR_META="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json headRefName,baseRefName)"
+  [ -n "${HEAD_REF}" ] || HEAD_REF="$(printf '%s' "${PR_META}" | jq -r .headRefName)"
+  [ -n "${BASE_REF}" ] || BASE_REF="$(printf '%s' "${PR_META}" | jq -r .baseRefName)"
+fi
+
+cd /workspace
+[ -d "${REPO_SHORT}" ] || git clone "https://github.com/${REPO}.git" "${REPO_SHORT}"
+cd "${REPO_SHORT}"
+git fetch origin "${HEAD_REF}"
+git checkout -B "${HEAD_REF}" FETCH_HEAD
+
+cd /workspace
+rm -rf islo-agents
+git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
+cd islo-agents
+git fetch --depth=1 origin "{{agents_ref}}"
+git -c advice.detachedHead=false checkout FETCH_HEAD
+npm ci
 npx tsx src/agent.ts \
   --prompt agents/review/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
-  --session-key "{{repo}}-{{pr_number}}" \
+  --session-key "${REPO}-${PR_NUMBER}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
-  --var REPO="{{repo}}" \
-  --var PR_NUMBER="{{pr_number}}" \
-  --var HEAD_REF="{{head_ref}}" \
-  --var BASE_REF="{{base_ref}}"
+  --var REPO="${REPO}" \
+  --var PR_NUMBER="${PR_NUMBER}" \
+  --var HEAD_REF="${HEAD_REF}" \
+  --var BASE_REF="${BASE_REF}"
 ''',
 ]
 

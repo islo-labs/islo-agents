@@ -56,7 +56,7 @@ islo webhook incoming update <webhook-id> --request-json '{
 }'
 ```
 
-Point the GitHub org/repo webhook at the `receiver_url`, content type `application/json`, events: **Pull requests**, **Issue comments**.
+Point the GitHub org/repo webhook at the `receiver_url`, content type `application/json`, events: **Pull requests**, **Issue comments**, **Workflow runs**.
 
 ### Linear HMAC
 
