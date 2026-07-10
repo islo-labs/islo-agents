@@ -1,4 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { spawnSync } from "child_process";
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join, resolve } from "path";
@@ -15,6 +16,11 @@ interface Args {
   sessionKey?: string;
   contextFiles: string[];
   vars: Record<string, string>;
+  knowledgeRepo?: string;
+  knowledgeLevel?: string;
+  knowledgeTag?: string;
+  knowledgeQuery?: string;
+  knowledgeIds: string[];
 }
 
 function parseArgs(): Args {
@@ -26,6 +32,7 @@ function parseArgs(): Args {
     maxTurns: 50,
     contextFiles: [],
     vars: {},
+    knowledgeIds: [],
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -51,6 +58,21 @@ function parseArgs(): Args {
       case "--context-file":
         args.contextFiles.push(argv[++i]);
         break;
+      case "--knowledge-repo":
+        args.knowledgeRepo = argv[++i];
+        break;
+      case "--knowledge-level":
+        args.knowledgeLevel = argv[++i];
+        break;
+      case "--knowledge-tag":
+        args.knowledgeTag = argv[++i];
+        break;
+      case "--knowledge-query":
+        args.knowledgeQuery = argv[++i];
+        break;
+      case "--knowledge-id":
+        args.knowledgeIds.push(argv[++i]);
+        break;
       case "--var": {
         const eq = argv[++i];
         const idx = eq.indexOf("=");
@@ -64,7 +86,7 @@ function parseArgs(): Args {
 
   if (!args.prompt) {
     console.error(
-      "Usage: tsx src/agent.ts --prompt <path> [--cwd <dir>] [--model <m>] [--max-turns <n>] [--max-budget <n>] [--session-key <key>] [--context-file <path>]... [--var KEY=VALUE]..."
+      "Usage: tsx src/agent.ts --prompt <path> [--cwd <dir>] [--model <m>] [--max-turns <n>] [--max-budget <n>] [--session-key <key>] [--context-file <path>]... [--knowledge-repo <repo>] [--knowledge-level memory|skill|rule] [--knowledge-tag <tag>] [--knowledge-query <q>] [--knowledge-id <slug>]... [--var KEY=VALUE]..."
     );
     process.exit(1);
   }
@@ -94,6 +116,92 @@ function writeSessionId(path: string, sessionId: string, key: string): void {
   );
 }
 
+function hasKnowledgeRequest(args: Args): boolean {
+  return Boolean(
+    args.knowledgeRepo ||
+      args.knowledgeLevel ||
+      args.knowledgeTag ||
+      args.knowledgeQuery ||
+      args.knowledgeIds.length
+  );
+}
+
+function runIsloJson(argv: string[]): unknown | undefined {
+  const result = spawnSync("islo", argv, {
+    encoding: "utf-8",
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  if (result.error) {
+    console.error(`islo ${argv.join(" ")}: ${result.error.message}`);
+    return undefined;
+  }
+  if (result.status !== 0) {
+    const err = (result.stderr || result.stdout || "").trim();
+    console.error(`islo ${argv.join(" ")} failed (exit ${result.status})${err ? `: ${err}` : ""}`);
+    return undefined;
+  }
+  try {
+    return JSON.parse(result.stdout);
+  } catch (e) {
+    console.error(`islo ${argv.join(" ")}: invalid JSON (${e})`);
+    return undefined;
+  }
+}
+
+function itemKey(item: Record<string, unknown>): string | undefined {
+  const key = item.identifier ?? item.slug;
+  return typeof key === "string" && key.length > 0 ? key : undefined;
+}
+
+function itemBody(item: Record<string, unknown>): string | undefined {
+  return typeof item.body === "string" && item.body.length > 0 ? item.body : undefined;
+}
+
+/** Fetch knowledge via one optional filter query and/or explicit IDs; dedupe by slug. */
+function loadKnowledgeMarkdown(args: Args): string {
+  if (!hasKnowledgeRequest(args)) return "";
+
+  const byId = new Map<string, string>();
+
+  const filterActive = Boolean(
+    args.knowledgeRepo || args.knowledgeLevel || args.knowledgeTag || args.knowledgeQuery
+  );
+  if (filterActive) {
+    const renderArgs = ["knowledge", "render", "-o", "json"];
+    if (args.knowledgeRepo) renderArgs.push("--repo", args.knowledgeRepo);
+    if (args.knowledgeLevel) renderArgs.push("--level", args.knowledgeLevel);
+    if (args.knowledgeTag) renderArgs.push("--tag", args.knowledgeTag);
+    if (args.knowledgeQuery) renderArgs.push("--query", args.knowledgeQuery);
+
+    const rendered = runIsloJson(renderArgs);
+    if (Array.isArray(rendered)) {
+      for (const entry of rendered) {
+        if (!entry || typeof entry !== "object") continue;
+        const item = entry as Record<string, unknown>;
+        const key = itemKey(item);
+        const body = itemBody(item);
+        if (key && body) byId.set(key, body);
+      }
+    } else if (rendered !== undefined) {
+      console.error("islo knowledge render -o json: expected an array");
+    }
+  }
+
+  for (const id of args.knowledgeIds) {
+    const got = runIsloJson(["knowledge", "get", id, "-o", "json"]);
+    if (!got || typeof got !== "object") continue;
+    const item = got as Record<string, unknown>;
+    const key = itemKey(item) ?? id;
+    const body = itemBody(item);
+    if (body) byId.set(key, body);
+    else console.error(`knowledge item '${id}' has empty body; skipping`);
+  }
+
+  if (byId.size === 0) return "";
+  console.log(`Loaded ${byId.size} knowledge item(s)`);
+  return Array.from(byId.values()).join("\n\n---\n\n");
+}
+
 const args = parseArgs();
 
 const promptPath = resolve(PROJECT_ROOT, args.prompt);
@@ -111,10 +219,29 @@ for (const cf of args.contextFiles) {
     contextSection += readFileSync(cfPath, "utf-8") + "\n";
   }
 }
+
+const knowledgeMarkdown = loadKnowledgeMarkdown(args);
+args.vars["KNOWLEDGE_SECTION"] = knowledgeMarkdown;
+if (knowledgeMarkdown) {
+  contextSection = contextSection
+    ? `${contextSection}\n${knowledgeMarkdown}\n`
+    : `${knowledgeMarkdown}\n`;
+}
 args.vars["CONTEXT_SECTION"] = contextSection;
+
+const hadContextPlaceholder = promptTemplate.includes("{{CONTEXT_SECTION}}");
+const hadKnowledgePlaceholder = promptTemplate.includes("{{KNOWLEDGE_SECTION}}");
 
 for (const [key, value] of Object.entries(args.vars)) {
   promptTemplate = promptTemplate.replaceAll(`{{${key}}}`, value);
+}
+
+if (
+  knowledgeMarkdown &&
+  !hadContextPlaceholder &&
+  !hadKnowledgePlaceholder
+) {
+  promptTemplate += `\n\n## Knowledge\n\n${knowledgeMarkdown}\n`;
 }
 
 const sessionPath = args.sessionKey ? sessionStatePath(args.sessionKey) : undefined;
