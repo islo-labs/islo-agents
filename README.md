@@ -2,7 +2,7 @@
 
 Shared agent templates for Islo jobs: prompts, durable job manifests, and webhook trigger-rule fragments. Deploy jobs and assemble webhooks from this checkout.
 
-**Role vs source:** roles (`review`, `implementer`, …) are source-agnostic. Source systems only appear under `trigger-rules/<source>.json` and assembled `webhooks/`. Workspace-specific values that cannot be generalized (e.g. a Linear label UUID) ship as placeholders.
+**Role vs source:** roles (`review`, `implementer`, …) are source-agnostic. Source systems only appear under `trigger-rules/<source>.toml` and assembled `webhooks/`. Workspace-specific values that cannot be generalized (e.g. a Linear label UUID) ship as placeholders.
 
 ## Structure
 
@@ -12,11 +12,11 @@ agents/                             — one directory per role
   <role>/
     prompt.md                       — agent behavior
     job.toml                        — durable job (sandbox + steps); job name = role name
-    trigger-rules/<source>.json     — webhook rule fragments for that source
+    trigger-rules/<source>.toml     — webhook rule fragments for that source
 webhooks/                           — assembled receivers
-  github-events.json
-  linear-issues.json
-scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.json → webhooks/
+  github-events.toml
+  linear-issues.toml
+scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.toml → webhooks/
 ```
 
 The harness (`src/agent.ts`) requires `ISLO_API_KEY` to be set (automatic in Islo sandboxes via phantom env vars, or any valid API key). Optional `--knowledge-*` flags use the `@islo-labs/sdk` to fetch knowledge items and inject their Markdown bodies into the prompt; on failure they warn and continue.
@@ -30,13 +30,13 @@ Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; de
 | Axis | Meaning | Lives in |
 |------|---------|----------|
 | **Role** | What the agent does | `agents/<role>/` + job name |
-| **Source** | Which system fires the event | `trigger-rules/<source>.json` → `webhooks/` |
+| **Source** | Which system fires the event | `trigger-rules/<source>.toml` → `webhooks/` |
 
 ## Quick start
 
 ### 1. Replace placeholders
 
-- **Implementer (Linear example):** in `agents/implementer/trigger-rules/linear.json`, replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` with your label UUID, then reassemble:
+- **Implementer (Linear example):** in `agents/implementer/trigger-rules/linear.toml`, replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` with your label UUID, then reassemble:
 
 ```bash
 npm run assemble-webhooks
@@ -57,8 +57,8 @@ Same pattern for `implementer`, `delegator`, `verify`, `babysit` (directory name
 ### 3. Wire webhooks
 
 ```bash
-islo webhook incoming create --request-json @webhooks/github-events.json
-islo webhook incoming create --request-json @webhooks/linear-issues.json
+islo webhook incoming create --request-toml @webhooks/github-events.toml
+islo webhook incoming create --request-toml @webhooks/linear-issues.toml
 ```
 
 See `webhooks/README.md` for HMAC and GitHub/Linear setup.

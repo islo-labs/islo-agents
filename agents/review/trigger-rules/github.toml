@@ -1,0 +1,85 @@
+[[rules]]
+
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "exists"
+json_path = "$.pull_request"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "opened"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "review"
+
+[rules.actions.params.repo]
+source = { source = "json_path", path = "$.repository.full_name" }
+
+[rules.actions.params.repo_name]
+source = { source = "json_path", path = "$.repository.name" }
+
+[rules.actions.params.pr_number]
+source = { source = "json_path", path = "$.pull_request.number" }
+
+[[rules]]
+
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "exists"
+json_path = "$.pull_request"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "reopened"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "review"
+
+[rules.actions.params.repo]
+source = { source = "json_path", path = "$.repository.full_name" }
+
+[rules.actions.params.repo_name]
+source = { source = "json_path", path = "$.repository.name" }
+
+[rules.actions.params.pr_number]
+source = { source = "json_path", path = "$.pull_request.number" }
+
+[[rules]]
+
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "exists"
+json_path = "$.pull_request"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "labeled"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.label.name"
+value = "islo-review"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "review"
+
+[rules.actions.params.repo]
+source = { source = "json_path", path = "$.repository.full_name" }
+
+[rules.actions.params.repo_name]
+source = { source = "json_path", path = "$.repository.name" }
+
+[rules.actions.params.pr_number]
+source = { source = "json_path", path = "$.pull_request.number" }

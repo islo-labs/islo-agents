@@ -1,0 +1,226 @@
+name = "github-events"
+status = "active"
+
+[auth]
+auth_type = "none"
+
+[target]
+target_type = "fixed_sandbox_name"
+sandbox_name = "github-events"
+
+[idempotency]
+source = "header"
+name = "X-GitHub-Delivery"
+
+[[rules]]
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "completed"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.workflow_run.conclusion"
+value = "failure"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.workflow_run.event"
+value = "pull_request"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "babysit"
+
+[rules.actions.params.repo.source]
+source = "json_path"
+path = "$.repository.full_name"
+
+[rules.actions.params.repo_name.source]
+source = "json_path"
+path = "$.repository.name"
+
+[[rules.actions.params.workflow_run_id.parts]]
+type = "source"
+
+[rules.actions.params.workflow_run_id.parts.source]
+source = "json_path"
+path = "$.workflow_run.id"
+
+[rules.actions.params.head_repository.source]
+source = "json_path"
+path = "$.workflow_run.head_repository.full_name"
+
+[[rules]]
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "created"
+
+[[rules.when.conditions]]
+op = "any"
+
+[[rules.when.conditions.conditions]]
+op = "exists"
+json_path = "$.issue.pull_request"
+
+[[rules.when.conditions.conditions]]
+op = "exists"
+json_path = "$.pull_request"
+
+[[rules.when.conditions]]
+op = "matches"
+json_path = "$.comment.body"
+pattern = "(?i)@islo"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "delegator"
+
+[[rules.actions.params.source.parts]]
+type = "literal"
+value = "github"
+
+[[rules.actions.params.event_type.parts]]
+type = "literal"
+value = "github_pr_comment"
+
+[rules.actions.params.raw_payload.source]
+source = "raw_body"
+
+[rules.actions.params.delivery_id.source]
+source = "header"
+name = "X-GitHub-Delivery"
+
+[[rules]]
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "exists"
+json_path = "$.pull_request"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "opened"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "review"
+
+[rules.actions.params.repo.source]
+source = "json_path"
+path = "$.repository.full_name"
+
+[rules.actions.params.repo_name.source]
+source = "json_path"
+path = "$.repository.name"
+
+[rules.actions.params.pr_number.source]
+source = "json_path"
+path = "$.pull_request.number"
+
+[[rules]]
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "exists"
+json_path = "$.pull_request"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "reopened"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "review"
+
+[rules.actions.params.repo.source]
+source = "json_path"
+path = "$.repository.full_name"
+
+[rules.actions.params.repo_name.source]
+source = "json_path"
+path = "$.repository.name"
+
+[rules.actions.params.pr_number.source]
+source = "json_path"
+path = "$.pull_request.number"
+
+[[rules]]
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "exists"
+json_path = "$.pull_request"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "labeled"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.label.name"
+value = "islo-review"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "review"
+
+[rules.actions.params.repo.source]
+source = "json_path"
+path = "$.repository.full_name"
+
+[rules.actions.params.repo_name.source]
+source = "json_path"
+path = "$.repository.name"
+
+[rules.actions.params.pr_number.source]
+source = "json_path"
+path = "$.pull_request.number"
+
+[[rules]]
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "exists"
+json_path = "$.pull_request"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "labeled"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.label.name"
+value = "islo-verify"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "verify"
+
+[rules.actions.params.repo.source]
+source = "json_path"
+path = "$.repository.full_name"
+
+[rules.actions.params.repo_name.source]
+source = "json_path"
+path = "$.repository.name"
+
+[rules.actions.params.pr_number.source]
+source = "json_path"
+path = "$.pull_request.number"
+

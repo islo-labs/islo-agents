@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * Assemble webhooks/<source>-*.json from agents/<role>/trigger-rules/<source>.json fragments.
+ * Assemble webhooks/<source>.toml from agents/<role>/trigger-rules/<source>.toml fragments.
  *
  * Usage: node scripts/assemble-webhooks.js
  */
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { parse, stringify } from "smol-toml";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const agentsDir = join(root, "agents");
@@ -14,7 +15,7 @@ const webhooksDir = join(root, "webhooks");
 
 const receivers = {
   github: {
-    out: "github-events.json",
+    out: "github-events.toml",
     shell: {
       name: "github-events",
       auth: { auth_type: "none" },
@@ -27,7 +28,7 @@ const receivers = {
     },
   },
   linear: {
-    out: "linear-issues.json",
+    out: "linear-issues.toml",
     shell: {
       name: "linear-issues",
       auth: { auth_type: "none" },
@@ -49,14 +50,16 @@ function collectRules(source) {
     .sort();
 
   for (const agent of agents) {
-    const path = join(agentsDir, agent, "trigger-rules", `${source}.json`);
+    const path = join(agentsDir, agent, "trigger-rules", `${source}.toml`);
     if (!existsSync(path)) continue;
-    const fragment = JSON.parse(readFileSync(path, "utf8"));
-    if (!Array.isArray(fragment)) {
-      throw new Error(`${path} must be a JSON array of webhook rules`);
+    const fragment = parse(readFileSync(path, "utf8"));
+    if (!Array.isArray(fragment.rules)) {
+      throw new Error(`${path} must contain a [[rules]] array`);
     }
-    rules.push(...fragment);
-    console.log(`+ ${agent}/trigger-rules/${source}.json (${fragment.length} rule(s))`);
+    rules.push(...fragment.rules);
+    console.log(
+      `+ ${agent}/trigger-rules/${source}.toml (${fragment.rules.length} rule(s))`
+    );
   }
   return rules;
 }
@@ -65,6 +68,6 @@ for (const [source, cfg] of Object.entries(receivers)) {
   const rules = collectRules(source);
   const body = { ...cfg.shell, rules };
   const outPath = join(webhooksDir, cfg.out);
-  writeFileSync(outPath, JSON.stringify(body, null, 2) + "\n");
+  writeFileSync(outPath, stringify(body) + "\n");
   console.log(`wrote ${cfg.out} (${rules.length} rule(s))\n`);
 }

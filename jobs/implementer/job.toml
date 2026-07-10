@@ -1,0 +1,132 @@
+[job]
+name = "implementer"
+version = "0.5.0"
+description = "Implement a tracked issue: enrich context from the source system, change code, open PR(s), report back."
+
+[job.params.issue_id]
+type = "string"
+required = true
+description = "Stable issue ID in the source system (UUID, key, etc.)."
+
+[job.params.issue_title]
+type = "string"
+default = ""
+description = "Issue title."
+
+[job.params.issue_description]
+type = "string"
+default = ""
+description = "Issue description/body."
+
+[job.params.issue_identifier]
+type = "string"
+default = ""
+description = "Human-readable issue identifier (e.g. ENG-123, PROJ-45)."
+
+[job.params.issue_url]
+type = "string"
+default = ""
+description = "URL of the issue in the source system."
+
+[job.params.agents_git_ref]
+type = "string"
+default = "main"
+description = "Git ref (branch, tag, or commit) of the agents pack to check out."
+pattern = "^[a-zA-Z0-9._/@^~-]+$"
+
+[job.params.model]
+type = "string"
+default = "claude-sonnet-4-5"
+description = "Claude model for the implementer agent."
+
+[job.params.max_turns]
+type = "integer"
+default = 100
+description = "Maximum agentic turns."
+
+[job.params.max_budget_usd]
+type = "number"
+default = 15
+description = "Maximum budget in USD."
+
+[run]
+fail_fast = true
+fanout = false
+timeout = 3600
+workdir = "/workspace"
+teardown_on_complete = false
+
+[run.sandbox]
+mode = "ensure"
+name = "implementer-{{issue_id}}"
+image = "docker.io/library/islo-runner:latest"
+snapshot_name = "islo-stack"
+vcpus = 4
+memory_mb = 4096
+gateway_profile = "default"
+init = { type = "full" }
+
+[run.sandbox.lifecycle]
+pause_after_idle = 1800
+delete_after = 604800
+
+[[run.tasks]]
+name = "implementer"
+
+[[run.tasks.steps]]
+name = "checkout-pack"
+timeout = 120
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace
+rm -rf islo-agents
+git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
+cd islo-agents
+git fetch --depth=1 origin "{{agents_git_ref}}"
+git -c advice.detachedHead=false checkout FETCH_HEAD
+''',
+]
+
+[[run.tasks.steps]]
+name = "install-deps"
+timeout = 300
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
+npm ci
+''',
+]
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 3600
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/islo-agents
+npx tsx src/agent.ts \
+  --prompt agents/implementer/prompt.md \
+  --cwd /workspace \
+  --session-key "implementer-{{issue_id}}" \
+  --model "{{model}}" \
+  --max-turns "{{max_turns}}" \
+  --max-budget "{{max_budget_usd}}" \
+  --var ISSUE_ID="{{issue_id}}" \
+  --var ISSUE_TITLE="{{issue_title}}" \
+  --var ISSUE_DESCRIPTION="{{issue_description}}" \
+  --var ISSUE_IDENTIFIER="{{issue_identifier}}" \
+  --var ISSUE_URL="{{issue_url}}"
+''',
+]
+
+[[run.tasks.steps]]
+name = "pause-sandbox"
+pause = true
