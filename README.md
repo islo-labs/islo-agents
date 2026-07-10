@@ -19,7 +19,7 @@ webhooks/                           — assembled receivers
 scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.json → webhooks/
 ```
 
-The harness (`src/agent.ts`) is meant to run inside an authenticated Islo sandbox (or any environment where `islo` is logged in). Optional `--knowledge-*` flags shell out to `islo knowledge render` / `get` and inject Markdown into the prompt; if `islo` is unavailable they warn and continue.
+The harness (`src/agent.ts`) requires `ISLO_API_KEY` to be set (automatic in Islo sandboxes via phantom env vars, or any valid API key). Optional `--knowledge-*` flags use the `@islo-labs/sdk` to fetch knowledge items and inject their Markdown bodies into the prompt; on failure they warn and continue.
 
 Roles / job names: `review`, `implementer`, `verify`, `babysit`, `delegator`.
 
