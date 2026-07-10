@@ -1,5 +1,5 @@
 [job]
-name = "implementor"
+name = "implementer"
 version = "0.5.0"
 description = "Implement a tracked issue: enrich context from the source system, change code, open PR(s), report back."
 
@@ -37,7 +37,7 @@ pattern = "^[a-zA-Z0-9._/@^~-]+$"
 [job.params.model]
 type = "string"
 default = "claude-sonnet-4-5"
-description = "Claude model for the implementor agent."
+description = "Claude model for the implementer agent."
 
 [job.params.max_turns]
 type = "integer"
@@ -58,7 +58,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "implementor-{{issue_id}}"
+name = "implementer-{{issue_id}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-stack"
 vcpus = 4
@@ -71,7 +71,7 @@ pause_after_idle = 120
 delete_after = 604800
 
 [[run.tasks]]
-name = "implementor"
+name = "implementer"
 
 [[run.tasks.steps]]
 name = "checkout-pack"
@@ -113,9 +113,9 @@ exec = [
 set -euo pipefail
 cd /workspace/islo-agents
 npx tsx src/agent.ts \
-  --prompt agents/implementor/prompt.md \
+  --prompt agents/implementer/prompt.md \
   --cwd /workspace \
-  --session-key "implementor-{{issue_id}}" \
+  --session-key "implementer-{{issue_id}}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \

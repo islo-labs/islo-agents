@@ -44,7 +44,7 @@
       "actions": [
         {
           "action_type": "trigger_job",
-          "job_name": "implementor",
+          "job_name": "implementer",
           "params": {
             "issue_id": {
               "source": {

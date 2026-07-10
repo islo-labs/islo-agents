@@ -44,7 +44,7 @@ Your cwd is the `islo-agents` checkout. Use it as the catalog of agents you can 
 
 | Intent | Job / agent | Typical sandbox naming |
 |--------|-------------|------------------------|
-| Implement / fix / address feedback | `implementor` / `agents/implementor` | `implementor-<issue-id>` |
+| Implement / fix / address feedback | `implementer` / `agents/implementer` | `implementer-<issue-id>` |
 | Review a PR | `review` / `agents/review` | `review-<repo>-<pr>` |
 | Verify E2E | `verify` / `agents/verify` | `verify-<repo>-<pr>` |
 | Fix CI | `babysit` / `agents/babysit` | `babysit-<repo>-<workflow-run-id>` |
@@ -106,7 +106,7 @@ Examples:
 
 - Review: `islo job run review --param repo=owner/name --param repo_name=name --param pr_number=N` (`repo_name` is required for the sandbox name; it cannot contain `/`)
 - Verify / babysit: same pattern with their required params (read their `job.toml`).
-- Implement from an issue-shaped request: `islo job run implementor --param issue_id=…` (plus optional title/description/identifier/url); otherwise create an issue-scoped sandbox from `islo-stack` and start `agents/implementor` via the harness.
+- Implement from an issue-shaped request: `islo job run implementer --param issue_id=…` (plus optional title/description/identifier/url); otherwise create an issue-scoped sandbox from `islo-stack` and start `agents/implementer` via the harness.
 
 3. If no job fits cleanly, create an appropriately named sandbox yourself (use the `islo-stack` snapshot for code work) and start the matching agent harness from this checkout — still in the **worker** sandbox, not here.
 

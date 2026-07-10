@@ -2,7 +2,7 @@
 
 Shared agent templates for Islo jobs: prompts, durable job manifests, and webhook trigger-rule fragments. Deploy jobs and assemble webhooks from this checkout.
 
-**Role vs source:** roles (`review`, `implementor`, …) are source-agnostic. Source systems only appear under `trigger-rules/<source>.json` and assembled `webhooks/`. Workspace-specific values that cannot be generalized (e.g. a Linear label UUID) ship as placeholders.
+**Role vs source:** roles (`review`, `implementer`, …) are source-agnostic. Source systems only appear under `trigger-rules/<source>.json` and assembled `webhooks/`. Workspace-specific values that cannot be generalized (e.g. a Linear label UUID) ship as placeholders.
 
 ## Structure
 
@@ -19,7 +19,7 @@ webhooks/                           — assembled receivers
 scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.json → webhooks/
 ```
 
-Roles / job names: `review`, `implementor`, `verify`, `babysit`, `delegator`.
+Roles / job names: `review`, `implementer`, `verify`, `babysit`, `delegator`.
 
 Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; default `main`). Override with `--param agents_git_ref=…` when pinning.
 
@@ -34,7 +34,7 @@ Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; de
 
 ### 1. Replace placeholders
 
-- **Implementor (Linear example):** in `agents/implementor/trigger-rules/linear.json`, replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` with your label UUID, then reassemble:
+- **Implementer (Linear example):** in `agents/implementer/trigger-rules/linear.json`, replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` with your label UUID, then reassemble:
 
 ```bash
 npm run assemble-webhooks
@@ -50,7 +50,7 @@ cp agents/review/job.toml jobs/review/job.toml
 islo job deploy review
 ```
 
-Same pattern for `implementor`, `delegator`, `verify`, `babysit` (directory name = job name).
+Same pattern for `implementer`, `delegator`, `verify`, `babysit` (directory name = job name).
 
 ### 3. Wire webhooks
 
@@ -65,7 +65,7 @@ See `webhooks/README.md` for HMAC and GitHub/Linear setup.
 
 ```bash
 islo job run review --param repo=owner/repo --param repo_name=repo --param pr_number=1
-islo job run implementor --param issue_id=…
+islo job run implementer --param issue_id=…
 ```
 
 ## Customizing context
