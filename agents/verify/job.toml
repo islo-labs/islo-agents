@@ -1,6 +1,6 @@
 [job]
 name = "islo-verify"
-version = "0.3.0"
+version = "0.4.0"
 description = "Empirical E2E verification of a PR against a full running stack."
 
 [job.params.repo]
@@ -12,28 +12,13 @@ pattern = "^[^/]+/[^/]+$"
 [job.params.repo_name]
 type = "string"
 required = true
-description = "Repository name without owner, used in the sandbox name."
+description = "Repository name without owner (sandbox names cannot contain /)."
 pattern = "^[a-z0-9][a-z0-9._-]*$"
 
 [job.params.pr_number]
 type = "integer"
 required = true
 description = "Pull request number to verify."
-
-[job.params.head_ref]
-type = "string"
-required = true
-description = "PR head branch name."
-
-[job.params.base_ref]
-type = "string"
-required = true
-description = "PR base branch name."
-
-[job.params.pr_title]
-type = "string"
-required = true
-description = "PR title for context."
 
 [job.params.related_prs]
 type = "string"
@@ -179,9 +164,6 @@ npx tsx src/agent.ts \
   --var REPO="{{repo}}" \
   --var REPO_SHORT="${REPO_SHORT}" \
   --var PR_NUMBER="{{pr_number}}" \
-  --var HEAD_REF="{{head_ref}}" \
-  --var BASE_REF="{{base_ref}}" \
-  --var PR_TITLE="{{pr_title}}" \
   --var RELATED_PRS="{{related_prs}}"
 ''',
 ]

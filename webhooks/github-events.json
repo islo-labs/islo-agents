@@ -62,12 +62,6 @@
                 }
               ]
             },
-            "head_ref": {
-              "source": {
-                "source": "json_path",
-                "path": "$.workflow_run.head_branch"
-              }
-            },
             "head_repository": {
               "source": {
                 "source": "json_path",
@@ -180,18 +174,6 @@
                 "source": "json_path",
                 "path": "$.pull_request.number"
               }
-            },
-            "head_ref": {
-              "source": {
-                "source": "json_path",
-                "path": "$.pull_request.head.ref"
-              }
-            },
-            "base_ref": {
-              "source": {
-                "source": "json_path",
-                "path": "$.pull_request.base.ref"
-              }
             }
           }
         }
@@ -233,18 +215,6 @@
               "source": {
                 "source": "json_path",
                 "path": "$.pull_request.number"
-              }
-            },
-            "head_ref": {
-              "source": {
-                "source": "json_path",
-                "path": "$.pull_request.head.ref"
-              }
-            },
-            "base_ref": {
-              "source": {
-                "source": "json_path",
-                "path": "$.pull_request.base.ref"
               }
             }
           }
@@ -288,18 +258,6 @@
                 "source": "json_path",
                 "path": "$.pull_request.number"
               }
-            },
-            "head_ref": {
-              "source": {
-                "source": "json_path",
-                "path": "$.pull_request.head.ref"
-              }
-            },
-            "base_ref": {
-              "source": {
-                "source": "json_path",
-                "path": "$.pull_request.base.ref"
-              }
             }
           }
         }
@@ -341,24 +299,6 @@
               "source": {
                 "source": "json_path",
                 "path": "$.pull_request.number"
-              }
-            },
-            "head_ref": {
-              "source": {
-                "source": "json_path",
-                "path": "$.pull_request.head.ref"
-              }
-            },
-            "base_ref": {
-              "source": {
-                "source": "json_path",
-                "path": "$.pull_request.base.ref"
-              }
-            },
-            "pr_title": {
-              "source": {
-                "source": "json_path",
-                "path": "$.pull_request.title"
               }
             }
           }

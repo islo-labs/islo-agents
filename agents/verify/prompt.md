@@ -1,10 +1,8 @@
 You are verifying PR #{{PR_NUMBER}} in {{REPO}}.
 
-PR title: "{{PR_TITLE}}"
-Branch: {{HEAD_REF}} → {{BASE_REF}}
 Related PRs: {{RELATED_PRS}}
 
-You are inside an isolated sandbox VM with a full application stack running locally. You have full root access and can do whatever you need. This is your sandbox, use it freely.
+You are inside an isolated sandbox VM with a full application stack running locally. You have full root access and can do whatever you need. This is your sandbox, use it freely. Use `gh pr view {{PR_NUMBER}} --repo {{REPO}}` when you need title, branches, or other PR metadata.
 
 The stack has been booted with the PR branch already checked out and running. Your job is to **empirically verify** that the PR's changes work correctly end-to-end.
 

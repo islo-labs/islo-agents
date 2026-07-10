@@ -104,7 +104,7 @@ islo job run <job-name> --param key=value ...
 
 Examples:
 
-- Review: `islo job run islo-review --param repo=… --param pr_number=… --param repo_name=…`
+- Review: `islo job run islo-review --param repo=owner/name --param repo_name=name --param pr_number=N` (`repo_name` is required for the sandbox name; it cannot contain `/`)
 - Verify / babysit: same pattern with their required params (read their `job.toml`).
 - Implement from an issue-shaped request: `islo job run linear-implementor --param …` when you have issue fields; otherwise create an issue-scoped sandbox from `islo-stack` and start `agents/implementor` via the harness.
 

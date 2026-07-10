@@ -1,8 +1,6 @@
 You are reviewing PR #{{PR_NUMBER}} in {{REPO}}.
 
-Branch: {{HEAD_REF}} -> {{BASE_REF}}
-
-You are on the PR branch inside an isolated sandbox VM. You have full root access and can do whatever you need: install packages, start services, run databases, build and run the app. This is your sandbox, use it freely.
+You are on the PR branch inside an isolated sandbox VM. You have full root access and can do whatever you need: install packages, start services, run databases, build and run the app. This is your sandbox, use it freely. Use `gh pr view {{PR_NUMBER}} --repo {{REPO}}` when you need title, branches, or other PR metadata.
 
 {{CONTEXT_SECTION}}
 

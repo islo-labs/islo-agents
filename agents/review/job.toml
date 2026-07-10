@@ -1,6 +1,6 @@
 [job]
 name = "islo-review"
-version = "0.3.0"
+version = "0.4.0"
 description = "Run automated GitHub PR code review as a durable Islo job."
 
 [job.params.repo]
@@ -12,23 +12,13 @@ pattern = "^[^/]+/[^/]+$"
 [job.params.repo_name]
 type = "string"
 required = true
-description = "Repository name without owner, used in the sandbox name."
+description = "Repository name without owner (sandbox names cannot contain /)."
 pattern = "^[a-z0-9][a-z0-9._-]*$"
 
 [job.params.pr_number]
 type = "integer"
 required = true
 description = "Pull request number to review."
-
-[job.params.head_ref]
-type = "string"
-default = ""
-description = "PR head branch name. Resolved from the PR when empty."
-
-[job.params.base_ref]
-type = "string"
-default = ""
-description = "PR base branch name. Resolved from the PR when empty."
 
 [job.params.agents_git_ref]
 type = "string"
@@ -76,8 +66,8 @@ delete_after = 604800
 name = "review"
 
 [[run.tasks.steps]]
-name = "resolve-refs"
-timeout = 60
+name = "checkout-pr"
+timeout = 120
 exec = [
   "bash",
   "-lc",
@@ -86,40 +76,16 @@ set -euo pipefail
 mkdir -p /workspace/.islo-job
 REPO="{{repo}}"
 PR_NUMBER="{{pr_number}}"
-HEAD_REF="{{head_ref}}"
-BASE_REF="{{base_ref}}"
 REPO_SHORT="$(echo "${REPO}" | cut -d/ -f2)"
-
-if [ -z "${HEAD_REF}" ] || [ -z "${BASE_REF}" ]; then
-  PR_META="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json headRefName,baseRefName)"
-  [ -n "${HEAD_REF}" ] || HEAD_REF="$(printf '%s' "${PR_META}" | jq -r .headRefName)"
-  [ -n "${BASE_REF}" ] || BASE_REF="$(printf '%s' "${PR_META}" | jq -r .baseRefName)"
-fi
-
 cat > /workspace/.islo-job/env <<EOF
 export REPO="${REPO}"
 export PR_NUMBER="${PR_NUMBER}"
-export HEAD_REF="${HEAD_REF}"
-export BASE_REF="${BASE_REF}"
 export REPO_SHORT="${REPO_SHORT}"
 EOF
-''',
-]
-
-[[run.tasks.steps]]
-name = "checkout-pr"
-timeout = 120
-exec = [
-  "bash",
-  "-lc",
-  '''
-set -euo pipefail
-source /workspace/.islo-job/env
 cd /workspace
 [ -d "${REPO_SHORT}" ] || git clone "https://github.com/${REPO}.git" "${REPO_SHORT}"
 cd "${REPO_SHORT}"
-git fetch origin "${HEAD_REF}"
-git checkout -B "${HEAD_REF}" FETCH_HEAD
+gh pr checkout "${PR_NUMBER}" --repo "${REPO}"
 ''',
 ]
 
@@ -172,9 +138,7 @@ npx tsx src/agent.ts \
   --session-key "${REPO}-${PR_NUMBER}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
   --var REPO="${REPO}" \
-  --var PR_NUMBER="${PR_NUMBER}" \
-  --var HEAD_REF="${HEAD_REF}" \
-  --var BASE_REF="${BASE_REF}"
+  --var PR_NUMBER="${PR_NUMBER}"
 ''',
 ]
 

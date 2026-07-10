@@ -1,6 +1,6 @@
 [job]
 name = "islo-babysit"
-version = "0.3.0"
+version = "0.4.0"
 description = "Automatically fix CI failures on a PR branch."
 
 [job.params.repo]
@@ -12,18 +12,13 @@ pattern = "^[^/]+/[^/]+$"
 [job.params.repo_name]
 type = "string"
 required = true
-description = "Repository name without owner, used in the sandbox name."
+description = "Repository name without owner (sandbox names cannot contain /)."
 pattern = "^[a-z0-9][a-z0-9._-]*$"
 
 [job.params.workflow_run_id]
 type = "string"
 required = true
 description = "GitHub Actions workflow run ID that failed."
-
-[job.params.head_ref]
-type = "string"
-default = ""
-description = "PR head branch name. Resolved from the failed run when empty."
 
 [job.params.head_repository]
 type = "string"
@@ -104,26 +99,16 @@ set -euo pipefail
 if [ -f /workspace/.islo-job/skip ]; then echo "skipped"; exit 0; fi
 REPO="{{repo}}"
 RUN_ID="{{workflow_run_id}}"
-HEAD_REF="{{head_ref}}"
 REPO_SHORT="$(echo "${REPO}" | cut -d/ -f2)"
-
-if [ -z "${HEAD_REF}" ]; then
-  HEAD_REF="$(gh run view "${RUN_ID}" --repo "${REPO}" --json headBranch --jq .headBranch)"
-fi
-
-PR_JSON="$(gh pr list --repo "${REPO}" --head "${HEAD_REF}" --json number,baseRefName --limit 1)"
-PR_NUMBER="$(printf '%s' "${PR_JSON}" | jq -r '.[0].number // empty')"
-BASE_REF="$(printf '%s' "${PR_JSON}" | jq -r '.[0].baseRefName // empty')"
+HEAD_REF="$(gh run view "${RUN_ID}" --repo "${REPO}" --json headBranch --jq .headBranch)"
+PR_NUMBER="$(gh pr list --repo "${REPO}" --head "${HEAD_REF}" --json number --jq '.[0].number // empty')"
 if [ -z "${PR_NUMBER}" ]; then
   echo "No open PR found for head branch ${HEAD_REF} in ${REPO}"
   exit 1
 fi
-
 cat > /workspace/.islo-job/env <<EOF
 export REPO="${REPO}"
 export RUN_ID="${RUN_ID}"
-export HEAD_REF="${HEAD_REF}"
-export BASE_REF="${BASE_REF}"
 export PR_NUMBER="${PR_NUMBER}"
 export REPO_SHORT="${REPO_SHORT}"
 EOF
@@ -143,8 +128,7 @@ source /workspace/.islo-job/env
 cd /workspace
 [ -d "${REPO_SHORT}" ] || git clone "https://github.com/${REPO}.git" "${REPO_SHORT}"
 cd "${REPO_SHORT}"
-git fetch origin "${HEAD_REF}"
-git checkout -B "${HEAD_REF}" FETCH_HEAD
+gh pr checkout "${PR_NUMBER}" --repo "${REPO}"
 ''',
 ]
 

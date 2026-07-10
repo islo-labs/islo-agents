@@ -27,9 +27,6 @@
               }
             ]
           },
-          "head_ref": {
-            "source": { "source": "json_path", "path": "$.workflow_run.head_branch" }
-          },
           "head_repository": {
             "source": {
               "source": "json_path",
