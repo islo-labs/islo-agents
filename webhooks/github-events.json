@@ -231,6 +231,11 @@
           },
           {
             "op": "equals",
+            "json_path": "$.action",
+            "value": "labeled"
+          },
+          {
+            "op": "equals",
             "json_path": "$.label.name",
             "value": "islo-review"
           }
@@ -270,6 +275,11 @@
           {
             "op": "exists",
             "json_path": "$.pull_request"
+          },
+          {
+            "op": "equals",
+            "json_path": "$.action",
+            "value": "labeled"
           },
           {
             "op": "equals",
