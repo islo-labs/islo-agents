@@ -36,18 +36,18 @@ PR_NUMBER="$(jq -r '.issue.number // .pull_request.number' "{{RAW_PAYLOAD_PATH}}
 gh pr view "${PR_NUMBER}" --repo "${REPO}" --json title,body,headRefName,baseRefName,url,comments,reviews
 ```
 
-Extract repo, PR number, head/base refs, and any Linear issue IDs (from title, branch, body, or comments). Prefer visible conventions over guessing.
+Extract repo, PR number, and any issue IDs (from title, branch, body, or comments — Linear, Jira, etc.). Prefer visible conventions over guessing.
 
 ## Agent catalog (this checkout)
 
 Your cwd is the `islo-agents` checkout. Use it as the catalog of agents you can kick off:
 
-| Intent | Agent / job | Typical sandbox naming |
+| Intent | Job / agent | Typical sandbox naming |
 |--------|-------------|------------------------|
-| Implement / fix / address feedback | `linear-implementor` / `agents/implementor` | `linear-implementor-<issue-id>` or `implement-<ISSUE>` |
-| Review a PR | `islo-review` / `agents/review` | `review-<repo>-<pr>` |
-| Verify E2E | `islo-verify` / `agents/verify` | `islo-verify-<repo>-<pr>` |
-| Fix CI | `islo-babysit` / `agents/babysit` | `babysit-<repo>-<workflow-run-id>` |
+| Implement / fix / address feedback | `implementor` / `agents/implementor` | `implementor-<issue-id>` |
+| Review a PR | `review` / `agents/review` | `review-<repo>-<pr>` |
+| Verify E2E | `verify` / `agents/verify` | `verify-<repo>-<pr>` |
+| Fix CI | `babysit` / `agents/babysit` | `babysit-<repo>-<workflow-run-id>` |
 
 Read the relevant `job.toml` / `prompt.md` under `agents/` when you need exact params or behavior. Treat naming as hints, not hard requirements.
 
@@ -104,9 +104,9 @@ islo job run <job-name> --param key=value ...
 
 Examples:
 
-- Review: `islo job run islo-review --param repo=owner/name --param repo_name=name --param pr_number=N` (`repo_name` is required for the sandbox name; it cannot contain `/`)
+- Review: `islo job run review --param repo=owner/name --param repo_name=name --param pr_number=N` (`repo_name` is required for the sandbox name; it cannot contain `/`)
 - Verify / babysit: same pattern with their required params (read their `job.toml`).
-- Implement from an issue-shaped request: `islo job run linear-implementor --param …` when you have issue fields; otherwise create an issue-scoped sandbox from `islo-stack` and start `agents/implementor` via the harness.
+- Implement from an issue-shaped request: `islo job run implementor --param issue_id=…` (plus optional title/description/identifier/url); otherwise create an issue-scoped sandbox from `islo-stack` and start `agents/implementor` via the harness.
 
 3. If no job fits cleanly, create an appropriately named sandbox yourself (use the `islo-stack` snapshot for code work) and start the matching agent harness from this checkout — still in the **worker** sandbox, not here.
 

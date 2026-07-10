@@ -1,6 +1,6 @@
 [job]
-name = "islo-verify"
-version = "0.4.0"
+name = "verify"
+version = "0.5.0"
 description = "Empirical E2E verification of a PR against a full running stack."
 
 [job.params.repo]
@@ -65,7 +65,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "islo-verify-{{repo_name}}-{{pr_number}}"
+name = "verify-{{repo_name}}-{{pr_number}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-fullstack"
 vcpus = 8

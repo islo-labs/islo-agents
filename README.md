@@ -1,6 +1,8 @@
 # islo-agents
 
-Shared agent templates for Islo jobs: prompts, durable job manifests, and webhook trigger-rule fragments. Deploy jobs and assemble webhooks from this checkout. Workspace-specific values that cannot be generalized (today: the Linear label UUID) ship as placeholders — replace them before deploy, or override in a thin private overlay later.
+Shared agent templates for Islo jobs: prompts, durable job manifests, and webhook trigger-rule fragments. Deploy jobs and assemble webhooks from this checkout.
+
+**Role vs source:** roles (`review`, `implementor`, …) are source-agnostic. Source systems only appear under `trigger-rules/<source>.json` and assembled `webhooks/`. Workspace-specific values that cannot be generalized (e.g. a Linear label UUID) ship as placeholders.
 
 ## Structure
 
@@ -9,7 +11,7 @@ src/agent.ts                        — generic harness (prompt + vars → Claud
 agents/                             — one directory per role
   <role>/
     prompt.md                       — agent behavior
-    job.toml                        — durable job (sandbox + steps)
+    job.toml                        — durable job (sandbox + steps); job name = role name
     trigger-rules/<source>.json     — webhook rule fragments for that source
 webhooks/                           — assembled receivers
   github-events.json
@@ -17,7 +19,7 @@ webhooks/                           — assembled receivers
 scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.json → webhooks/
 ```
 
-Roles: `review`, `implementor`, `verify`, `babysit`, `delegator`.
+Roles / job names: `review`, `implementor`, `verify`, `babysit`, `delegator`.
 
 Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; default `main`). Override with `--param agents_git_ref=…` when pinning.
 
@@ -25,30 +27,30 @@ Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; de
 
 | Axis | Meaning | Lives in |
 |------|---------|----------|
-| **Role** | What the agent does | `agents/<role>/` |
-| **Source** | Which system fires the event | `webhooks/<source>-….json` + `trigger-rules/<source>.json` |
+| **Role** | What the agent does | `agents/<role>/` + job name |
+| **Source** | Which system fires the event | `trigger-rules/<source>.json` → `webhooks/` |
 
 ## Quick start
 
 ### 1. Replace placeholders
 
-- **Implementor:** in `agents/implementor/trigger-rules/linear.json`, replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` with your Linear label UUID, then reassemble:
+- **Implementor (Linear example):** in `agents/implementor/trigger-rules/linear.json`, replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` with your label UUID, then reassemble:
 
 ```bash
 npm run assemble-webhooks
 ```
 
-Babysit triggers on any failed PR `workflow_run` (no workflow-name allowlist).
+Babysit triggers on any failed PR `workflow_run` (no workflow-name allowlist). GitHub PR labels `islo-review` / `islo-verify` are example trigger labels in the GitHub fragments — rename them in `trigger-rules` if you prefer different labels.
 
 ### 2. Deploy a job
 
 ```bash
-mkdir -p jobs/islo-review
-cp agents/review/job.toml jobs/islo-review/job.toml
-islo job deploy islo-review
+mkdir -p jobs/review
+cp agents/review/job.toml jobs/review/job.toml
+islo job deploy review
 ```
 
-Same pattern for `implementor` → `jobs/linear-implementor`, `delegator`, `verify`, `babysit`.
+Same pattern for `implementor`, `delegator`, `verify`, `babysit` (directory name = job name).
 
 ### 3. Wire webhooks
 
@@ -62,8 +64,8 @@ See `webhooks/README.md` for HMAC and GitHub/Linear setup.
 ### Manual run
 
 ```bash
-islo job run islo-review --param repo=owner/repo --param repo_name=repo --param pr_number=1
-islo job run linear-implementor --param issue_id=…
+islo job run review --param repo=owner/repo --param repo_name=repo --param pr_number=1
+islo job run implementor --param issue_id=…
 ```
 
 ## Customizing context

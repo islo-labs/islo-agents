@@ -44,7 +44,7 @@
       "actions": [
         {
           "action_type": "trigger_job",
-          "job_name": "linear-implementor",
+          "job_name": "implementor",
           "params": {
             "issue_id": {
               "source": {

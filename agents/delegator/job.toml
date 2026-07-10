@@ -1,6 +1,6 @@
 [job]
 name = "delegator"
-version = "0.2.0"
+version = "0.3.0"
 description = "Route human mentions to the right worker sandbox or kick off a new agent job."
 
 [job.params.source]

@@ -1,19 +1,19 @@
 # Implementor
 
-Implements a tracked issue: enrich context from the trigger source, change code, open PR(s), report back.
+Implements a tracked issue from any source system: enrich context, change code, open PR(s), report back.
 
-- **Prompt / job:** `prompt.md`, `job.toml` (deployed as `linear-implementor` today)
-- **Linear trigger:** `trigger-rules/linear.json` → assembled into `webhooks/linear-issues.json`
+- **Prompt / job:** `prompt.md`, `job.toml` (job name `implementor`)
+- **Triggers:** `trigger-rules/<source>.json` — Linear example ships today; add Jira/etc. the same way (map source fields → the shared `issue_*` params)
 
 ```bash
-mkdir -p jobs/linear-implementor
-cp agents/implementor/job.toml jobs/linear-implementor/job.toml
-islo job deploy linear-implementor
+mkdir -p jobs/implementor
+cp agents/implementor/job.toml jobs/implementor/job.toml
+islo job deploy implementor
 
 npm run assemble-webhooks
 islo webhook incoming create --request-json @webhooks/linear-issues.json
 ```
 
-## Label ID
+## Source-specific config
 
-Replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` in `trigger-rules/linear.json` with the UUID of the label that should start the implementor (e.g. your workspace’s `islo` label). Then reassemble webhooks.
+Linear: replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` in `trigger-rules/linear.json` with your label UUID, then reassemble. The job itself stays source-agnostic.

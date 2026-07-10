@@ -1,12 +1,12 @@
 [job]
-name = "linear-implementor"
-version = "0.4.0"
-description = "Implement a Linear issue triggered by adding the 'islo' label."
+name = "implementor"
+version = "0.5.0"
+description = "Implement a tracked issue: enrich context from the source system, change code, open PR(s), report back."
 
 [job.params.issue_id]
 type = "string"
 required = true
-description = "Linear issue UUID."
+description = "Stable issue ID in the source system (UUID, key, etc.)."
 
 [job.params.issue_title]
 type = "string"
@@ -21,12 +21,12 @@ description = "Issue description/body."
 [job.params.issue_identifier]
 type = "string"
 default = ""
-description = "Human-readable issue identifier (e.g. ENG-123)."
+description = "Human-readable issue identifier (e.g. ENG-123, PROJ-45)."
 
 [job.params.issue_url]
 type = "string"
 default = ""
-description = "URL of the issue in Linear."
+description = "URL of the issue in the source system."
 
 [job.params.agents_git_ref]
 type = "string"
@@ -58,7 +58,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "linear-implementor-{{issue_id}}"
+name = "implementor-{{issue_id}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-stack"
 vcpus = 4
@@ -71,7 +71,7 @@ pause_after_idle = 120
 delete_after = 604800
 
 [[run.tasks]]
-name = "linear-implementor"
+name = "implementor"
 
 [[run.tasks.steps]]
 name = "checkout-pack"

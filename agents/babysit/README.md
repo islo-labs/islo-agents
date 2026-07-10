@@ -2,7 +2,7 @@
 
 Fixes CI failures on PR branches.
 
-- **Prompt / job:** `prompt.md`, `job.toml` (deployed as `islo-babysit`)
+- **Prompt / job:** `prompt.md`, `job.toml` (job name `babysit`)
 - **GitHub trigger:** `trigger-rules/github.json` → assembled into `webhooks/github-events.json`
 
 ## Trigger scope

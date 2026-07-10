@@ -10,7 +10,7 @@
     "actions": [
       {
         "action_type": "trigger_job",
-        "job_name": "islo-verify",
+        "job_name": "verify",
         "params": {
           "repo": {
             "source": { "source": "json_path", "path": "$.repository.full_name" }
