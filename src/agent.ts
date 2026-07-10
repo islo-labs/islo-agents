@@ -1,5 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { spawnSync } from "child_process";
+import { Islo } from "@islo-labs/sdk";
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join, resolve } from "path";
@@ -126,80 +126,55 @@ function hasKnowledgeRequest(args: Args): boolean {
   );
 }
 
-function runIsloJson(argv: string[]): unknown | undefined {
-  const result = spawnSync("islo", argv, {
-    encoding: "utf-8",
-    maxBuffer: 10 * 1024 * 1024,
-  });
-  if (result.error) {
-    console.error(`islo ${argv.join(" ")}: ${result.error.message}`);
-    return undefined;
-  }
-  if (result.status !== 0) {
-    const err = (result.stderr || result.stdout || "").trim();
-    console.error(`islo ${argv.join(" ")} failed (exit ${result.status})${err ? `: ${err}` : ""}`);
-    return undefined;
-  }
-  try {
-    return JSON.parse(result.stdout);
-  } catch (e) {
-    console.error(`islo ${argv.join(" ")}: invalid JSON (${e})`);
-    return undefined;
-  }
-}
-
-function itemKey(item: Record<string, unknown>): string | undefined {
-  const key = item.identifier ?? item.slug;
-  return typeof key === "string" && key.length > 0 ? key : undefined;
-}
-
-function itemBody(item: Record<string, unknown>): string | undefined {
-  return typeof item.body === "string" && item.body.length > 0 ? item.body : undefined;
-}
-
-/** Fetch knowledge via one optional filter query and/or explicit IDs; dedupe by slug. */
-function loadKnowledgeMarkdown(args: Args): string {
+/** Fetch knowledge items via the Islo SDK; dedupe by slug, return merged markdown. */
+async function loadKnowledgeMarkdown(args: Args): Promise<string> {
   if (!hasKnowledgeRequest(args)) return "";
 
-  const byId = new Map<string, string>();
+  const client = new Islo();
+  const slugs = new Set<string>();
 
   const filterActive = Boolean(
     args.knowledgeRepo || args.knowledgeLevel || args.knowledgeTag || args.knowledgeQuery
   );
   if (filterActive) {
-    const renderArgs = ["knowledge", "render", "-o", "json"];
-    if (args.knowledgeRepo) renderArgs.push("--repo", args.knowledgeRepo);
-    if (args.knowledgeLevel) renderArgs.push("--level", args.knowledgeLevel);
-    if (args.knowledgeTag) renderArgs.push("--tag", args.knowledgeTag);
-    if (args.knowledgeQuery) renderArgs.push("--query", args.knowledgeQuery);
-
-    const rendered = runIsloJson(renderArgs);
-    if (Array.isArray(rendered)) {
-      for (const entry of rendered) {
-        if (!entry || typeof entry !== "object") continue;
-        const item = entry as Record<string, unknown>;
-        const key = itemKey(item);
-        const body = itemBody(item);
-        if (key && body) byId.set(key, body);
-      }
-    } else if (rendered !== undefined) {
-      console.error("islo knowledge render -o json: expected an array");
+    try {
+      let cursor: string | undefined;
+      do {
+        const result = await client.knowledge.listKnowledge({
+          ...(args.knowledgeLevel ? { level: args.knowledgeLevel as any } : {}),
+          ...(args.knowledgeTag ? { tag: args.knowledgeTag } : {}),
+          ...(args.knowledgeRepo ? { repository: args.knowledgeRepo } : {}),
+          ...(args.knowledgeQuery ? { q: args.knowledgeQuery } : {}),
+          ...(cursor ? { cursor } : {}),
+        });
+        for (const item of result.items) slugs.add(item.slug);
+        cursor = result.next_cursor ?? undefined;
+      } while (cursor);
+    } catch (e: any) {
+      console.error(`knowledge list failed: ${e.message ?? e}`);
     }
   }
 
-  for (const id of args.knowledgeIds) {
-    const got = runIsloJson(["knowledge", "get", id, "-o", "json"]);
-    if (!got || typeof got !== "object") continue;
-    const item = got as Record<string, unknown>;
-    const key = itemKey(item) ?? id;
-    const body = itemBody(item);
-    if (body) byId.set(key, body);
-    else console.error(`knowledge item '${id}' has empty body; skipping`);
-  }
+  for (const id of args.knowledgeIds) slugs.add(id);
 
-  if (byId.size === 0) return "";
-  console.log(`Loaded ${byId.size} knowledge item(s)`);
-  return Array.from(byId.values()).join("\n\n---\n\n");
+  if (slugs.size === 0) return "";
+
+  const bodies: string[] = [];
+  await Promise.all(
+    [...slugs].map(async (slug) => {
+      try {
+        const item = await client.knowledge.getKnowledge({ identifier: slug });
+        if (item.body) bodies.push(item.body);
+        else console.error(`knowledge item '${slug}' has empty body; skipping`);
+      } catch (e: any) {
+        console.error(`knowledge get '${slug}' failed: ${e.message ?? e}`);
+      }
+    })
+  );
+
+  if (bodies.length === 0) return "";
+  console.log(`Loaded ${bodies.length} knowledge item(s)`);
+  return bodies.join("\n\n---\n\n");
 }
 
 const args = parseArgs();
@@ -220,7 +195,7 @@ for (const cf of args.contextFiles) {
   }
 }
 
-const knowledgeMarkdown = loadKnowledgeMarkdown(args);
+const knowledgeMarkdown = await loadKnowledgeMarkdown(args);
 args.vars["KNOWLEDGE_SECTION"] = knowledgeMarkdown;
 if (knowledgeMarkdown) {
   contextSection = contextSection
