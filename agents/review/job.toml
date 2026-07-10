@@ -85,6 +85,9 @@ EOF
 cd /workspace
 [ -d "${REPO_SHORT}" ] || git clone "https://github.com/${REPO}.git" "${REPO_SHORT}"
 cd "${REPO_SHORT}"
+# Snapshot clones are often single-branch; widen fetch so PR checkout can track.
+git remote set-branches origin '*'
+git fetch --prune origin
 gh pr checkout "${PR_NUMBER}" --repo "${REPO}"
 ''',
 ]
