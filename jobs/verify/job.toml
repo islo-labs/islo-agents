@@ -27,7 +27,7 @@ description = "Comma-separated repo:ref pairs for multi-repo verification."
 
 [job.params.agents_git_ref]
 type = "string"
-default = "main"
+default = "feat/github-events-webhook"
 description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
