@@ -104,10 +104,9 @@ fi
 export LAUNCH_ARGS REPO PR_NUMBER RELATED_PRS
 
 BOOT_COMMAND="{{boot_command}}"
-RESOLVED_CMD=$(envsubst '${REPO} ${PR_NUMBER} ${LAUNCH_ARGS} ${RELATED_PRS}' <<< "${BOOT_COMMAND}")
-echo "Running boot command: ${RESOLVED_CMD}"
+echo "Running boot command: ${BOOT_COMMAND}"
 source ~/.bashrc 2>/dev/null || true
-eval "${RESOLVED_CMD}"
+eval "${BOOT_COMMAND}"
 ''',
 ]
 
