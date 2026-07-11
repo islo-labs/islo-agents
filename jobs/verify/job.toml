@@ -160,6 +160,7 @@ npx tsx src/agent.ts \
   --max-budget "{{max_budget_usd}}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
   --context-file "/workspace/${REPO_SHORT}/VERIFY.md" \
+  --knowledge-id fullstack-env \
   --var REPO="{{repo}}" \
   --var REPO_SHORT="${REPO_SHORT}" \
   --var PR_NUMBER="{{pr_number}}" \
