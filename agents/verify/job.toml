@@ -153,17 +153,6 @@ REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
 ENV_FILE="{{env_file}}"
 [ -f "${ENV_FILE}" ] && source "${ENV_FILE}" || true
 
-# Pre-exchange API key for a session JWT so the agent can use it directly
-if [ -n "${ISLO_API_KEY:-}" ] && [ -n "${ISLO_BASE_URL:-}" ]; then
-  _token=$(curl -sf -X POST "${ISLO_BASE_URL}/auth/token" \
-    -H "Content-Type: application/json" \
-    -d "{\"access_key\": \"${ISLO_API_KEY}\"}" | jq -r '.session_token // empty')
-  if [ -n "${_token}" ]; then
-    export ISLO_SESSION_TOKEN="${_token}"
-    echo "Exchanged API key for session token"
-  fi
-fi
-
 npx tsx src/agent.ts \
   --prompt agents/verify/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \
