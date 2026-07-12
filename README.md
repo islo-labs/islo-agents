@@ -1,83 +1,75 @@
 # islo-agents
 
-Reusable agent templates for Islo jobs. Each template owns a prompt, an Islo job file, and any integration-specific launchers when they are useful. All templates share `src/agent.ts`, a generic runner that loads a prompt, substitutes variables, and runs the Claude Agent SDK.
+Shared agent templates for Islo jobs: prompts, durable job manifests, and webhook trigger-rule fragments. Deploy jobs and assemble webhooks from this checkout.
+
+**Role vs source:** roles (`review`, `implementer`, …) are source-agnostic. Source systems only appear under `trigger-rules/<source>.toml` and assembled `webhooks/`. Workspace-specific values that cannot be generalized (e.g. a Linear label UUID) ship as placeholders.
 
 ## Structure
 
 ```
-src/agent.ts          — generic harness (prompt + vars → Claude Agent SDK)
-agents/               — reusable agent templates
-  review/github/      — GitHub PR reviewer (job + prompt)
-  babysit/            — CI failure fixer (job + action + prompt)
-  verify/             — E2E verification (job + action + prompt)
-  task/               — integration-triggered tasks
-    prompt.md         — shared "implement this issue" prompt
-    linear/           — Linear agent integration (activity emissions)
+src/agent.ts                        — generic harness (prompt + vars → Claude Agent SDK)
+agents/                             — one directory per role
+  <role>/
+    prompt.md                       — agent behavior
+    job.toml                        — durable job (sandbox + steps); job name = role name
+    trigger-rules/<source>.toml     — webhook rule fragments for that source
+webhooks/                           — assembled receivers
+  github-events.toml
+  linear-issues.toml
+scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.toml → webhooks/
 ```
 
-## Quick Start
+The harness (`src/agent.ts`) requires `ISLO_API_KEY` to be set (automatic in Islo sandboxes via phantom env vars, or any valid API key). Optional `--knowledge-*` flags use the `@islo-labs/sdk` to fetch knowledge items and inject their Markdown bodies into the prompt; on failure they warn and continue.
 
-Deploy the relevant job manifest in Islo, then connect your trigger through Islo webhooks, schedules, manual runs, or a wrapper that launches the same job.
+Roles / job names: `review`, `implementer`, `verify`, `babysit`, `delegator`.
 
-### PR Review
+Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; default `main`). Override with `--param agents_git_ref=…` when pinning.
 
-Use `agents/review/github/job.toml` and `agents/review/github/prompt.md`.
+## Axes
 
-### CI Babysit
+| Axis | Meaning | Lives in |
+|------|---------|----------|
+| **Role** | What the agent does | `agents/<role>/` + job name |
+| **Source** | Which system fires the event | `trigger-rules/<source>.toml` → `webhooks/` |
 
-```yaml
-name: Babysit CI
-on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-jobs:
-  babysit:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    if: github.event.workflow_run.conclusion == 'failure'
-    steps:
-      - uses: islo-labs/islo-agents/agents/babysit@v1
-        with:
-          run_id: ${{ github.event.workflow_run.id }}
-        env:
-          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
-```
+## Quick start
 
-### E2E Verification
+### 1. Replace placeholders
 
-```yaml
-name: Verify
-on:
-  pull_request:
-    types: [labeled]
-jobs:
-  verify:
-    if: github.event.label.name == 'islo-verify'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: islo-labs/islo-agents/agents/verify@v1
-        with:
-          pr_number: ${{ github.event.pull_request.number }}
-        env:
-          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
-```
-
-## Deploying Jobs
-
-Each template has a colocated `job.toml` manifest. The current Islo CLI deploy command reads manifests from `jobs/<name>/job.toml`, so put the chosen template manifest at that path before deploying.
+- **Implementer (Linear example):** in `agents/implementer/trigger-rules/linear.toml`, replace `REPLACE_WITH_YOUR_LINEAR_LABEL_ID` with your label UUID, then reassemble:
 
 ```bash
-mkdir -p jobs/islo-review
-cp agents/review/github/job.toml jobs/islo-review/job.toml
-islo job deploy islo-review --dry-run
-islo job deploy islo-review
+npm run assemble-webhooks
 ```
 
-Repeat the same pattern for other templates such as `agents/babysit/job.toml`, `agents/verify/job.toml`, and `agents/task/linear/job.toml`.
+Babysit triggers on any failed PR `workflow_run` (no workflow-name allowlist). GitHub PR labels `islo-review` / `islo-verify` are example trigger labels in the GitHub fragments — rename them in `trigger-rules` if you prefer different labels.
 
-## Customizing Review Context
+### 2. Deploy a job
 
-Create a `REVIEW.md` at your repo root to inject extra context into review and babysit prompts. For verify, also add a `VERIFY.md`.
+```bash
+mkdir -p jobs/review
+cp agents/review/job.toml jobs/review/job.toml
+islo job deploy review
+```
 
+Same pattern for `implementer`, `delegator`, `verify`, `babysit` (directory name = job name).
+
+### 3. Wire webhooks
+
+```bash
+islo webhook incoming create --request-toml @webhooks/github-events.toml
+islo webhook incoming create --request-toml @webhooks/linear-issues.toml
+```
+
+See `webhooks/README.md` for HMAC and GitHub/Linear setup.
+
+### Manual run
+
+```bash
+islo job run review --param repo=owner/repo --param repo_name=repo --param pr_number=1
+islo job run implementer --param issue_id=…
+```
+
+## Customizing context
+
+Create a `REVIEW.md` at your repo root for review/babysit. For verify, add `VERIFY.md`.

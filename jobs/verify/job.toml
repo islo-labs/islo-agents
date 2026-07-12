@@ -152,7 +152,6 @@ cd /workspace/islo-agents
 REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
 ENV_FILE="{{env_file}}"
 [ -f "${ENV_FILE}" ] && source "${ENV_FILE}" || true
-
 npx tsx src/agent.ts \
   --prompt agents/verify/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \

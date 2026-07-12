@@ -1,4 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { Islo } from "@islo-labs/sdk";
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join, resolve } from "path";
@@ -15,6 +16,11 @@ interface Args {
   sessionKey?: string;
   contextFiles: string[];
   vars: Record<string, string>;
+  knowledgeRepo?: string;
+  knowledgeLevel?: string;
+  knowledgeTag?: string;
+  knowledgeQuery?: string;
+  knowledgeIds: string[];
 }
 
 function parseArgs(): Args {
@@ -26,6 +32,7 @@ function parseArgs(): Args {
     maxTurns: 50,
     contextFiles: [],
     vars: {},
+    knowledgeIds: [],
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -51,6 +58,21 @@ function parseArgs(): Args {
       case "--context-file":
         args.contextFiles.push(argv[++i]);
         break;
+      case "--knowledge-repo":
+        args.knowledgeRepo = argv[++i];
+        break;
+      case "--knowledge-level":
+        args.knowledgeLevel = argv[++i];
+        break;
+      case "--knowledge-tag":
+        args.knowledgeTag = argv[++i];
+        break;
+      case "--knowledge-query":
+        args.knowledgeQuery = argv[++i];
+        break;
+      case "--knowledge-id":
+        args.knowledgeIds.push(argv[++i]);
+        break;
       case "--var": {
         const eq = argv[++i];
         const idx = eq.indexOf("=");
@@ -64,7 +86,7 @@ function parseArgs(): Args {
 
   if (!args.prompt) {
     console.error(
-      "Usage: tsx src/agent.ts --prompt <path> [--cwd <dir>] [--model <m>] [--max-turns <n>] [--max-budget <n>] [--session-key <key>] [--context-file <path>]... [--var KEY=VALUE]..."
+      "Usage: tsx src/agent.ts --prompt <path> [--cwd <dir>] [--model <m>] [--max-turns <n>] [--max-budget <n>] [--session-key <key>] [--context-file <path>]... [--knowledge-repo <repo>] [--knowledge-level memory|skill|rule] [--knowledge-tag <tag>] [--knowledge-query <q>] [--knowledge-id <slug>]... [--var KEY=VALUE]..."
     );
     process.exit(1);
   }
@@ -94,6 +116,67 @@ function writeSessionId(path: string, sessionId: string, key: string): void {
   );
 }
 
+function hasKnowledgeRequest(args: Args): boolean {
+  return Boolean(
+    args.knowledgeRepo ||
+      args.knowledgeLevel ||
+      args.knowledgeTag ||
+      args.knowledgeQuery ||
+      args.knowledgeIds.length
+  );
+}
+
+/** Fetch knowledge items via the Islo SDK; dedupe by slug, return merged markdown. */
+async function loadKnowledgeMarkdown(args: Args): Promise<string> {
+  if (!hasKnowledgeRequest(args)) return "";
+
+  const client = new Islo();
+  const slugs = new Set<string>();
+
+  const filterActive = Boolean(
+    args.knowledgeRepo || args.knowledgeLevel || args.knowledgeTag || args.knowledgeQuery
+  );
+  if (filterActive) {
+    try {
+      let cursor: string | undefined;
+      do {
+        const result = await client.knowledge.listKnowledge({
+          ...(args.knowledgeLevel ? { level: args.knowledgeLevel as any } : {}),
+          ...(args.knowledgeTag ? { tag: args.knowledgeTag } : {}),
+          ...(args.knowledgeRepo ? { repository: args.knowledgeRepo } : {}),
+          ...(args.knowledgeQuery ? { q: args.knowledgeQuery } : {}),
+          ...(cursor ? { cursor } : {}),
+        });
+        for (const item of result.items) slugs.add(item.slug);
+        cursor = result.next_cursor ?? undefined;
+      } while (cursor);
+    } catch (e: any) {
+      console.error(`knowledge list failed: ${e.message ?? e}`);
+    }
+  }
+
+  for (const id of args.knowledgeIds) slugs.add(id);
+
+  if (slugs.size === 0) return "";
+
+  const bodies: string[] = [];
+  await Promise.all(
+    [...slugs].map(async (slug) => {
+      try {
+        const item = await client.knowledge.getKnowledge({ identifier: slug });
+        if (item.body) bodies.push(item.body);
+        else console.error(`knowledge item '${slug}' has empty body; skipping`);
+      } catch (e: any) {
+        console.error(`knowledge get '${slug}' failed: ${e.message ?? e}`);
+      }
+    })
+  );
+
+  if (bodies.length === 0) return "";
+  console.log(`Loaded ${bodies.length} knowledge item(s)`);
+  return bodies.join("\n\n---\n\n");
+}
+
 const args = parseArgs();
 
 const promptPath = resolve(PROJECT_ROOT, args.prompt);
@@ -111,10 +194,29 @@ for (const cf of args.contextFiles) {
     contextSection += readFileSync(cfPath, "utf-8") + "\n";
   }
 }
+
+const knowledgeMarkdown = await loadKnowledgeMarkdown(args);
+args.vars["KNOWLEDGE_SECTION"] = knowledgeMarkdown;
+if (knowledgeMarkdown) {
+  contextSection = contextSection
+    ? `${contextSection}\n${knowledgeMarkdown}\n`
+    : `${knowledgeMarkdown}\n`;
+}
 args.vars["CONTEXT_SECTION"] = contextSection;
+
+const hadContextPlaceholder = promptTemplate.includes("{{CONTEXT_SECTION}}");
+const hadKnowledgePlaceholder = promptTemplate.includes("{{KNOWLEDGE_SECTION}}");
 
 for (const [key, value] of Object.entries(args.vars)) {
   promptTemplate = promptTemplate.replaceAll(`{{${key}}}`, value);
+}
+
+if (
+  knowledgeMarkdown &&
+  !hadContextPlaceholder &&
+  !hadKnowledgePlaceholder
+) {
+  promptTemplate += `\n\n## Knowledge\n\n${knowledgeMarkdown}\n`;
 }
 
 const sessionPath = args.sessionKey ? sessionStatePath(args.sessionKey) : undefined;

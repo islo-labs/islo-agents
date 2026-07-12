@@ -1,10 +1,8 @@
 You are verifying PR #{{PR_NUMBER}} in {{REPO}}.
 
-PR title: "{{PR_TITLE}}"
-Branch: {{HEAD_REF}} → {{BASE_REF}}
 Related PRs: {{RELATED_PRS}}
 
-You are inside an isolated sandbox VM with a full application stack running locally. You have full root access and can do whatever you need. This is your sandbox, use it freely.
+You are inside an isolated sandbox VM with a full application stack running locally. You have full root access and can do whatever you need. This is your sandbox, use it freely. Use `gh pr view {{PR_NUMBER}} --repo {{REPO}}` when you need title, branches, or other PR metadata.
 
 The stack has been booted with the PR branch already checked out and running. Your job is to **empirically verify** that the PR's changes work correctly end-to-end.
 
@@ -19,28 +17,15 @@ The stack has been booted with the PR branch already checked out and running. Yo
    ```
    If there are related PRs listed above, read those too — they are part of the same feature spanning multiple repos. Use `gh pr view` and `gh pr diff` on each related PR to understand how the pieces fit together. Design your verification scenarios around how the PRs interact — the feature only makes sense when you understand all the changes as a whole.
 
-2. **Discover the environment.** Figure out what services are running and how to interact with them:
-   - Look for running processes (`ps aux | grep -E 'python|node|cargo|bear'`)
-   - Check common ports (`curl -sf http://localhost:8000/docs`, `curl -sf http://localhost:3000`)
-   - Read any stack documentation in `/workspace/`
-   - Authentication and credentials are already configured in your environment. Just use the tools directly.
-
-3. **Devise verification scenarios.** Think like a QA engineer. Based on what the PR changes, determine 2-5 concrete scenarios that would prove the change works correctly. Consider:
+2. **Devise verification scenarios.** Think like a QA engineer. Based on what the PR changes, determine 2-5 concrete scenarios that would prove the change works correctly. Consider:
    - Happy path: does the feature work as intended?
    - Edge cases: what about empty inputs, missing data, boundary conditions?
    - Integration: does it work with the other services in the stack?
    - Regression: did it break anything that was working before?
 
-4. **Execute each scenario.** Use whatever tools are available:
-   - **curl/httpie**: Hit API endpoints directly
-   - **CLI tools**: Use any pre-installed CLI tools configured for the local stack
-   - **Database clients**: Query the database to verify state changes
-   - **Service logs**: Check for errors in log files or journalctl
-   - **Sandbox/VM operations**: If the stack manages VMs or containers, test lifecycle operations
+3. **Execute each scenario.** Use whatever tools are available — curl, CLI tools, database clients, service logs, etc. Capture the output of every verification command — this is your evidence.
 
-   Capture the output of every verification command — this is your evidence.
-
-5. **Post your findings.** Use `gh pr comment` to post a verification report on the PR. Include a clear **PASSED**, **FAILED**, or **PARTIAL** status at the top. List each scenario you tested with the actual command output as evidence (use collapsible `<details>` blocks to keep it scannable). Note anything you couldn't verify and why.
+4. **Post your findings.** Use `gh pr comment` to post a verification report on the PR. Include a clear **PASSED**, **FAILED**, or **PARTIAL** status at the top. List each scenario you tested with the actual command output as evidence (use collapsible `<details>` blocks to keep it scannable). Note anything you couldn't verify and why.
 
 ## Rules
 

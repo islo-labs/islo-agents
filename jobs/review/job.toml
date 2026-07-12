@@ -1,7 +1,7 @@
 [job]
-name = "verify"
+name = "review"
 version = "0.5.0"
-description = "Empirical E2E verification of a PR against a full running stack."
+description = "Automated PR code review."
 
 [job.params.repo]
 type = "string"
@@ -18,12 +18,7 @@ pattern = "^[a-z0-9][a-z0-9._-]*$"
 [job.params.pr_number]
 type = "integer"
 required = true
-description = "Pull request number to verify."
-
-[job.params.related_prs]
-type = "string"
-default = ""
-description = "Comma-separated repo:ref pairs for multi-repo verification."
+description = "Pull request number to review."
 
 [job.params.agents_git_ref]
 type = "string"
@@ -31,45 +26,35 @@ default = "main"
 description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
-[job.params.boot_command]
-type = "string"
-default = "launch-fullstack ${LAUNCH_ARGS}"
-description = "Shell command to boot the stack. Supports ${REPO}, ${PR_NUMBER}, ${LAUNCH_ARGS} substitution."
-
-[job.params.env_file]
-type = "string"
-default = "/workspace/.fullstack-env"
-description = "Path to env file to source before running the agent."
-
 [job.params.model]
 type = "string"
 default = "claude-opus-4-6"
-description = "Claude model for the verify agent."
+description = "Claude model for the review agent."
 
 [job.params.max_turns]
 type = "integer"
-default = 80
+default = 50
 description = "Maximum agentic turns."
 
 [job.params.max_budget_usd]
 type = "number"
-default = 20
-description = "Maximum budget in USD."
+default = 10
+description = "Maximum review budget in USD."
 
 [run]
 fail_fast = true
 fanout = false
-timeout = 2700
+timeout = 900
 workdir = "/workspace"
 teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "verify-{{repo_name}}-{{pr_number}}"
+name = "review-{{repo_name}}-{{pr_number}}"
 image = "docker.io/library/islo-runner:latest"
-snapshot_name = "islo-fullstack"
-vcpus = 8
-memory_mb = 16384
+snapshot_name = "islo-stack"
+vcpus = 4
+memory_mb = 4096
 gateway_profile = "default"
 init = { type = "full" }
 
@@ -78,35 +63,32 @@ pause_after_idle = 1800
 delete_after = 604800
 
 [[run.tasks]]
-name = "verify"
+name = "review"
 
 [[run.tasks.steps]]
-name = "boot-stack"
-timeout = 600
+name = "checkout-pr"
+timeout = 120
 exec = [
   "bash",
   "-lc",
   '''
 set -euo pipefail
-REPO="$(echo "{{repo}}" | cut -d/ -f2)"
+mkdir -p /workspace/.islo-job
+REPO="{{repo}}"
 PR_NUMBER="{{pr_number}}"
-RELATED_PRS="{{related_prs}}"
-
-LAUNCH_ARGS="--${REPO} pr/${PR_NUMBER}"
-if [ -n "${RELATED_PRS}" ]; then
-  IFS=',' read -ra PAIRS <<< "${RELATED_PRS}"
-  for pair in "${PAIRS[@]}"; do
-    repo_name="${pair%%:*}"
-    ref="${pair#*:}"
-    LAUNCH_ARGS="${LAUNCH_ARGS} --${repo_name} ${ref}"
-  done
-fi
-export LAUNCH_ARGS REPO PR_NUMBER RELATED_PRS
-
-BOOT_COMMAND="{{boot_command}}"
-echo "Running boot command: ${BOOT_COMMAND}"
-source ~/.bashrc 2>/dev/null || true
-eval "${BOOT_COMMAND}"
+REPO_SHORT="$(echo "${REPO}" | cut -d/ -f2)"
+cat > /workspace/.islo-job/env <<EOF
+export REPO="${REPO}"
+export PR_NUMBER="${PR_NUMBER}"
+export REPO_SHORT="${REPO_SHORT}"
+EOF
+cd /workspace
+[ -d "${REPO_SHORT}" ] || git clone "https://github.com/${REPO}.git" "${REPO_SHORT}"
+cd "${REPO_SHORT}"
+# Snapshot clones are often single-branch; widen fetch so PR checkout can track.
+git remote set-branches origin '*'
+git fetch --prune origin
+gh pr checkout "${PR_NUMBER}" --repo "${REPO}"
 ''',
 ]
 
@@ -142,30 +124,24 @@ npm ci
 
 [[run.tasks.steps]]
 name = "run-agent"
-timeout = 2400
+timeout = 900
 exec = [
   "bash",
   "-lc",
   '''
 set -euo pipefail
+source /workspace/.islo-job/env
 cd /workspace/islo-agents
-REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
-ENV_FILE="{{env_file}}"
-[ -f "${ENV_FILE}" ] && source "${ENV_FILE}" || true
-
 npx tsx src/agent.ts \
-  --prompt agents/verify/prompt.md \
+  --prompt agents/review/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
+  --session-key "${REPO}-${PR_NUMBER}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
-  --context-file "/workspace/${REPO_SHORT}/VERIFY.md" \
-  --knowledge-id fullstack-env \
-  --var REPO="{{repo}}" \
-  --var REPO_SHORT="${REPO_SHORT}" \
-  --var PR_NUMBER="{{pr_number}}" \
-  --var RELATED_PRS="{{related_prs}}"
+  --var REPO="${REPO}" \
+  --var PR_NUMBER="${PR_NUMBER}"
 ''',
 ]
 

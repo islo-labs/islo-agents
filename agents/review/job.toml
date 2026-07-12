@@ -1,7 +1,7 @@
 [job]
-name = "islo-review"
-version = "0.1.0"
-description = "Run automated GitHub PR code review as a durable Islo job."
+name = "review"
+version = "0.5.0"
+description = "Automated PR code review."
 
 [job.params.repo]
 type = "string"
@@ -9,31 +9,21 @@ required = true
 description = "GitHub repository in owner/name form."
 pattern = "^[^/]+/[^/]+$"
 
+[job.params.repo_name]
+type = "string"
+required = true
+description = "Repository name without owner (sandbox names cannot contain /)."
+pattern = "^[a-z0-9][a-z0-9._-]*$"
+
 [job.params.pr_number]
 type = "integer"
 required = true
 description = "Pull request number to review."
 
-[job.params.head_ref]
+[job.params.agents_git_ref]
 type = "string"
-required = true
-description = "PR head branch name."
-
-[job.params.base_ref]
-type = "string"
-required = true
-description = "PR base branch name."
-
-[job.params.sandbox_name]
-type = "string"
-required = true
-description = "Stable PR-scoped sandbox name to reuse across review runs."
-pattern = "^islo-review-[a-f0-9]{12}-[0-9]+$"
-
-[job.params.agents_ref]
-type = "string"
-required = true
-description = "islo-agents git ref to run, for example v1 or a branch name."
+default = "main"
+description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.model]
@@ -60,7 +50,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "{{sandbox_name}}"
+name = "review-{{repo_name}}-{{pr_number}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-stack"
 vcpus = 4
@@ -83,17 +73,27 @@ exec = [
   "-lc",
   '''
 set -euo pipefail
-REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
+mkdir -p /workspace/.islo-job
+REPO="{{repo}}"
+PR_NUMBER="{{pr_number}}"
+REPO_SHORT="$(echo "${REPO}" | cut -d/ -f2)"
+cat > /workspace/.islo-job/env <<EOF
+export REPO="${REPO}"
+export PR_NUMBER="${PR_NUMBER}"
+export REPO_SHORT="${REPO_SHORT}"
+EOF
 cd /workspace
-[ -d "${REPO_SHORT}" ] || git clone "https://github.com/{{repo}}.git" "${REPO_SHORT}"
+[ -d "${REPO_SHORT}" ] || git clone "https://github.com/${REPO}.git" "${REPO_SHORT}"
 cd "${REPO_SHORT}"
-git fetch origin "{{head_ref}}"
-git checkout -B "{{head_ref}}" FETCH_HEAD
+# Snapshot clones are often single-branch; widen fetch so PR checkout can track.
+git remote set-branches origin '*'
+git fetch --prune origin
+gh pr checkout "${PR_NUMBER}" --repo "${REPO}"
 ''',
 ]
 
 [[run.tasks.steps]]
-name = "checkout-agents"
+name = "checkout-pack"
 timeout = 120
 exec = [
   "bash",
@@ -104,13 +104,13 @@ cd /workspace
 rm -rf islo-agents
 git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
 cd islo-agents
-git fetch --depth=1 origin "{{agents_ref}}"
+git fetch --depth=1 origin "{{agents_git_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
 ''',
 ]
 
 [[run.tasks.steps]]
-name = "install-agent-deps"
+name = "install-deps"
 timeout = 300
 exec = [
   "bash",
@@ -123,27 +123,25 @@ npm ci
 ]
 
 [[run.tasks.steps]]
-name = "run-reviewer"
+name = "run-agent"
 timeout = 900
 exec = [
   "bash",
   "-lc",
   '''
 set -euo pipefail
+source /workspace/.islo-job/env
 cd /workspace/islo-agents
-REPO_SHORT="$(echo "{{repo}}" | cut -d/ -f2)"
 npx tsx src/agent.ts \
-  --prompt agents/review/github/prompt.md \
+  --prompt agents/review/prompt.md \
   --cwd "/workspace/${REPO_SHORT}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
-  --session-key "{{repo}}-{{pr_number}}" \
+  --session-key "${REPO}-${PR_NUMBER}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
-  --var REPO="{{repo}}" \
-  --var PR_NUMBER="{{pr_number}}" \
-  --var HEAD_REF="{{head_ref}}" \
-  --var BASE_REF="{{base_ref}}"
+  --var REPO="${REPO}" \
+  --var PR_NUMBER="${PR_NUMBER}"
 ''',
 ]
 
