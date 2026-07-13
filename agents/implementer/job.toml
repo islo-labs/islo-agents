@@ -63,7 +63,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "implementer-{{issue_id}}"
+name = "implementer-{{issue_identifier}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-stack"
 vcpus = 4
@@ -142,7 +142,7 @@ cd /workspace/islo-agents
 npx tsx src/agent.ts \
   --prompt agents/implementer/prompt.md \
   --cwd /workspace \
-  --session-key "implementer-{{issue_id}}" \
+  --session-key "implementer-{{issue_identifier}}" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
