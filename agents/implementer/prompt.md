@@ -35,11 +35,7 @@ You are inside an isolated sandbox VM with full root access. Repos are pre-clone
    gh pr edit <PR> --add-label islo-loop
    ```
    If the change spans multiple repos, cross-reference the PRs in each body.
-5. **Wait for CI.** After pushing, poll CI until it finishes:
-   ```bash
-   gh pr checks <PR_NUMBER> --repo <REPO> --watch
-   ```
-   If any check fails, read the failure logs, fix the code, and push again. Do not consider the PR ready until CI is green.
+   CI failures are handled automatically by the babysit agent — you don't need to wait for or poll CI.
 
 ## Report back
 
