@@ -81,6 +81,33 @@ delete_after = 604800
 name = "verify"
 
 [[run.tasks.steps]]
+name = "prepare-knowledge"
+timeout = 30
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+CONTEXT_DIR="/workspace/.islo/context"
+mkdir -p "${CONTEXT_DIR}"
+for slug in fullstack-env islo-integrations; do
+  FILE="${CONTEXT_DIR}/${slug}.md"
+  if [ -s "${FILE}" ]; then
+    echo "Using cached ${slug} knowledge"
+  else
+    if islo knowledge get "${slug}" -o json | jq -er '.body' > "${FILE}.tmp"; then
+      mv "${FILE}.tmp" "${FILE}"
+      echo "Cached ${slug} knowledge"
+    else
+      rm -f "${FILE}.tmp"
+      echo "Warning: ${slug} knowledge unavailable; continuing without it" >&2
+    fi
+  fi
+done
+''',
+]
+
+[[run.tasks.steps]]
 name = "boot-stack"
 timeout = 600
 exec = [
@@ -161,7 +188,8 @@ npx tsx src/agent.ts \
   --max-budget "{{max_budget_usd}}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
   --context-file "/workspace/${REPO_SHORT}/VERIFY.md" \
-  --knowledge-id fullstack-env \
+  --context-file "/workspace/.islo/context/fullstack-env.md" \
+  --context-file "/workspace/.islo/context/islo-integrations.md" \
   --var REPO="{{repo}}" \
   --var REPO_SHORT="${REPO_SHORT}" \
   --var PR_NUMBER="{{pr_number}}" \

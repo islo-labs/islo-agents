@@ -204,6 +204,7 @@ npx tsx src/agent.ts \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
+  --knowledge-id islo-integrations \
   --var REPO="${REPO}" \
   --var PR_NUMBER="${PR_NUMBER}" \
   --var RUN_ID="${RUN_ID}"

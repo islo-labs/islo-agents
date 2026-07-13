@@ -146,6 +146,7 @@ npx tsx src/agent.ts \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
+  --knowledge-id islo-integrations \
   --var ISSUE_ID="{{issue_id}}" \
   --var ISSUE_TITLE="{{issue_title}}" \
   --var ISSUE_DESCRIPTION="{{issue_description}}" \

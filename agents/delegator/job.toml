@@ -124,6 +124,7 @@ npx tsx src/agent.ts \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
   --context-file /workspace/payload.json \
+  --knowledge-id islo-integrations \
   --var SOURCE="{{source}}" \
   --var EVENT_TYPE="{{event_type}}" \
   --var DELIVERY_ID="{{delivery_id}}" \

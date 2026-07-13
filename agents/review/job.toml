@@ -140,6 +140,7 @@ npx tsx src/agent.ts \
   --max-budget "{{max_budget_usd}}" \
   --session-key "${REPO}-${PR_NUMBER}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
+  --knowledge-id islo-integrations \
   --var REPO="${REPO}" \
   --var PR_NUMBER="${PR_NUMBER}"
 ''',
