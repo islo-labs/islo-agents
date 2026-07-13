@@ -36,21 +36,25 @@ source = { source = "raw_body" }
 [rules.actions.params.delivery_id]
 source = { source = "header", name = "X-GitHub-Delivery" }
 
-# islo-loop: changes_requested on an islo-loop PR → delegator resumes implementer
+# islo-loop: needs-changes label on an islo-loop PR → delegator resumes implementer
 [[rules]]
 
 [rules.when]
 op = "all"
 
 [[rules.when.conditions]]
-op = "equals"
-json_path = "$.action"
-value = "submitted"
+op = "exists"
+json_path = "$.pull_request"
 
 [[rules.when.conditions]]
 op = "equals"
-json_path = "$.review.state"
-value = "changes_requested"
+json_path = "$.action"
+value = "labeled"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.label.name"
+value = "needs-changes"
 
 [[rules.when.conditions]]
 op = "contains"
@@ -65,7 +69,7 @@ job_name = "delegator"
 parts = [{ type = "literal", value = "github" }]
 
 [rules.actions.params.event_type]
-parts = [{ type = "literal", value = "pull_request_review" }]
+parts = [{ type = "literal", value = "pr_needs_changes" }]
 
 [rules.actions.params.raw_payload]
 source = { source = "raw_body" }

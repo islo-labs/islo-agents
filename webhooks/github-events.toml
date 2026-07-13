@@ -103,14 +103,18 @@ name = "X-GitHub-Delivery"
 op = "all"
 
 [[rules.when.conditions]]
-op = "equals"
-json_path = "$.action"
-value = "submitted"
+op = "exists"
+json_path = "$.pull_request"
 
 [[rules.when.conditions]]
 op = "equals"
-json_path = "$.review.state"
-value = "changes_requested"
+json_path = "$.action"
+value = "labeled"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.label.name"
+value = "needs-changes"
 
 [[rules.when.conditions]]
 op = "contains"
@@ -127,7 +131,7 @@ value = "github"
 
 [[rules.actions.params.event_type.parts]]
 type = "literal"
-value = "pull_request_review"
+value = "pr_needs_changes"
 
 [rules.actions.params.raw_payload.source]
 source = "raw_body"

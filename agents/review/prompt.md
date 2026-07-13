@@ -18,9 +18,10 @@ You are on the PR branch inside an isolated sandbox VM. You have full root acces
    ```bash
    gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-review 2>/dev/null || true
    gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-verify 2>/dev/null || true
+   gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label needs-changes 2>/dev/null || true
    ```
 
-6. **Post your review.** Submit a GitHub PR review with inline comments, then signal your verdict with a label:
+6. **Post your review.** Submit a GitHub PR review comment with inline comments, then signal your verdict with a label:
 
    - **Approve** — code is correct, ready for verification:
      ```bash
@@ -29,12 +30,13 @@ You are on the PR branch inside an isolated sandbox VM. You have full root acces
      ```
    - **Request changes** — bugs, issues, or problems that must be fixed:
      ```bash
-     gh pr review {{PR_NUMBER}} --repo {{REPO}} --request-changes --body "your summary"
+     gh pr review {{PR_NUMBER}} --repo {{REPO}} --comment --body "your summary"
+     gh pr edit {{PR_NUMBER}} --repo {{REPO}} --add-label needs-changes
      ```
 
-   The `passed-review` label is what triggers the next step (verification). Do not use `--approve` — GitHub blocks self-approval since the PR was authored by the same bot account.
+   **All signaling is label-based.** Do not use `--approve` or `--request-changes` — GitHub blocks both on self-authored PRs (the bot owns the PR and the review account). The `passed-review` label triggers verification; the `needs-changes` label triggers the implementer to address feedback.
 
-   When in doubt, request changes. Another review cycle is cheap; running full-stack verification on broken code is not.
+   When in doubt, add `needs-changes`. Another review cycle is cheap; running full-stack verification on broken code is not.
 
 Be constructive, not nitpicky. Focus on things that matter. Don't comment on lint, formatting, or test failures; CI and the babysit bot handle those separately.
 
