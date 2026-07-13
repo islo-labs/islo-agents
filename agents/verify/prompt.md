@@ -10,6 +10,11 @@ The stack has been booted with the PR branch already checked out and running. Yo
 
 ## Instructions
 
+0. **Clear stale verdict labels.** Remove any previous verification result so a fresh one can trigger correctly:
+   ```bash
+   gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-verify 2>/dev/null || true
+   ```
+
 1. **Understand the full change.** Read the primary PR and all related PRs to understand the complete feature:
    ```
    gh pr view {{PR_NUMBER}} --repo {{REPO}}
@@ -35,7 +40,12 @@ The stack has been booted with the PR branch already checked out and running. Yo
 
 4. **Post your findings.**
 
-   - **PASSED**: Use `gh pr comment` to post a verification report. Include a clear **PASSED** status at the top, list each scenario with evidence. **Do NOT submit an approved review** — the verifier's job is to test, not to approve. A comment is sufficient; the loop ends naturally because no webhook rule matches comments. Then notify the team on Slack:
+   - **PASSED**: Post a verification report comment and add the `passed-verify` label:
+     ```bash
+     gh pr comment {{PR_NUMBER}} --repo {{REPO}} --body "your verification report"
+     gh pr edit {{PR_NUMBER}} --repo {{REPO}} --add-label passed-verify
+     ```
+     Then notify the team on Slack:
      ```bash
      curl -s -X POST "https://slack.com/api/chat.postMessage" \
        -H "Authorization: Bearer $SLACK_TOKEN" \
@@ -49,7 +59,7 @@ The stack has been booted with the PR branch already checked out and running. Yo
 
 - **Do NOT modify the PR branch.** Never commit, push, or change code. This is read-only verification.
 - **Do NOT run the full test suite.** You are here to prove the feature works, not to run CI. Target specific scenarios.
-- **NEVER submit an approved review.** Post a comment on pass, submit `changes_requested` on failure. Submitting an approval would cause an infinite verification loop.
+- **NEVER submit an approved review or add `passed-review`.** Use the `passed-verify` label on pass, `changes_requested` on failure. Submitting an approval or adding the review label would re-trigger verification in an infinite loop.
 - **Always capture evidence.** Every claim in your report must have command output backing it up.
 - **Be specific.** "It works" is not evidence. "GET /api/users?status=active returns 200 with 3 results" is evidence.
 - **Report failures honestly.** If something doesn't work, say so clearly with the error output.

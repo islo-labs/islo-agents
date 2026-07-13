@@ -30,21 +30,25 @@ source = { source = "json_path", path = "$.repository.name" }
 [rules.actions.params.pr_number]
 source = { source = "json_path", path = "$.pull_request.number" }
 
-# islo-loop: review approval on an islo-loop PR → verify
+# islo-loop: passed-review label on an islo-loop PR → verify
 [[rules]]
 
 [rules.when]
 op = "all"
 
 [[rules.when.conditions]]
-op = "equals"
-json_path = "$.action"
-value = "submitted"
+op = "exists"
+json_path = "$.pull_request"
 
 [[rules.when.conditions]]
 op = "equals"
-json_path = "$.review.state"
-value = "approved"
+json_path = "$.action"
+value = "labeled"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.label.name"
+value = "passed-review"
 
 [[rules.when.conditions]]
 op = "contains"

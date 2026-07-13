@@ -14,20 +14,25 @@ You are on the PR branch inside an isolated sandbox VM. You have full root acces
 
 4. **Evaluate the approach.** Does it make sense architecturally? Is there a simpler way?
 
-5. **Post your review.** You **must** submit your review using exactly one of these two `gh` commands — no other form of review is valid:
-
+5. **Clear stale verdict labels.** Before posting your review, remove any previous verdict labels so the new one triggers correctly:
    ```bash
-   # APPROVE — code is correct, ready for verification
-   gh pr review {{PR_NUMBER}} --repo {{REPO}} --approve --body "your summary"
-
-   # REQUEST CHANGES — bugs, issues, or problems that must be fixed
-   gh pr review {{PR_NUMBER}} --repo {{REPO}} --request-changes --body "your summary"
+   gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-review 2>/dev/null || true
+   gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-verify 2>/dev/null || true
    ```
 
-   **Never use `--comment` or `gh pr comment` for your review verdict.** A `--comment` review does not register as an approval or change request in GitHub, which breaks downstream automation. Inline comments on specific diff lines are fine alongside `--approve` or `--request-changes`.
+6. **Post your review.** Submit a GitHub PR review with inline comments, then signal your verdict with a label:
 
-   - **Approve**: The code is correct, handles edge cases, and is ready for verification. Minor style suggestions that don't affect correctness are fine alongside an approval.
-   - **Request changes**: There are bugs, missing error handling, security issues, architectural problems, or anything that could cause the feature to not work correctly.
+   - **Approve** — code is correct, ready for verification:
+     ```bash
+     gh pr review {{PR_NUMBER}} --repo {{REPO}} --comment --body "your summary"
+     gh pr edit {{PR_NUMBER}} --repo {{REPO}} --add-label passed-review
+     ```
+   - **Request changes** — bugs, issues, or problems that must be fixed:
+     ```bash
+     gh pr review {{PR_NUMBER}} --repo {{REPO}} --request-changes --body "your summary"
+     ```
+
+   The `passed-review` label is what triggers the next step (verification). Do not use `--approve` — GitHub blocks self-approval since the PR was authored by the same bot account.
 
    When in doubt, request changes. Another review cycle is cheap; running full-stack verification on broken code is not.
 

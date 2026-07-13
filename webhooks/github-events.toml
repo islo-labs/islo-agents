@@ -301,14 +301,18 @@ path = "$.pull_request.number"
 op = "all"
 
 [[rules.when.conditions]]
-op = "equals"
-json_path = "$.action"
-value = "submitted"
+op = "exists"
+json_path = "$.pull_request"
 
 [[rules.when.conditions]]
 op = "equals"
-json_path = "$.review.state"
-value = "approved"
+json_path = "$.action"
+value = "labeled"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.label.name"
+value = "passed-review"
 
 [[rules.when.conditions]]
 op = "contains"
