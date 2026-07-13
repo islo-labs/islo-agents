@@ -28,7 +28,7 @@ json_path = "$.updatedFrom.labelIds"
 [[rules.when.conditions]]
 op = "contains"
 json_path = "$.data.labelIds"
-value = "REPLACE_WITH_YOUR_LINEAR_LABEL_ID"
+value = "5e83752c-0783-4f1e-adbe-3b17e007518a"
 
 [[rules.when.conditions]]
 op = "not"
@@ -36,7 +36,7 @@ op = "not"
 [rules.when.conditions.condition]
 op = "contains"
 json_path = "$.updatedFrom.labelIds"
-value = "REPLACE_WITH_YOUR_LINEAR_LABEL_ID"
+value = "5e83752c-0783-4f1e-adbe-3b17e007518a"
 
 [[rules.actions]]
 action_type = "trigger_job"
