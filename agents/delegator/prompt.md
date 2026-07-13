@@ -83,11 +83,15 @@ Pick the best session using `cwd`, `git_branch`, `first_user_text`, `last_timest
 
 ## Route to an existing session
 
-For Claude Code workers, resume by `session_name` — do **not** run plain `claude "..."` when a relevant session exists:
+For Claude Code workers, resume an existing session — do **not** run plain `claude "..."` when a relevant session exists:
 
 ```bash
-islo use <sandbox> -- bash -lc 'cd <session-cwd-or-repo> && claude --resume <session_name> --model sonnet "<handoff prompt>"'
+islo use <sandbox> -- bash -lc 'cd /workspace && claude --resume <session_name> --model sonnet "<handoff prompt>"'
 ```
+
+**Critical**: always `cd /workspace` before resuming. Claude scopes sessions by the **project directory** you launch from. All implementer sessions are created from `/workspace`, so resuming from any other directory (e.g. `/workspace/islo-frontend`) will fail with "No conversation found" because it looks in a different project scope.
+
+The `session_name` to use is the one from `islo logs <sandbox> --type agent` output. For implementer sandboxes, the session was created with `--session-key "implementer-<issue-id>"`, so try that name first.
 
 Handoff prompt should be short and event-shaped. Include the source thread and the exact user mention, then ask the worker to inspect the thread and continue.
 
