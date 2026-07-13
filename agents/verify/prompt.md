@@ -35,7 +35,13 @@ The stack has been booted with the PR branch already checked out and running. Yo
 
 4. **Post your findings.**
 
-   - **PASSED**: Use `gh pr comment` to post a verification report. Include a clear **PASSED** status at the top, list each scenario with evidence. **Do NOT submit an approved review** — the verifier's job is to test, not to approve. A comment is sufficient; the loop ends naturally because no webhook rule matches comments.
+   - **PASSED**: Use `gh pr comment` to post a verification report. Include a clear **PASSED** status at the top, list each scenario with evidence. **Do NOT submit an approved review** — the verifier's job is to test, not to approve. A comment is sufficient; the loop ends naturally because no webhook rule matches comments. Then notify the team on Slack:
+     ```bash
+     curl -s -X POST "https://slack.com/api/chat.postMessage" \
+       -H "Authorization: Bearer $SLACK_TOKEN" \
+       -H "Content-Type: application/json" \
+       -d "{\"channel\": \"#team-islo\", \"text\": \"Verification PASSED for {{REPO}}#{{PR_NUMBER}} — PR is ready to merge.\"}"
+     ```
 
    - **FAILED** or **PARTIAL**: Submit a `changes_requested` PR review via `gh pr review {{PR_NUMBER}} --repo {{REPO}} --request-changes --body "..."`. Include what failed, expected vs actual, and what needs fixing. This triggers the implementation loop to continue.
 
