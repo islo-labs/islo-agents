@@ -49,6 +49,11 @@ type = "number"
 default = 15
 description = "Maximum budget in USD."
 
+[job.params.max_iterations]
+type = "integer"
+default = 5
+description = "Maximum implementation loop iterations before hard-stopping."
+
 [run]
 fail_fast = true
 fanout = false
@@ -100,6 +105,28 @@ exec = [
 set -euo pipefail
 cd /workspace/islo-agents
 npm ci
+''',
+]
+
+[[run.tasks.steps]]
+name = "iteration-guard"
+timeout = 10
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+COUNTER="/workspace/.islo-agents/iteration-count"
+mkdir -p "$(dirname "$COUNTER")"
+COUNT=0
+[ -f "$COUNTER" ] && COUNT=$(cat "$COUNTER")
+COUNT=$((COUNT + 1))
+echo "$COUNT" > "$COUNTER"
+if [ "$COUNT" -gt {{max_iterations}} ]; then
+  echo "iteration-guard: limit reached ($COUNT/{{max_iterations}}). Stopping."
+  exit 1
+fi
+echo "iteration-guard: run $COUNT/{{max_iterations}}"
 ''',
 ]
 
