@@ -35,3 +35,40 @@ source = { source = "raw_body" }
 
 [rules.actions.params.delivery_id]
 source = { source = "header", name = "X-GitHub-Delivery" }
+
+# islo-loop: changes_requested on an islo-loop PR → delegator resumes implementer
+[[rules]]
+
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "submitted"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.review.state"
+value = "changes_requested"
+
+[[rules.when.conditions]]
+op = "contains"
+json_path = "$.pull_request.labels[*].name"
+value = "islo-loop"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "delegator"
+
+[rules.actions.params.source]
+parts = [{ type = "literal", value = "github" }]
+
+[rules.actions.params.event_type]
+parts = [{ type = "literal", value = "pull_request_review" }]
+
+[rules.actions.params.raw_payload]
+source = { source = "raw_body" }
+
+[rules.actions.params.delivery_id]
+source = { source = "header", name = "X-GitHub-Delivery" }

@@ -103,6 +103,44 @@ name = "X-GitHub-Delivery"
 op = "all"
 
 [[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "submitted"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.review.state"
+value = "changes_requested"
+
+[[rules.when.conditions]]
+op = "contains"
+json_path = "$.pull_request.labels[*].name"
+value = "islo-loop"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "delegator"
+
+[[rules.actions.params.source.parts]]
+type = "literal"
+value = "github"
+
+[[rules.actions.params.event_type.parts]]
+type = "literal"
+value = "pull_request_review"
+
+[rules.actions.params.raw_payload.source]
+source = "raw_body"
+
+[rules.actions.params.delivery_id.source]
+source = "header"
+name = "X-GitHub-Delivery"
+
+[[rules]]
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
 op = "exists"
 json_path = "$.pull_request"
 
@@ -201,12 +239,81 @@ json_path = "$.pull_request"
 [[rules.when.conditions]]
 op = "equals"
 json_path = "$.action"
+value = "synchronize"
+
+[[rules.when.conditions]]
+op = "contains"
+json_path = "$.pull_request.labels[*].name"
+value = "islo-loop"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "review"
+
+[rules.actions.params.repo.source]
+source = "json_path"
+path = "$.repository.full_name"
+
+[rules.actions.params.repo_name.source]
+source = "json_path"
+path = "$.repository.name"
+
+[rules.actions.params.pr_number.source]
+source = "json_path"
+path = "$.pull_request.number"
+
+[[rules]]
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "exists"
+json_path = "$.pull_request"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
 value = "labeled"
 
 [[rules.when.conditions]]
 op = "equals"
 json_path = "$.label.name"
 value = "islo-verify"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "verify"
+
+[rules.actions.params.repo.source]
+source = "json_path"
+path = "$.repository.full_name"
+
+[rules.actions.params.repo_name.source]
+source = "json_path"
+path = "$.repository.name"
+
+[rules.actions.params.pr_number.source]
+source = "json_path"
+path = "$.pull_request.number"
+
+[[rules]]
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "submitted"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.review.state"
+value = "approved"
+
+[[rules.when.conditions]]
+op = "contains"
+json_path = "$.pull_request.labels[*].name"
+value = "islo-loop"
 
 [[rules.actions]]
 action_type = "trigger_job"

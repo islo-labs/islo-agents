@@ -29,3 +29,37 @@ source = { source = "json_path", path = "$.repository.name" }
 
 [rules.actions.params.pr_number]
 source = { source = "json_path", path = "$.pull_request.number" }
+
+# islo-loop: review approval on an islo-loop PR → verify
+[[rules]]
+
+[rules.when]
+op = "all"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.action"
+value = "submitted"
+
+[[rules.when.conditions]]
+op = "equals"
+json_path = "$.review.state"
+value = "approved"
+
+[[rules.when.conditions]]
+op = "contains"
+json_path = "$.pull_request.labels[*].name"
+value = "islo-loop"
+
+[[rules.actions]]
+action_type = "trigger_job"
+job_name = "verify"
+
+[rules.actions.params.repo]
+source = { source = "json_path", path = "$.repository.full_name" }
+
+[rules.actions.params.repo_name]
+source = { source = "json_path", path = "$.repository.name" }
+
+[rules.actions.params.pr_number]
+source = { source = "json_path", path = "$.pull_request.number" }

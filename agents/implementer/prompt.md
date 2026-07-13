@@ -32,6 +32,7 @@ You are inside an isolated sandbox VM with full root access. Repos are pre-clone
    git commit -m "{{ISSUE_IDENTIFIER}}: <descriptive message>"
    git push -u origin HEAD
    gh pr create --title "{{ISSUE_IDENTIFIER}}: <short description>" --body "<what changed and why>"
+   gh pr edit <PR> --add-label islo-loop
    ```
    If the change spans multiple repos, cross-reference the PRs in each body.
 
@@ -45,3 +46,13 @@ When done (or blocked), post a short update on the **same source thread** that t
 - Follow each project's existing style and conventions.
 - Be thorough — handle edge cases, add error handling.
 - Don't guess silently: if something is ambiguous, pick the most reasonable interpretation and note it in the PR and the source comment.
+
+## Iteration guard
+
+Before pushing fixes, count your own commits on the PR branch:
+
+```bash
+git log --oneline --author="islo" | wc -l
+```
+
+If there are **5 or more**, stop. Post a comment on the PR and the source issue at `{{ISSUE_URL}}` saying you've hit the iteration limit and a human should take over. Do not push more commits.

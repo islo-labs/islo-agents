@@ -14,7 +14,12 @@ You are on the PR branch inside an isolated sandbox VM. You have full root acces
 
 4. **Evaluate the approach.** Does it make sense architecturally? Is there a simpler way?
 
-5. **Post your review.** Submit a GitHub PR review with inline comments on specific diff lines. Include a brief summary and put detailed feedback on the relevant lines.
+5. **Post your review.** Submit a GitHub PR review with inline comments on specific diff lines. Include a brief summary and put detailed feedback on the relevant lines. You **must** choose a verdict:
+
+   - **Approve** (`gh pr review --approve`): The code is correct, handles edge cases, and is ready for verification. Minor style suggestions that don't affect correctness are fine alongside an approval.
+   - **Request changes** (`gh pr review --request-changes`): There are bugs, missing error handling, security issues, architectural problems, or anything that could cause the feature to not work correctly.
+
+   When in doubt, request changes. Another review cycle is cheap; running full-stack verification on broken code is not.
 
 Be constructive, not nitpicky. Focus on things that matter. Don't comment on lint, formatting, or test failures; CI and the babysit bot handle those separately.
 

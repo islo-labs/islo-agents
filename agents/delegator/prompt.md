@@ -28,13 +28,26 @@ Read the payload:
 jq . "{{RAW_PAYLOAD_PATH}}"
 ```
 
-For GitHub PR comments:
+For GitHub PR comments (`{{EVENT_TYPE}}` = `github_pr_comment`):
 
 ```bash
 REPO="$(jq -r '.repository.full_name' "{{RAW_PAYLOAD_PATH}}")"
 PR_NUMBER="$(jq -r '.issue.number // .pull_request.number' "{{RAW_PAYLOAD_PATH}}")"
 gh pr view "${PR_NUMBER}" --repo "${REPO}" --json title,body,headRefName,baseRefName,url,comments,reviews
 ```
+
+For PR review events (`{{EVENT_TYPE}}` = `pull_request_review`):
+
+```bash
+REPO="$(jq -r '.repository.full_name' "{{RAW_PAYLOAD_PATH}}")"
+PR_NUMBER="$(jq -r '.pull_request.number' "{{RAW_PAYLOAD_PATH}}")"
+REVIEW_STATE="$(jq -r '.review.state' "{{RAW_PAYLOAD_PATH}}")"
+REVIEW_BODY="$(jq -r '.review.body' "{{RAW_PAYLOAD_PATH}}")"
+REVIEWER="$(jq -r '.review.user.login' "{{RAW_PAYLOAD_PATH}}")"
+gh pr view "${PR_NUMBER}" --repo "${REPO}" --json title,body,headRefName,baseRefName,url,comments,reviews
+```
+
+This event fires when a reviewer or verifier submits `changes_requested` on an `islo-loop` PR. Your job is to find the implementer sandbox and resume it with the feedback. The review body contains the specific issues to address — include it in the handoff prompt.
 
 Extract repo, PR number, and any issue IDs (from title, branch, body, or comments — Linear, Jira, etc.). Prefer visible conventions over guessing.
 
@@ -78,7 +91,9 @@ For Claude Code workers, resume by `session_name` — do **not** run plain `clau
 islo use <sandbox> -- bash -lc 'cd <session-cwd-or-repo> && claude --resume <session_name> --model sonnet "<handoff prompt>"'
 ```
 
-Handoff prompt should be short and event-shaped. Include the source thread and the exact user mention, then ask the worker to inspect the thread and continue:
+Handoff prompt should be short and event-shaped. Include the source thread and the exact user mention, then ask the worker to inspect the thread and continue.
+
+For `github_pr_comment` events:
 
 ```text
 You were mentioned on PR islo-labs/islo-cli#477.
@@ -87,6 +102,17 @@ User comment:
 "@islo make it clearer please"
 
 Inspect the PR discussion/review thread and continue the existing work in this session. Reply on the source thread when you have a useful update.
+```
+
+For `pull_request_review` events (islo-loop):
+
+```text
+Your PR islo-labs/islo-cli#477 received a changes_requested review from <reviewer>.
+
+Review feedback:
+"<review body>"
+
+Read the full review on the PR (inline comments and summary), address the feedback, and push fixes. Do not reply on the PR — the reviewer will be re-triggered automatically when you push.
 ```
 
 Do not rewrite the user's request into a detailed task plan. Do not run follow-up commands after a successful resume.
