@@ -14,27 +14,22 @@ You are on the PR branch inside an isolated sandbox VM. You have full root acces
 
 4. **Evaluate the approach.** Does it make sense architecturally? Is there a simpler way?
 
-5. **Clear stale verdict labels.** Before posting your review, remove any previous verdict labels so the new one triggers correctly:
-   ```bash
-   gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-review 2>/dev/null || true
-   gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-verify 2>/dev/null || true
-   gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label needs-changes 2>/dev/null || true
-   ```
-
-6. **Post your review.** Submit a GitHub PR review comment with inline comments, then signal your verdict with a label:
+5. **Signal your verdict.** This is the most important step — it drives the automation loop. Run **all three commands** in order: clear stale labels, add your verdict label, then post your review.
 
    - **Approve** — code is correct, ready for verification:
      ```bash
-     gh pr review {{PR_NUMBER}} --repo {{REPO}} --comment --body "your summary"
+     gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-review --remove-label passed-verify --remove-label needs-changes 2>/dev/null || true
      gh pr edit {{PR_NUMBER}} --repo {{REPO}} --add-label passed-review
+     gh pr review {{PR_NUMBER}} --repo {{REPO}} --comment --body "your summary"
      ```
    - **Request changes** — bugs, issues, or problems that must be fixed:
      ```bash
-     gh pr review {{PR_NUMBER}} --repo {{REPO}} --comment --body "your summary"
+     gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-review --remove-label passed-verify --remove-label needs-changes 2>/dev/null || true
      gh pr edit {{PR_NUMBER}} --repo {{REPO}} --add-label needs-changes
+     gh pr review {{PR_NUMBER}} --repo {{REPO}} --comment --body "your summary"
      ```
 
-   **All signaling is label-based.** Do not use `--approve` or `--request-changes` — GitHub blocks both on self-authored PRs (the bot owns the PR and the review account). The `passed-review` label triggers verification; the `needs-changes` label triggers the implementer to address feedback.
+   **The label MUST be added.** Without it, nothing happens — no verification, no implementation loop. The label is the trigger, not the review text. Do not use `--approve` or `--request-changes` — GitHub blocks both on self-authored PRs.
 
    When in doubt, add `needs-changes`. Another review cycle is cheap; running full-stack verification on broken code is not.
 
