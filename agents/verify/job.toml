@@ -48,7 +48,7 @@ description = "Claude model for the verify agent."
 
 [job.params.max_turns]
 type = "integer"
-default = 80
+default = 150
 description = "Maximum agentic turns."
 
 [job.params.max_budget_usd]
