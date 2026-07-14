@@ -134,7 +134,7 @@ source /workspace/.islo-job/env
 cd /workspace/islo-agents
 npx tsx src/agent.ts \
   --prompt agents/review/prompt.md \
-  --cwd "/workspace/${REPO_SHORT}" \
+  --cwd /workspace \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \

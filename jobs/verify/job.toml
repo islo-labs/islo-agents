@@ -182,7 +182,7 @@ ENV_FILE="{{env_file}}"
 
 npx tsx src/agent.ts \
   --prompt agents/verify/prompt.md \
-  --cwd "/workspace/${REPO_SHORT}" \
+  --cwd /workspace \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \

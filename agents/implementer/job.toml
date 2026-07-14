@@ -36,7 +36,7 @@ pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.model]
 type = "string"
-default = "claude-sonnet-4-5"
+default = "claude-opus-4-6"
 description = "Claude model for the implementer agent."
 
 [job.params.max_turns]

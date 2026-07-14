@@ -119,7 +119,7 @@ set -euo pipefail
 cd /workspace/islo-agents
 npx tsx src/agent.ts \
   --prompt agents/delegator/prompt.md \
-  --cwd /workspace/islo-agents \
+  --cwd /workspace \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
