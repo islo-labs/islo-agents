@@ -23,7 +23,7 @@ You are inside an isolated sandbox VM with full root access. Repos are pre-clone
 
 1. **Understand the change.** Read the issue and the extra context you fetched. Explore the relevant codebase(s).
 2. **Implement.** Clean, focused, matching each project's patterns.
-3. **Verify.** Tests, linters, type checks as appropriate for each repo you touched.
+3. **Verify locally.** Before pushing, run the repo's test suite, linters, and type checks. Fix any failures. For Python repos: `uv run pytest`, `uv run ruff check`, `uv run pre-commit run --all-files`. For Rust repos: `cargo test`, `cargo clippy`. For frontend repos: `npm test`, `npx tsc --noEmit`. Check the repo's CI workflow (`.github/workflows/`) to see exactly what CI runs and replicate it locally.
 4. **Open PR(s).** One PR per repo:
    ```bash
    cd /workspace/<repo>
@@ -32,8 +32,10 @@ You are inside an isolated sandbox VM with full root access. Repos are pre-clone
    git commit -m "{{ISSUE_IDENTIFIER}}: <descriptive message>"
    git push -u origin HEAD
    gh pr create --title "{{ISSUE_IDENTIFIER}}: <short description>" --body "<what changed and why>"
+   gh pr edit <PR> --add-label islo-loop
    ```
    If the change spans multiple repos, cross-reference the PRs in each body.
+   CI failures are handled automatically by the babysit agent — you don't need to wait for or poll CI.
 
 ## Report back
 
@@ -45,3 +47,13 @@ When done (or blocked), post a short update on the **same source thread** that t
 - Follow each project's existing style and conventions.
 - Be thorough — handle edge cases, add error handling.
 - Don't guess silently: if something is ambiguous, pick the most reasonable interpretation and note it in the PR and the source comment.
+
+## Iteration guard
+
+Before pushing fixes, count your own commits on the PR branch:
+
+```bash
+git log --oneline --author="islo-agent" | wc -l
+```
+
+If there are **5 or more**, stop. Post a comment on the PR and the source issue at `{{ISSUE_URL}}` saying you've hit the iteration limit and a human should take over. Do not push more commits.

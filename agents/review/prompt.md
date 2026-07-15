@@ -14,7 +14,24 @@ You are on the PR branch inside an isolated sandbox VM. You have full root acces
 
 4. **Evaluate the approach.** Does it make sense architecturally? Is there a simpler way?
 
-5. **Post your review.** Submit a GitHub PR review with inline comments on specific diff lines. Include a brief summary and put detailed feedback on the relevant lines.
+5. **Signal your verdict.** This is the most important step — it drives the automation loop. Run **all three commands** in order: clear stale labels, add your verdict label, then post your review.
+
+   - **Approve** — code is correct, ready for verification:
+     ```bash
+     gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-review --remove-label passed-verify --remove-label needs-changes 2>/dev/null || true
+     gh pr edit {{PR_NUMBER}} --repo {{REPO}} --add-label passed-review
+     gh pr review {{PR_NUMBER}} --repo {{REPO}} --comment --body "your summary"
+     ```
+   - **Request changes** — bugs, issues, or problems that must be fixed:
+     ```bash
+     gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-review --remove-label passed-verify --remove-label needs-changes 2>/dev/null || true
+     gh pr edit {{PR_NUMBER}} --repo {{REPO}} --add-label needs-changes
+     gh pr review {{PR_NUMBER}} --repo {{REPO}} --comment --body "your summary"
+     ```
+
+   **The label MUST be added.** Without it, nothing happens — no verification, no implementation loop. The label is the trigger, not the review text. Do not use `--approve` or `--request-changes` — GitHub blocks both on self-authored PRs.
+
+   When in doubt, add `needs-changes`. Another review cycle is cheap; running full-stack verification on broken code is not.
 
 Be constructive, not nitpicky. Focus on things that matter. Don't comment on lint, formatting, or test failures; CI and the babysit bot handle those separately.
 

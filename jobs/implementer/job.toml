@@ -36,7 +36,7 @@ pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.model]
 type = "string"
-default = "claude-sonnet-4-5"
+default = "claude-opus-4-6"
 description = "Claude model for the implementer agent."
 
 [job.params.max_turns]
@@ -49,6 +49,11 @@ type = "number"
 default = 15
 description = "Maximum budget in USD."
 
+[job.params.max_iterations]
+type = "integer"
+default = 5
+description = "Maximum implementation loop iterations before hard-stopping."
+
 [run]
 fail_fast = true
 fanout = false
@@ -58,7 +63,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "implementer-{{issue_id}}"
+name = "implementer-{{issue_identifier}}"
 image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-stack"
 vcpus = 4
@@ -104,6 +109,28 @@ npm ci
 ]
 
 [[run.tasks.steps]]
+name = "iteration-guard"
+timeout = 10
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+COUNTER="/workspace/.islo-agents/iteration-count"
+mkdir -p "$(dirname "$COUNTER")"
+COUNT=0
+[ -f "$COUNTER" ] && COUNT=$(cat "$COUNTER")
+COUNT=$((COUNT + 1))
+echo "$COUNT" > "$COUNTER"
+if [ "$COUNT" -gt {{max_iterations}} ]; then
+  echo "iteration-guard: limit reached ($COUNT/{{max_iterations}}). Stopping."
+  exit 1
+fi
+echo "iteration-guard: run $COUNT/{{max_iterations}}"
+''',
+]
+
+[[run.tasks.steps]]
 name = "run-agent"
 timeout = 3600
 exec = [
@@ -111,19 +138,38 @@ exec = [
   "-lc",
   '''
 set -euo pipefail
+# Write issue params to files via quoted heredocs so markdown backticks/quotes
+# in the Linear body cannot be interpreted as shell (command substitution).
+mkdir -p /workspace/.islo-job
+cat > /workspace/.islo-job/issue_id <<'ISLO_EOF'
+{{issue_id}}
+ISLO_EOF
+cat > /workspace/.islo-job/issue_title <<'ISLO_EOF'
+{{issue_title}}
+ISLO_EOF
+cat > /workspace/.islo-job/issue_description <<'ISLO_EOF'
+{{issue_description}}
+ISLO_EOF
+cat > /workspace/.islo-job/issue_identifier <<'ISLO_EOF'
+{{issue_identifier}}
+ISLO_EOF
+cat > /workspace/.islo-job/issue_url <<'ISLO_EOF'
+{{issue_url}}
+ISLO_EOF
 cd /workspace/islo-agents
 npx tsx src/agent.ts \
   --prompt agents/implementer/prompt.md \
   --cwd /workspace \
-  --session-key "implementer-{{issue_id}}" \
+  --session-key "implementer-$(tr -d '\n' < /workspace/.islo-job/issue_identifier)" \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
-  --var ISSUE_ID="{{issue_id}}" \
-  --var ISSUE_TITLE="{{issue_title}}" \
-  --var ISSUE_DESCRIPTION="{{issue_description}}" \
-  --var ISSUE_IDENTIFIER="{{issue_identifier}}" \
-  --var ISSUE_URL="{{issue_url}}"
+  --knowledge-id islo-integrations \
+  --var ISSUE_ID="$(tr -d '\n' < /workspace/.islo-job/issue_id)" \
+  --var ISSUE_TITLE="$(cat /workspace/.islo-job/issue_title)" \
+  --var ISSUE_DESCRIPTION="$(cat /workspace/.islo-job/issue_description)" \
+  --var ISSUE_IDENTIFIER="$(tr -d '\n' < /workspace/.islo-job/issue_identifier)" \
+  --var ISSUE_URL="$(tr -d '\n' < /workspace/.islo-job/issue_url)"
 ''',
 ]
 

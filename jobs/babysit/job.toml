@@ -199,11 +199,12 @@ source /workspace/.islo-job/env
 cd /workspace/islo-agents
 npx tsx src/agent.ts \
   --prompt agents/babysit/prompt.md \
-  --cwd "/workspace/${REPO_SHORT}" \
+  --cwd /workspace \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
+  --knowledge-id islo-integrations \
   --var REPO="${REPO}" \
   --var PR_NUMBER="${PR_NUMBER}" \
   --var RUN_ID="${RUN_ID}"

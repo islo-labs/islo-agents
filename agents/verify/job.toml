@@ -48,7 +48,7 @@ description = "Claude model for the verify agent."
 
 [job.params.max_turns]
 type = "integer"
-default = 80
+default = 150
 description = "Maximum agentic turns."
 
 [job.params.max_budget_usd]
@@ -79,6 +79,33 @@ delete_after = 604800
 
 [[run.tasks]]
 name = "verify"
+
+[[run.tasks.steps]]
+name = "prepare-knowledge"
+timeout = 30
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+CONTEXT_DIR="/workspace/.islo/context"
+mkdir -p "${CONTEXT_DIR}"
+for slug in fullstack-env islo-integrations; do
+  FILE="${CONTEXT_DIR}/${slug}.md"
+  if [ -s "${FILE}" ]; then
+    echo "Using cached ${slug} knowledge"
+  else
+    if islo knowledge get "${slug}" -o json | jq -er '.body' > "${FILE}.tmp"; then
+      mv "${FILE}.tmp" "${FILE}"
+      echo "Cached ${slug} knowledge"
+    else
+      rm -f "${FILE}.tmp"
+      echo "Warning: ${slug} knowledge unavailable; continuing without it" >&2
+    fi
+  fi
+done
+''',
+]
 
 [[run.tasks.steps]]
 name = "boot-stack"
@@ -155,13 +182,14 @@ ENV_FILE="{{env_file}}"
 
 npx tsx src/agent.ts \
   --prompt agents/verify/prompt.md \
-  --cwd "/workspace/${REPO_SHORT}" \
+  --cwd /workspace \
   --model "{{model}}" \
   --max-turns "{{max_turns}}" \
   --max-budget "{{max_budget_usd}}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
   --context-file "/workspace/${REPO_SHORT}/VERIFY.md" \
-  --knowledge-id fullstack-env \
+  --context-file "/workspace/.islo/context/fullstack-env.md" \
+  --context-file "/workspace/.islo/context/islo-integrations.md" \
   --var REPO="{{repo}}" \
   --var REPO_SHORT="${REPO_SHORT}" \
   --var PR_NUMBER="{{pr_number}}" \
