@@ -77,7 +77,7 @@ json_path = "$.pull_request"
 [[rules.when.conditions]]
 op = "matches"
 json_path = "$.comment.body"
-pattern = "(?i)@islo"
+pattern = "(?i)@islo-agent"
 
 [[rules.actions]]
 action_type = "trigger_job"

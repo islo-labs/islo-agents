@@ -53,7 +53,7 @@ When done (or blocked), post a short update on the **same source thread** that t
 Before pushing fixes, count your own commits on the PR branch:
 
 ```bash
-git log --oneline --author="islo" | wc -l
+git log --oneline --author="islo-agent" | wc -l
 ```
 
 If there are **5 or more**, stop. Post a comment on the PR and the source issue at `{{ISSUE_URL}}` saying you've hit the iteration limit and a human should take over. Do not push more commits.

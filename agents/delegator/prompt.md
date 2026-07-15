@@ -101,7 +101,7 @@ For `github_pr_comment` events:
 You were mentioned on PR islo-labs/islo-cli#477.
 
 User comment:
-"@islo make it clearer please"
+"@islo-agent make it clearer please"
 
 Inspect the PR discussion/review thread and continue the existing work in this session. Reply on the source thread when you have a useful update.
 ```

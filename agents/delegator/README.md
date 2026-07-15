@@ -1,13 +1,13 @@
 # Delegator
 
-Route human mentions like `@islo please update this PR` to the right worker.
+Route human mentions like `@islo-agent please update this PR` to the right worker.
 
 The delegator is an ephemeral job: each webhook delivery provisions a small sandbox, routes the mention, then tears the sandbox down. It never does the underlying work itself.
 
 ## Architecture
 
 ```
-GitHub @islo comment
+GitHub @islo-agent comment
   → github-events webhook
   → delegator job (fresh tiny sandbox)
   → resume existing worker session
