@@ -37,7 +37,6 @@ export function inspectClaudeMessage(
 
 export class ClaudeRuntime implements AgentRuntime {
   readonly harness = "claude" as const;
-  readonly sessionSuffix = ".json";
 
   constructor(
     private readonly model: string,

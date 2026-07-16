@@ -83,15 +83,31 @@ Pick the best session using `cwd`, `git_branch`, `first_user_text`, `last_timest
 
 ## Route to an existing session
 
-For Claude Code workers, resume an existing session — do **not** run plain `claude "..."` when a relevant session exists:
+### Discover the session key
+
+List the session files on the worker sandbox:
 
 ```bash
-islo use <sandbox> -- bash -lc 'cd /workspace && claude --resume <session_name> --model sonnet "<handoff prompt>"'
+islo use <sandbox> -- ls /workspace/.islo-agents/sessions/
 ```
 
-**Critical**: always `cd /workspace` before resuming. Claude scopes sessions by the **project directory** you launch from. All implementer sessions are created from `/workspace`, so resuming from any other directory (e.g. `/workspace/islo-frontend`) will fail with "No conversation found" because it looks in a different project scope.
+Each `.session.json` file is named after its session key (e.g. `review-repo-42.session.json`). The harness stores the provider session ID, harness type, and model inside the file automatically. Usually there is exactly one file.
 
-The `session_name` to use is the one from `islo logs <sandbox> --type agent` output. For implementer sandboxes, the session was created with `--session-key "implementer-<issue-id>"`, so try that name first.
+### Resume via the harness
+
+Use the harness to resume — it auto-detects the harness type and model from the session file, so you don't need to specify them:
+
+```bash
+islo use <sandbox> -- bash -lc 'cd /workspace/.islo-pack && npx tsx src/agent.ts \
+  --session-key "<session-key>" \
+  --prompt agents/<role>/prompt.md \
+  --cwd /workspace \
+  "<handoff prompt>"'
+```
+
+This works for both Claude and Codex workers. The `<session-key>` is the filename without `.session.json`.
+
+### Handoff prompt
 
 Handoff prompt should be short and event-shaped. Include the source thread and the exact user mention, then ask the worker to inspect the thread and continue.
 

@@ -69,7 +69,6 @@ test("createRuntime returns ClaudeRuntime for claude opts", () => {
   });
 
   assert.equal(runtime.harness, "claude");
-  assert.equal(runtime.sessionSuffix, ".json");
   assert.match(runtime.describeControls(), /maxTurns=50/);
   assert.match(runtime.describeControls(), /maxBudgetUsd=10/);
 });
@@ -88,7 +87,6 @@ test("createRuntime converts Codex maxBudget to rollout tokens", () => {
   });
 
   assert.equal(runtime.harness, "codex");
-  assert.equal(runtime.sessionSuffix, ".codex.json");
   assert.match(runtime.describeControls(), /maxBudgetUsd=10/);
   assert.match(runtime.describeControls(), /rolloutBudgetTokens=200000/);
   assert.match(runtime.describeControls(), /reasoningEffort=high/);

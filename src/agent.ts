@@ -27,7 +27,12 @@ export interface Args {
   knowledgeTag?: string;
   knowledgeQuery?: string;
   knowledgeIds: string[];
-  runtimeOpts: RuntimeOpts;
+  harness?: Harness;
+  model?: string;
+  maxTurns?: number;
+  maxBudget?: number;
+  rolloutBudgetTokens?: number;
+  reasoningEffort?: ReasoningEffort;
 }
 
 // ── Argument parsing ────────────────────────────────────────────────
@@ -47,7 +52,7 @@ function positiveInteger(raw: string | undefined, flag: string): number | undefi
 
 const CLI_OPTIONS = {
   prompt:                  { type: "string" as const },
-  harness:                 { type: "string" as const, default: "claude" },
+  harness:                 { type: "string" as const },
   cwd:                     { type: "string" as const },
   model:                   { type: "string" as const },
   "max-turns":             { type: "string" as const },
@@ -73,14 +78,19 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): Args {
     );
   }
 
-  const harness = values.harness as string;
-  if (harness !== "claude" && harness !== "codex") {
-    throw new Error(`Unsupported harness '${harness}'`);
+  const rawHarness = values.harness as string | undefined;
+  if (rawHarness !== undefined && rawHarness !== "claude" && rawHarness !== "codex") {
+    throw new Error(`Unsupported harness '${rawHarness}'`);
   }
 
   const knowledgeLevel = values["knowledge-level"];
   if (knowledgeLevel !== undefined && !isKnowledgeLevel(knowledgeLevel)) {
     throw new Error(`Unsupported knowledge level '${knowledgeLevel}'`);
+  }
+
+  const reasoningEffort = values["reasoning-effort"] as string | undefined;
+  if (reasoningEffort !== undefined && !isReasoningEffort(reasoningEffort)) {
+    throw new Error(`Unsupported reasoning effort '${reasoningEffort}'`);
   }
 
   const vars: Record<string, string> = {};
@@ -89,8 +99,6 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): Args {
     if (idx <= 0) throw new Error("--var must use KEY=VALUE");
     vars[entry.slice(0, idx)] = entry.slice(idx + 1);
   }
-
-  const runtimeOpts = buildRuntimeOpts(harness, values);
 
   return {
     prompt: values.prompt,
@@ -103,48 +111,44 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): Args {
     ...(knowledgeLevel ? { knowledgeLevel } : {}),
     ...(values["knowledge-tag"] ? { knowledgeTag: values["knowledge-tag"] } : {}),
     ...(values["knowledge-query"] ? { knowledgeQuery: values["knowledge-query"] } : {}),
-    runtimeOpts,
+    ...(rawHarness ? { harness: rawHarness as Harness } : {}),
+    ...(values.model ? { model: values.model } : {}),
+    maxTurns: positiveInteger(values["max-turns"] as string | undefined, "--max-turns"),
+    maxBudget: positiveNumber(values["max-budget"] as string | undefined, "--max-budget"),
+    rolloutBudgetTokens: positiveInteger(
+      values["rollout-budget-tokens"] as string | undefined,
+      "--rollout-budget-tokens",
+    ),
+    ...(reasoningEffort ? { reasoningEffort: reasoningEffort as ReasoningEffort } : {}),
   };
 }
 
-function buildRuntimeOpts(
+export function buildRuntimeOpts(
   harness: Harness,
-  values: Record<string, string | boolean | string[] | undefined>,
+  model: string | undefined,
+  args: Pick<Args, "maxTurns" | "maxBudget" | "rolloutBudgetTokens" | "reasoningEffort">,
 ): RuntimeOpts {
-  const maxTurns = positiveInteger(values["max-turns"] as string | undefined, "--max-turns");
-  const maxBudget = positiveNumber(values["max-budget"] as string | undefined, "--max-budget");
-  const rolloutBudgetTokens = positiveInteger(
-    values["rollout-budget-tokens"] as string | undefined,
-    "--rollout-budget-tokens",
-  );
-  const reasoningEffort = values["reasoning-effort"] as string | undefined;
-  const model = values.model as string | undefined;
-
-  if (reasoningEffort !== undefined && !isReasoningEffort(reasoningEffort)) {
-    throw new Error(`Unsupported reasoning effort '${reasoningEffort}'`);
-  }
-
   if (harness === "claude") {
-    if (rolloutBudgetTokens !== undefined || reasoningEffort !== undefined) {
+    if (args.rolloutBudgetTokens !== undefined || args.reasoningEffort !== undefined) {
       throw new Error("--rollout-budget-tokens and --reasoning-effort require --harness codex");
     }
     return {
       harness,
       model: model ?? "claude-opus-4-6",
-      maxTurns: maxTurns ?? 50,
-      ...(maxBudget !== undefined ? { maxBudget } : {}),
+      maxTurns: args.maxTurns ?? 50,
+      ...(args.maxBudget !== undefined ? { maxBudget: args.maxBudget } : {}),
     };
   }
 
-  if (maxTurns !== undefined) {
+  if (args.maxTurns !== undefined) {
     throw new Error("--max-turns requires --harness claude");
   }
   return {
     harness,
     model: model ?? "gpt-5.6",
-    ...(maxBudget !== undefined ? { maxBudget } : {}),
-    ...(rolloutBudgetTokens !== undefined ? { rolloutBudgetTokens } : {}),
-    ...(reasoningEffort ? { reasoningEffort } : {}),
+    ...(args.maxBudget !== undefined ? { maxBudget: args.maxBudget } : {}),
+    ...(args.rolloutBudgetTokens !== undefined ? { rolloutBudgetTokens: args.rolloutBudgetTokens } : {}),
+    ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),
   };
 }
 
@@ -158,31 +162,66 @@ function isReasoningEffort(v: string): v is ReasoningEffort {
 
 // ── Session state ───────────────────────────────────────────────────
 
-export function sessionStatePath(key: string, suffix: string): string {
-  const safeKey = key.replace(/[^a-zA-Z0-9_.-]/g, "-");
-  return join("/workspace/.islo-agents/sessions", `${safeKey}${suffix}`);
+export interface SessionData {
+  sessionId: string;
+  harness: Harness;
+  model: string;
 }
 
-function readSessionId(path: string): string | undefined {
+export function sessionStatePath(key: string): string {
+  const safeKey = key.replace(/[^a-zA-Z0-9_.-]/g, "-");
+  return join("/workspace/.islo-agents/sessions", `${safeKey}.session.json`);
+}
+
+export function readSession(path: string): SessionData | undefined {
   if (!existsSync(path)) return undefined;
   try {
     const parsed = JSON.parse(readFileSync(path, "utf-8"));
-    return typeof parsed.session_id === "string" ? parsed.session_id : undefined;
+    if (typeof parsed.session_id !== "string") return undefined;
+    return {
+      sessionId: parsed.session_id,
+      harness: parsed.harness === "codex" ? "codex" : "claude",
+      model: typeof parsed.model === "string" ? parsed.model : "",
+    };
   } catch {
     return undefined;
   }
 }
 
-function writeSessionId(path: string, sessionId: string, key: string): void {
+function writeSession(
+  path: string,
+  sessionId: string,
+  key: string,
+  harness: Harness,
+  model: string,
+): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(
     path,
     JSON.stringify(
-      { session_key: key, session_id: sessionId, updated_at: new Date().toISOString() },
+      { session_key: key, session_id: sessionId, harness, model, updated_at: new Date().toISOString() },
       null,
       2,
     ) + "\n",
   );
+}
+
+export function resolveRuntime(
+  args: Args,
+  stored: SessionData | undefined,
+): { harness: Harness; model: string | undefined; resumeSessionId: string | undefined } {
+  const harness = args.harness ?? stored?.harness ?? "claude";
+  const model = args.model ?? stored?.model ?? undefined;
+  const harnessChanged = stored !== undefined && stored.harness !== harness;
+  const resumeSessionId = harnessChanged ? undefined : stored?.sessionId;
+
+  if (harnessChanged) {
+    console.log(
+      `Harness changed (${stored.harness} → ${harness}); starting fresh session`,
+    );
+  }
+
+  return { harness, model, resumeSessionId };
 }
 
 // ── Knowledge loading ───────────────────────────────────────────────
@@ -296,22 +335,26 @@ async function renderPrompt(args: Args): Promise<string> {
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
   const args = parseArgs(argv);
-  const runtime = createRuntime(args.runtimeOpts);
+
+  const sessionPath = args.sessionKey
+    ? sessionStatePath(args.sessionKey)
+    : undefined;
+  const stored = sessionPath ? readSession(sessionPath) : undefined;
+  const resolved = resolveRuntime(args, stored);
+
+  const runtimeOpts = buildRuntimeOpts(resolved.harness, resolved.model, args);
+  const runtime = createRuntime(runtimeOpts);
 
   const prompt = await renderPrompt(args);
-  const sessionPath = args.sessionKey
-    ? sessionStatePath(args.sessionKey, runtime.sessionSuffix)
-    : undefined;
-  const previousSessionId = sessionPath ? readSessionId(sessionPath) : undefined;
-  let sessionId = previousSessionId;
+  let sessionId = resolved.resumeSessionId;
 
-  if (previousSessionId) {
-    console.log(`Resuming ${runtime.harness} session ${previousSessionId}`);
+  if (resolved.resumeSessionId) {
+    console.log(`Resuming ${runtime.harness} session ${resolved.resumeSessionId}`);
   }
 
   const controls = runtime.describeControls();
   console.log(
-    `Running ${runtime.harness} harness with model ${args.runtimeOpts.model}${
+    `Running ${runtime.harness} harness with model ${runtimeOpts.model}${
       controls ? ` (${controls})` : ""
     }`,
   );
@@ -321,7 +364,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     await runtime.run({
       prompt,
       cwd: args.cwd,
-      resumeSessionId: previousSessionId,
+      resumeSessionId: resolved.resumeSessionId,
       callbacks: {
         onProgress: () => process.stdout.write("."),
         onSessionId: (next) => { sessionId = next; },
@@ -329,7 +372,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     });
   } finally {
     if (sessionId && sessionPath && args.sessionKey) {
-      writeSessionId(sessionPath, sessionId, args.sessionKey);
+      writeSession(sessionPath, sessionId, args.sessionKey, runtime.harness, runtimeOpts.model);
     }
   }
 

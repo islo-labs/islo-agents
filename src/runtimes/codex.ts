@@ -84,7 +84,6 @@ export function inspectCodexEvent(event: unknown): CodexEventInspection {
 
 export class CodexRuntime implements AgentRuntime {
   readonly harness = "codex" as const;
-  readonly sessionSuffix = ".codex.json";
   private readonly effectiveTokens?: number;
 
   constructor(

@@ -16,7 +16,6 @@ export interface RunRequest {
 
 export interface AgentRuntime {
   readonly harness: Harness;
-  readonly sessionSuffix: string;
   describeControls(): string;
   run(request: RunRequest): Promise<void>;
 }

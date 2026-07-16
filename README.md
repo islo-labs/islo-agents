@@ -46,9 +46,12 @@ subagents. The feature is currently marked under development by Codex and may
 overshoot by one completed model response, so job timeouts remain the hard
 wall-clock bound. The Codex SDK is pinned exactly while this feature matures.
 
-Claude keeps the original `<session-key>.json` session file. Codex uses
-`<session-key>.codex.json`, preventing provider-native session IDs from being
-mixed when a durable sandbox changes harness.
+All harnesses use a unified session file (`<session-key>.session.json`)
+that stores the provider session ID, harness type, and model. On resume
+with `--session-key`, the harness auto-detects which runtime and model
+to use from the session file — `--harness` and `--model` are optional
+when resuming. If the harness changes between runs, the stored session
+is discarded and a fresh one starts.
 
 > **Note:** `harness` and `model` are independently overridable in job
 > params. If you override `harness` (e.g. `claude` → `codex`), also
