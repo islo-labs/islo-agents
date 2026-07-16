@@ -17,7 +17,9 @@ type KnowledgeListRequest = NonNullable<
 type SdkKnowledgeLevel = NonNullable<KnowledgeListRequest["level"]>;
 
 export interface Args {
-  prompt: string;
+  prompt?: string;
+  promptText?: string;
+  resume: boolean;
   cwd: string;
   sessionKey?: string;
   contextFiles: string[];
@@ -52,6 +54,7 @@ function positiveInteger(raw: string | undefined, flag: string): number | undefi
 
 const CLI_OPTIONS = {
   prompt:                  { type: "string" as const },
+  resume:                  { type: "boolean" as const },
   harness:                 { type: "string" as const },
   cwd:                     { type: "string" as const },
   model:                   { type: "string" as const },
@@ -70,11 +73,24 @@ const CLI_OPTIONS = {
 };
 
 export function parseArgs(argv: string[] = process.argv.slice(2)): Args {
-  const { values } = nodeParseArgs({ args: argv, options: CLI_OPTIONS, strict: true });
+  const { values, positionals } = nodeParseArgs({
+    args: argv,
+    options: CLI_OPTIONS,
+    allowPositionals: true,
+  });
 
-  if (!values.prompt) {
+  const promptText = positionals.length > 0 ? positionals.join(" ") : undefined;
+  const resume = values.resume === true;
+
+  if (resume && !values["session-key"]) {
+    throw new Error("--resume requires --session-key");
+  }
+  if (resume && !promptText) {
+    throw new Error("--resume requires a positional prompt text argument");
+  }
+  if (!values.prompt && !promptText) {
     throw new Error(
-      "Usage: tsx src/agent.ts --prompt <path> [--harness claude|codex] [--cwd <dir>] [--model <m>] [--max-turns <n>] [--max-budget <n>] [--rollout-budget-tokens <n>] [--reasoning-effort minimal|low|medium|high|xhigh] [--session-key <key>] [--context-file <path>]... [--var KEY=VALUE]...",
+      "Usage: tsx src/agent.ts --prompt <path> [--resume] [--session-key <key>] [--harness claude|codex] [--cwd <dir>] [--model <m>] [--max-turns <n>] [--max-budget <n>] [--rollout-budget-tokens <n>] [--reasoning-effort low|medium|high|xhigh|max] [--context-file <path>]... [--var KEY=VALUE]... [\"prompt text\"]",
     );
   }
 
@@ -101,7 +117,9 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): Args {
   }
 
   return {
-    prompt: values.prompt,
+    ...(values.prompt ? { prompt: values.prompt } : {}),
+    ...(promptText ? { promptText } : {}),
+    resume,
     cwd: values.cwd ?? process.cwd(),
     contextFiles: values["context-file"] ?? [],
     vars,
@@ -129,14 +147,15 @@ export function buildRuntimeOpts(
   args: Pick<Args, "maxTurns" | "maxBudget" | "rolloutBudgetTokens" | "reasoningEffort">,
 ): RuntimeOpts {
   if (harness === "claude") {
-    if (args.rolloutBudgetTokens !== undefined || args.reasoningEffort !== undefined) {
-      throw new Error("--rollout-budget-tokens and --reasoning-effort require --harness codex");
+    if (args.rolloutBudgetTokens !== undefined) {
+      throw new Error("--rollout-budget-tokens requires --harness codex");
     }
     return {
       harness,
       model: model ?? "claude-opus-4-6",
       maxTurns: args.maxTurns ?? 50,
-      ...(args.maxBudget !== undefined ? { maxBudget: args.maxBudget } : {}),
+      maxBudget: args.maxBudget ?? 15,
+      ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),
     };
   }
 
@@ -146,7 +165,7 @@ export function buildRuntimeOpts(
   return {
     harness,
     model: model ?? "gpt-5.6",
-    ...(args.maxBudget !== undefined ? { maxBudget: args.maxBudget } : {}),
+    maxBudget: args.maxBudget ?? 15,
     ...(args.rolloutBudgetTokens !== undefined ? { rolloutBudgetTokens: args.rolloutBudgetTokens } : {}),
     ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),
   };
@@ -157,7 +176,7 @@ function isKnowledgeLevel(v: string): v is UserKnowledgeLevel {
 }
 
 function isReasoningEffort(v: string): v is ReasoningEffort {
-  return ["minimal", "low", "medium", "high", "xhigh"].includes(v);
+  return ["minimal", "low", "medium", "high", "xhigh", "max"].includes(v);
 }
 
 // ── Session state ───────────────────────────────────────────────────
@@ -165,7 +184,7 @@ function isReasoningEffort(v: string): v is ReasoningEffort {
 export interface SessionData {
   sessionId: string;
   harness: Harness;
-  model: string;
+  model: string | undefined;
 }
 
 export function sessionStatePath(key: string): string {
@@ -181,7 +200,7 @@ export function readSession(path: string): SessionData | undefined {
     return {
       sessionId: parsed.session_id,
       harness: parsed.harness === "codex" ? "codex" : "claude",
-      model: typeof parsed.model === "string" ? parsed.model : "",
+      model: typeof parsed.model === "string" && parsed.model ? parsed.model : undefined,
     };
   } catch {
     return undefined;
@@ -212,15 +231,7 @@ export function resolveRuntime(
 ): { harness: Harness; model: string | undefined; resumeSessionId: string | undefined } {
   const harness = args.harness ?? stored?.harness ?? "claude";
   const model = args.model ?? stored?.model ?? undefined;
-  const harnessChanged = stored !== undefined && stored.harness !== harness;
-  const resumeSessionId = harnessChanged ? undefined : stored?.sessionId;
-
-  if (harnessChanged) {
-    console.log(
-      `Harness changed (${stored.harness} → ${harness}); starting fresh session`,
-    );
-  }
-
+  const resumeSessionId = stored?.sessionId;
   return { harness, model, resumeSessionId };
 }
 
@@ -294,7 +305,7 @@ async function loadKnowledgeMarkdown(args: Args): Promise<string> {
 // ── Prompt rendering ────────────────────────────────────────────────
 
 async function renderPrompt(args: Args): Promise<string> {
-  const promptPath = resolve(PROJECT_ROOT, args.prompt);
+  const promptPath = resolve(PROJECT_ROOT, args.prompt!);
   if (!existsSync(promptPath)) {
     throw new Error(`Prompt file not found: ${promptPath}`);
   }
@@ -335,22 +346,42 @@ async function renderPrompt(args: Args): Promise<string> {
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
   const args = parseArgs(argv);
+  const sessionPath = args.sessionKey ? sessionStatePath(args.sessionKey) : undefined;
 
-  const sessionPath = args.sessionKey
-    ? sessionStatePath(args.sessionKey)
-    : undefined;
-  const stored = sessionPath ? readSession(sessionPath) : undefined;
-  const resolved = resolveRuntime(args, stored);
+  let prompt: string;
+  let resolved: ReturnType<typeof resolveRuntime>;
+
+  if (args.resume) {
+    const stored = sessionPath ? readSession(sessionPath) : undefined;
+    if (!stored) {
+      throw new Error(
+        `Session '${args.sessionKey}' not found. Remove --resume to start a new session.`,
+      );
+    }
+    if (args.harness && args.harness !== stored.harness) {
+      throw new Error(
+        `Cannot resume: session uses ${stored.harness} but --harness ${args.harness} was specified.`,
+      );
+    }
+    resolved = resolveRuntime(args, stored);
+    prompt = args.promptText!;
+    console.log(`Resuming ${stored.harness} session ${stored.sessionId}`);
+  } else {
+    if (sessionPath && existsSync(sessionPath)) {
+      throw new Error(
+        `Session '${args.sessionKey}' already exists. Use --resume to continue it.`,
+      );
+    }
+    if (!args.prompt) {
+      throw new Error("--prompt is required for new sessions");
+    }
+    resolved = resolveRuntime(args, undefined);
+    prompt = await renderPrompt(args);
+  }
 
   const runtimeOpts = buildRuntimeOpts(resolved.harness, resolved.model, args);
   const runtime = createRuntime(runtimeOpts);
-
-  const prompt = await renderPrompt(args);
   let sessionId = resolved.resumeSessionId;
-
-  if (resolved.resumeSessionId) {
-    console.log(`Resuming ${runtime.harness} session ${resolved.resumeSessionId}`);
-  }
 
   const controls = runtime.describeControls();
   console.log(
@@ -358,7 +389,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
       controls ? ` (${controls})` : ""
     }`,
   );
-  console.log(`Prompt: ${args.prompt}`);
+  if (args.prompt) console.log(`Prompt: ${args.prompt}`);
 
   try {
     await runtime.run({

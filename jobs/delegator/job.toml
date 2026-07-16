@@ -55,8 +55,8 @@ description = "Maximum budget in USD."
 [job.params.reasoning_effort]
 type = "string"
 default = "medium"
-description = "Reasoning effort (Codex only; ignored by Claude)."
-pattern = "^(minimal|low|medium|high|xhigh)$"
+description = "Reasoning effort level for both harnesses. Codex uses minimal–xhigh; Claude uses low–max."
+pattern = "^(minimal|low|medium|high|xhigh|max)$"
 
 [run]
 fail_fast = true
@@ -130,13 +130,12 @@ exec = [
 set -euo pipefail
 cd /workspace/.islo-pack
 HARNESS="{{harness}}"
-HARNESS_ARGS=()
+HARNESS_ARGS=(--reasoning-effort "{{reasoning_effort}}")
 case "${HARNESS}" in
   claude)
     HARNESS_ARGS+=(--max-turns "{{max_turns}}")
     ;;
   codex)
-    HARNESS_ARGS+=(--reasoning-effort "{{reasoning_effort}}")
     ;;
   *)
     echo "Unsupported harness: ${HARNESS}" >&2

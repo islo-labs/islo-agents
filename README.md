@@ -24,22 +24,39 @@ The harness (`src/agent.ts`) requires `ISLO_API_KEY` to be set (automatic in Isl
 
 ## Harnesses
 
-Select the coding-agent runtime independently from its model:
+Select the coding-agent runtime independently from its model. Three invocation patterns:
 
 ```bash
-npx tsx src/agent.ts --harness claude --model claude-opus-4-6 \
-  --prompt agents/review/prompt.md --max-turns 50 --max-budget 10
+# First run — render template, create session
+npx tsx src/agent.ts --prompt agents/review/prompt.md \
+  --session-key "review-owner/repo-42" --cwd /workspace \
+  --harness codex --model gpt-5.6 --max-budget 10
 
-npx tsx src/agent.ts --harness codex --model gpt-5.6 \
-  --prompt agents/review/prompt.md --max-budget 10 --reasoning-effort high
+# Resume — positional text sent to existing session
+npx tsx src/agent.ts --resume --session-key "review-owner/repo-42" \
+  "The PR has been updated. Review the latest changes."
+
+# One-shot (no session persistence)
+npx tsx src/agent.ts --prompt agents/review/prompt.md --cwd /workspace
 ```
 
+**`--prompt <path>`** renders a template file with `--var`, `--knowledge-*`, and `--context-file`. Used on first run.
+
+**Positional argument** is literal prompt text sent to the agent. Required when `--resume` is set.
+
+**`--resume`** explicitly resumes an existing session. Requires `--session-key`. Errors if the session file does not exist. On resume, harness and model are auto-detected from the session file; `--harness` and `--model` can override stored values, but a harness mismatch (resuming a Codex session as Claude) is an error.
+
+**`--session-key <key>`** without `--resume` errors if the session file already exists, preventing accidental overwrites. At least one of `--prompt` or positional text must be provided.
+
 Shared options: `--prompt`, `--cwd`, `--model`, `--max-budget`,
-`--session-key`, `--context-file`, `--knowledge-*`, and `--var`.
-`--max-budget` sets a USD cap for both harnesses (Codex converts
-internally via `CODEX_TOKENS_PER_USD`). Claude alone supports
-`--max-turns`. Codex alone supports `--rollout-budget-tokens` (raw
-weighted-token override) and `--reasoning-effort`.
+`--reasoning-effort`, `--session-key`, `--context-file`,
+`--knowledge-*`, and `--var`. `--max-budget` sets a USD spending cap
+(default **$15** when not specified). Codex converts this internally
+via `CODEX_TOKENS_PER_USD`. `--reasoning-effort` maps to `effort` in
+Claude and `reasoning_effort` in Codex; levels `low`–`xhigh` work on
+both, `minimal` is Codex-only, and `max` is Claude-only. Claude alone
+supports `--max-turns`. Codex alone supports `--rollout-budget-tokens`
+(raw weighted-token override).
 
 Codex rollout budgets count weighted tokens across the thread and any
 subagents. The feature is currently marked under development by Codex and may
@@ -47,11 +64,7 @@ overshoot by one completed model response, so job timeouts remain the hard
 wall-clock bound. The Codex SDK is pinned exactly while this feature matures.
 
 All harnesses use a unified session file (`<session-key>.session.json`)
-that stores the provider session ID, harness type, and model. On resume
-with `--session-key`, the harness auto-detects which runtime and model
-to use from the session file — `--harness` and `--model` are optional
-when resuming. If the harness changes between runs, the stored session
-is discarded and a fresh one starts.
+that stores the provider session ID, harness type, and model.
 
 > **Note:** `harness` and `model` are independently overridable in job
 > params. If you override `harness` (e.g. `claude` → `codex`), also

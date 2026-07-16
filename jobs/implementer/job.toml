@@ -58,8 +58,8 @@ description = "Maximum budget in USD."
 [job.params.reasoning_effort]
 type = "string"
 default = "high"
-description = "Reasoning effort (Codex only; ignored by Claude)."
-pattern = "^(minimal|low|medium|high|xhigh)$"
+description = "Reasoning effort level for both harnesses. Codex uses minimal–xhigh; Claude uses low–max."
+pattern = "^(minimal|low|medium|high|xhigh|max)$"
 
 [job.params.max_iterations]
 type = "integer"
@@ -169,34 +169,40 @@ cat > /workspace/.islo-job/issue_url <<'ISLO_EOF'
 {{issue_url}}
 ISLO_EOF
 cd /workspace/.islo-pack
-HARNESS="{{harness}}"
-HARNESS_ARGS=()
-case "${HARNESS}" in
-  claude)
-    HARNESS_ARGS+=(--max-turns "{{max_turns}}")
-    ;;
-  codex)
-    HARNESS_ARGS+=(--reasoning-effort "{{reasoning_effort}}")
-    ;;
-  *)
-    echo "Unsupported harness: ${HARNESS}" >&2
-    exit 2
-    ;;
-esac
-npx tsx src/agent.ts \
-  --prompt agents/implementer/prompt.md \
-  --harness "${HARNESS}" \
-  --cwd /workspace \
-  --session-key "implementer-$(tr -d '\n' < /workspace/.islo-job/issue_identifier)" \
-  --model "{{model}}" \
-  --max-budget "{{max_budget_usd}}" \
-  "${HARNESS_ARGS[@]}" \
-  --knowledge-id islo-integrations \
-  --var ISSUE_ID="$(tr -d '\n' < /workspace/.islo-job/issue_id)" \
-  --var ISSUE_TITLE="$(cat /workspace/.islo-job/issue_title)" \
-  --var ISSUE_DESCRIPTION="$(cat /workspace/.islo-job/issue_description)" \
-  --var ISSUE_IDENTIFIER="$(tr -d '\n' < /workspace/.islo-job/issue_identifier)" \
-  --var ISSUE_URL="$(tr -d '\n' < /workspace/.islo-job/issue_url)"
+SESSION_KEY="implementer-$(tr -d '\n' < /workspace/.islo-job/issue_identifier)"
+SESSION_FILE="/workspace/.islo-agents/sessions/$(echo "${SESSION_KEY}" | tr -c 'a-zA-Z0-9_.-' '-').session.json"
+if [ -f "$SESSION_FILE" ]; then
+  npx tsx src/agent.ts --resume --session-key "${SESSION_KEY}" \
+    "Continue your implementation."
+else
+  HARNESS="{{harness}}"
+  HARNESS_ARGS=(--reasoning-effort "{{reasoning_effort}}")
+  case "${HARNESS}" in
+    claude)
+      HARNESS_ARGS+=(--max-turns "{{max_turns}}")
+      ;;
+    codex)
+      ;;
+    *)
+      echo "Unsupported harness: ${HARNESS}" >&2
+      exit 2
+      ;;
+  esac
+  npx tsx src/agent.ts \
+    --prompt agents/implementer/prompt.md \
+    --harness "${HARNESS}" \
+    --cwd /workspace \
+    --session-key "${SESSION_KEY}" \
+    --model "{{model}}" \
+    --max-budget "{{max_budget_usd}}" \
+    "${HARNESS_ARGS[@]}" \
+    --knowledge-id islo-integrations \
+    --var ISSUE_ID="$(tr -d '\n' < /workspace/.islo-job/issue_id)" \
+    --var ISSUE_TITLE="$(cat /workspace/.islo-job/issue_title)" \
+    --var ISSUE_DESCRIPTION="$(cat /workspace/.islo-job/issue_description)" \
+    --var ISSUE_IDENTIFIER="$(tr -d '\n' < /workspace/.islo-job/issue_identifier)" \
+    --var ISSUE_URL="$(tr -d '\n' < /workspace/.islo-job/issue_url)"
+fi
 ''',
 ]
 

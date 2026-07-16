@@ -73,6 +73,17 @@ test("createRuntime returns ClaudeRuntime for claude opts", () => {
   assert.match(runtime.describeControls(), /maxBudgetUsd=10/);
 });
 
+test("createRuntime passes reasoningEffort to ClaudeRuntime", () => {
+  const runtime = createRuntime({
+    harness: "claude",
+    model: "claude-opus-4-6",
+    maxTurns: 50,
+    reasoningEffort: "high",
+  });
+
+  assert.match(runtime.describeControls(), /effort=high/);
+});
+
 test("usdToTokens converts using the constant rate", () => {
   assert.equal(usdToTokens(10), 10 * CODEX_TOKENS_PER_USD);
   assert.equal(usdToTokens(1), CODEX_TOKENS_PER_USD);

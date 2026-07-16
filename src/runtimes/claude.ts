@@ -1,4 +1,4 @@
-import { query } from "@anthropic-ai/claude-agent-sdk";
+import { query, type EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 
 import type { AgentRuntime, RunRequest } from "./types.js";
 
@@ -42,6 +42,7 @@ export class ClaudeRuntime implements AgentRuntime {
     private readonly model: string,
     private readonly maxTurns: number,
     private readonly maxBudgetUsd?: number,
+    private readonly effort?: EffortLevel,
   ) {}
 
   describeControls(): string {
@@ -50,6 +51,7 @@ export class ClaudeRuntime implements AgentRuntime {
       ...(this.maxBudgetUsd !== undefined
         ? [`maxBudgetUsd=${this.maxBudgetUsd}`]
         : []),
+      ...(this.effort ? [`effort=${this.effort}`] : []),
     ].join(", ");
   }
 
@@ -65,6 +67,7 @@ export class ClaudeRuntime implements AgentRuntime {
         ...(this.maxBudgetUsd
           ? { maxBudgetUsd: this.maxBudgetUsd }
           : {}),
+        ...(this.effort ? { effort: this.effort } : {}),
         ...(request.resumeSessionId
           ? { resume: request.resumeSessionId }
           : {}),

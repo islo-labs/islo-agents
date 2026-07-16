@@ -99,13 +99,11 @@ Use the harness to resume — it auto-detects the harness type and model from th
 
 ```bash
 islo use <sandbox> -- bash -lc 'cd /workspace/.islo-pack && npx tsx src/agent.ts \
-  --session-key "<session-key>" \
-  --prompt agents/<role>/prompt.md \
-  --cwd /workspace \
+  --resume --session-key "<session-key>" \
   "<handoff prompt>"'
 ```
 
-This works for both Claude and Codex workers. The `<session-key>` is the filename without `.session.json`.
+This works for both Claude and Codex workers. The `<session-key>` is the filename without `.session.json`. The positional argument is the prompt text sent to the agent on resume.
 
 ### Handoff prompt
 

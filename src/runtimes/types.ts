@@ -1,6 +1,6 @@
 export type Harness = "claude" | "codex";
 
-export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
+export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
 export interface RuntimeCallbacks {
   onProgress(): void;
@@ -25,6 +25,7 @@ export interface ClaudeRuntimeOpts {
   model: string;
   maxTurns: number;
   maxBudget?: number;
+  reasoningEffort?: ReasoningEffort;
 }
 
 export interface CodexRuntimeOpts {

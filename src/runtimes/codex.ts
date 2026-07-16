@@ -119,7 +119,7 @@ export class CodexRuntime implements AgentRuntime {
       skipGitRepoCheck: true,
       sandboxMode: "danger-full-access",
       approvalPolicy: "never",
-      ...(this.reasoningEffort
+      ...(this.reasoningEffort && this.reasoningEffort !== "max"
         ? { modelReasoningEffort: this.reasoningEffort }
         : {}),
     };
