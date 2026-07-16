@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "agent": "tsx src/agent.ts",
-    "assemble-webhooks": "node scripts/assemble-webhooks.js"
+    "assemble-webhooks": "node scripts/assemble-webhooks.js",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.139",
     "@islo-labs/sdk": "^0.0.28",
+    "@openai/codex-sdk": "0.144.5",
     "smol-toml": "^1.7.0"
   },
   "devDependencies": {

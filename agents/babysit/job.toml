@@ -1,6 +1,6 @@
 [job]
 name = "babysit"
-version = "0.5.0"
+version = "0.6.0"
 description = "Automatically fix CI failures on a PR branch."
 
 [job.params.repo]
@@ -31,20 +31,37 @@ default = "main"
 description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
+[job.params.harness]
+type = "string"
+default = "claude"
+description = "Agent harness: claude or codex."
+pattern = "^(claude|codex)$"
+
 [job.params.model]
 type = "string"
 default = "claude-opus-4-6"
-description = "Claude model for the babysit agent."
+description = "Model name understood by the selected harness."
 
 [job.params.max_turns]
 type = "integer"
 default = 50
-description = "Maximum agentic turns."
+description = "Claude-only maximum agentic turns."
 
 [job.params.max_budget_usd]
 type = "number"
 default = 10
-description = "Maximum budget in USD."
+description = "Claude-only maximum budget in USD."
+
+[job.params.rollout_budget_tokens]
+type = "integer"
+default = 200000
+description = "Codex-only weighted token budget. May overshoot by one model response."
+
+[job.params.reasoning_effort]
+type = "string"
+default = "high"
+description = "Codex-only reasoning effort."
+pattern = "^(minimal|low|medium|high|xhigh)$"
 
 [run]
 fail_fast = true
@@ -197,12 +214,26 @@ set -euo pipefail
 if [ -f /workspace/.islo-job/skip ]; then echo "skipped"; exit 0; fi
 source /workspace/.islo-job/env
 cd /workspace/islo-agents
+HARNESS="{{harness}}"
+HARNESS_ARGS=()
+case "${HARNESS}" in
+  claude)
+    HARNESS_ARGS+=(--max-turns "{{max_turns}}" --max-budget "{{max_budget_usd}}")
+    ;;
+  codex)
+    HARNESS_ARGS+=(--rollout-budget-tokens "{{rollout_budget_tokens}}" --reasoning-effort "{{reasoning_effort}}")
+    ;;
+  *)
+    echo "Unsupported harness: ${HARNESS}" >&2
+    exit 2
+    ;;
+esac
 npx tsx src/agent.ts \
   --prompt agents/babysit/prompt.md \
+  --harness "${HARNESS}" \
   --cwd /workspace \
   --model "{{model}}" \
-  --max-turns "{{max_turns}}" \
-  --max-budget "{{max_budget_usd}}" \
+  "${HARNESS_ARGS[@]}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
   --knowledge-id islo-integrations \
   --var REPO="${REPO}" \

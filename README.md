@@ -7,7 +7,8 @@ Shared agent templates for Islo jobs: prompts, durable job manifests, and webhoo
 ## Structure
 
 ```
-src/agent.ts                        — generic harness (prompt + vars → Claude Agent SDK)
+src/agent.ts                        — generic prompt/context harness
+src/runtimes/                       — Claude and Codex SDK adapters
 agents/                             — one directory per role
   <role>/
     prompt.md                       — agent behavior
@@ -21,7 +22,36 @@ scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.to
 
 The harness (`src/agent.ts`) requires `ISLO_API_KEY` to be set (automatic in Islo sandboxes via phantom env vars, or any valid API key). Optional `--knowledge-*` flags use the `@islo-labs/sdk` to fetch knowledge items and inject their Markdown bodies into the prompt; on failure they warn and continue.
 
+## Harnesses
+
+Select the coding-agent runtime independently from its model:
+
+```bash
+npx tsx src/agent.ts --harness claude --model claude-opus-4-6 \
+  --prompt agents/review/prompt.md --max-turns 50 --max-budget 10
+
+npx tsx src/agent.ts --harness codex --model gpt-5.6 \
+  --prompt agents/review/prompt.md \
+  --rollout-budget-tokens 200000 --reasoning-effort high
+```
+
+Shared options include `--prompt`, `--cwd`, `--model`, `--session-key`,
+`--context-file`, `--knowledge-*`, and `--var`. Claude alone supports
+`--max-turns` and `--max-budget`. Codex alone supports
+`--rollout-budget-tokens` and `--reasoning-effort`.
+
+Codex rollout budgets count weighted tokens across the thread and any
+subagents. The feature is currently marked under development by Codex and may
+overshoot by one completed model response, so job timeouts remain the hard
+wall-clock bound. The Codex SDK is pinned exactly while this feature matures.
+
+Claude keeps the original `<session-key>.json` session file. Codex uses
+`<session-key>.codex.json`, preventing provider-native session IDs from being
+mixed when a durable sandbox changes harness.
+
 Roles / job names: `review`, `implementer`, `verify`, `babysit`, `delegator`.
+The review job defaults to Codex with `gpt-5.6`; the other jobs default to
+Claude. Every job exposes a `harness` parameter for explicit overrides.
 
 Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; default `main`). Override with `--param agents_git_ref=…` when pinning.
 
