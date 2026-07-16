@@ -34,6 +34,7 @@ export function buildCodexConfig(rolloutBudgetTokens?: number): CodexConfig {
       rollout_budget: {
         enabled: true,
         limit_tokens: rolloutBudgetTokens,
+        reminder_at_remaining_tokens: Math.max(1000, Math.round(rolloutBudgetTokens * 0.1)),
       },
     },
   };

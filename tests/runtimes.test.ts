@@ -30,6 +30,7 @@ test("Codex rollout budget maps to CLI configuration", () => {
       rollout_budget: {
         enabled: true,
         limit_tokens: 200000,
+        reminder_at_remaining_tokens: 20000,
       },
     },
   });
