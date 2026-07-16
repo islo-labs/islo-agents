@@ -1,6 +1,6 @@
 [job]
 name = "review"
-version = "0.6.0"
+version = "0.7.0"
 description = "Automated PR code review."
 
 [job.params.repo]
@@ -37,22 +37,22 @@ type = "string"
 default = "gpt-5.6"
 description = "Model name understood by the selected harness."
 
-[job.params.max_turns]
+[job.params.claude_max_turns]
 type = "integer"
 default = 50
 description = "Claude-only maximum agentic turns."
 
-[job.params.max_budget_usd]
+[job.params.claude_max_budget_usd]
 type = "number"
 default = 10
 description = "Claude-only maximum review budget in USD."
 
-[job.params.rollout_budget_tokens]
+[job.params.codex_rollout_budget_tokens]
 type = "integer"
 default = 200000
 description = "Codex-only weighted token budget. May overshoot by one model response."
 
-[job.params.reasoning_effort]
+[job.params.codex_reasoning_effort]
 type = "string"
 default = "high"
 description = "Codex-only reasoning effort."
@@ -153,10 +153,10 @@ HARNESS="{{harness}}"
 HARNESS_ARGS=()
 case "${HARNESS}" in
   claude)
-    HARNESS_ARGS+=(--max-turns "{{max_turns}}" --max-budget "{{max_budget_usd}}")
+    HARNESS_ARGS+=(--max-turns "{{claude_max_turns}}" --max-budget "{{claude_max_budget_usd}}")
     ;;
   codex)
-    HARNESS_ARGS+=(--rollout-budget-tokens "{{rollout_budget_tokens}}" --reasoning-effort "{{reasoning_effort}}")
+    HARNESS_ARGS+=(--rollout-budget-tokens "{{codex_rollout_budget_tokens}}" --reasoning-effort "{{codex_reasoning_effort}}")
     ;;
   *)
     echo "Unsupported harness: ${HARNESS}" >&2

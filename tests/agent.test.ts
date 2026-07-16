@@ -6,9 +6,9 @@ import { parseArgs, sessionStatePath } from "../src/agent.js";
 test("parseArgs preserves Claude defaults", () => {
   const args = parseArgs(["--prompt", "agents/review/prompt.md"]);
 
-  assert.equal(args.harness, "claude");
-  assert.equal(args.model, "claude-opus-4-6");
-  assert.equal(args.maxTurns, 50);
+  assert.equal(args.runtimeOpts.harness, "claude");
+  assert.equal(args.runtimeOpts.model, "claude-opus-4-6");
+  assert.equal(args.runtimeOpts.harness === "claude" && args.runtimeOpts.maxTurns, 50);
 });
 
 test("parseArgs accepts Codex-specific controls", () => {
@@ -25,10 +25,16 @@ test("parseArgs accepts Codex-specific controls", () => {
     "high",
   ]);
 
-  assert.equal(args.harness, "codex");
-  assert.equal(args.model, "gpt-5.6");
-  assert.equal(args.rolloutBudgetTokens, 200000);
-  assert.equal(args.reasoningEffort, "high");
+  assert.equal(args.runtimeOpts.harness, "codex");
+  assert.equal(args.runtimeOpts.model, "gpt-5.6");
+  assert.equal(
+    args.runtimeOpts.harness === "codex" && args.runtimeOpts.rolloutBudgetTokens,
+    200000,
+  );
+  assert.equal(
+    args.runtimeOpts.harness === "codex" && args.runtimeOpts.reasoningEffort,
+    "high",
+  );
 });
 
 test("parseArgs rejects controls from the wrong harness", () => {
@@ -42,7 +48,7 @@ test("parseArgs rejects controls from the wrong harness", () => {
         "--max-turns",
         "10",
       ]),
-    /require --harness claude/
+    /require --harness claude/,
   );
   assert.throws(
     () =>
@@ -52,17 +58,17 @@ test("parseArgs rejects controls from the wrong harness", () => {
         "--rollout-budget-tokens",
         "1000",
       ]),
-    /require --harness codex/
+    /require --harness codex/,
   );
 });
 
-test("sessionStatePath isolates Codex without moving Claude sessions", () => {
+test("sessionStatePath isolates runtimes by suffix", () => {
   assert.equal(
-    sessionStatePath("owner/repo-42", "claude"),
-    "/workspace/.islo-agents/sessions/owner-repo-42.json"
+    sessionStatePath("owner/repo-42", ".json"),
+    "/workspace/.islo-agents/sessions/owner-repo-42.json",
   );
   assert.equal(
-    sessionStatePath("owner/repo-42", "codex"),
-    "/workspace/.islo-agents/sessions/owner-repo-42.codex.json"
+    sessionStatePath("owner/repo-42", ".codex.json"),
+    "/workspace/.islo-agents/sessions/owner-repo-42.codex.json",
   );
 });

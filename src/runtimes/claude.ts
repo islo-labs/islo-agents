@@ -1,6 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
-import type { ClaudeRuntimeRequest } from "./types.js";
+import type { AgentRuntime, RunRequest } from "./types.js";
 
 interface ClaudeMessageInspection {
   progress: boolean;
@@ -8,7 +8,7 @@ interface ClaudeMessageInspection {
 }
 
 export function inspectClaudeMessage(
-  message: unknown
+  message: unknown,
 ): ClaudeMessageInspection {
   if (typeof message !== "object" || message === null || !("type" in message)) {
     return { progress: false };
@@ -35,29 +35,49 @@ export function inspectClaudeMessage(
   return { progress: type === "assistant" };
 }
 
-export async function runClaude(request: ClaudeRuntimeRequest): Promise<void> {
-  for await (const message of query({
-    prompt: request.prompt,
-    options: {
-      cwd: request.cwd,
-      permissionMode: "bypassPermissions",
-      allowDangerouslySkipPermissions: true,
-      maxTurns: request.maxTurns,
-      model: request.model,
-      ...(request.maxBudgetUsd
-        ? { maxBudgetUsd: request.maxBudgetUsd }
-        : {}),
-      ...(request.resumeSessionId
-        ? { resume: request.resumeSessionId }
-        : {}),
-    },
-  })) {
-    const inspection = inspectClaudeMessage(message);
-    if (inspection.sessionId) {
-      request.callbacks.onSessionId(inspection.sessionId);
-    }
-    if (inspection.progress) {
-      request.callbacks.onProgress();
+export class ClaudeRuntime implements AgentRuntime {
+  readonly harness = "claude" as const;
+  readonly sessionSuffix = ".json";
+
+  constructor(
+    private readonly model: string,
+    private readonly maxTurns: number,
+    private readonly maxBudgetUsd?: number,
+  ) {}
+
+  describeControls(): string {
+    return [
+      `maxTurns=${this.maxTurns}`,
+      ...(this.maxBudgetUsd !== undefined
+        ? [`maxBudgetUsd=${this.maxBudgetUsd}`]
+        : []),
+    ].join(", ");
+  }
+
+  async run(request: RunRequest): Promise<void> {
+    for await (const message of query({
+      prompt: request.prompt,
+      options: {
+        cwd: request.cwd,
+        permissionMode: "bypassPermissions",
+        allowDangerouslySkipPermissions: true,
+        maxTurns: this.maxTurns,
+        model: this.model,
+        ...(this.maxBudgetUsd
+          ? { maxBudgetUsd: this.maxBudgetUsd }
+          : {}),
+        ...(request.resumeSessionId
+          ? { resume: request.resumeSessionId }
+          : {}),
+      },
+    })) {
+      const inspection = inspectClaudeMessage(message);
+      if (inspection.sessionId) {
+        request.callbacks.onSessionId(inspection.sessionId);
+      }
+      if (inspection.progress) {
+        request.callbacks.onProgress();
+      }
     }
   }
 }

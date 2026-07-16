@@ -6,6 +6,7 @@ import {
   buildCodexConfig,
   inspectCodexEvent,
 } from "../src/runtimes/codex.js";
+import { createRuntime } from "../src/runtimes/index.js";
 
 test("Claude messages expose progress and resumable session IDs", () => {
   assert.deepEqual(
@@ -14,7 +15,7 @@ test("Claude messages expose progress and resumable session IDs", () => {
       subtype: "init",
       session_id: "claude-session",
     }),
-    { progress: false, sessionId: "claude-session" }
+    { progress: false, sessionId: "claude-session" },
   );
   assert.deepEqual(inspectClaudeMessage({ type: "assistant" }), {
     progress: true,
@@ -39,14 +40,14 @@ test("Codex events expose thread IDs, progress, and failures", () => {
       type: "thread.started",
       thread_id: "codex-thread",
     }),
-    { progress: false, sessionId: "codex-thread" }
+    { progress: false, sessionId: "codex-thread" },
   );
   assert.deepEqual(
     inspectCodexEvent({
       type: "item.completed",
       item: { type: "agent_message", text: "done" },
     }),
-    { progress: true }
+    { progress: true },
   );
 
   const failure = inspectCodexEvent({
@@ -55,4 +56,32 @@ test("Codex events expose thread IDs, progress, and failures", () => {
   });
   assert.equal(failure.progress, false);
   assert.equal(failure.error?.message, "budget exhausted");
+});
+
+test("createRuntime returns ClaudeRuntime for claude opts", () => {
+  const runtime = createRuntime({
+    harness: "claude",
+    model: "claude-opus-4-6",
+    maxTurns: 50,
+    maxBudget: 10,
+  });
+
+  assert.equal(runtime.harness, "claude");
+  assert.equal(runtime.sessionSuffix, ".json");
+  assert.match(runtime.describeControls(), /maxTurns=50/);
+  assert.match(runtime.describeControls(), /maxBudgetUsd=10/);
+});
+
+test("createRuntime returns CodexRuntime for codex opts", () => {
+  const runtime = createRuntime({
+    harness: "codex",
+    model: "gpt-5.6",
+    rolloutBudgetTokens: 200000,
+    reasoningEffort: "high",
+  });
+
+  assert.equal(runtime.harness, "codex");
+  assert.equal(runtime.sessionSuffix, ".codex.json");
+  assert.match(runtime.describeControls(), /rolloutBudgetTokens=200000/);
+  assert.match(runtime.describeControls(), /reasoningEffort=high/);
 });

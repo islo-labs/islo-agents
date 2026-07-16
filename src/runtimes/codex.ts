@@ -1,6 +1,6 @@
 import { Codex, type ThreadOptions } from "@openai/codex-sdk";
 
-import type { CodexRuntimeRequest } from "./types.js";
+import type { AgentRuntime, ReasoningEffort, RunRequest } from "./types.js";
 
 type CodexOptions = NonNullable<ConstructorParameters<typeof Codex>[0]>;
 type CodexConfig = NonNullable<CodexOptions["config"]>;
@@ -69,39 +69,61 @@ export function inspectCodexEvent(event: unknown): CodexEventInspection {
   return { progress };
 }
 
-export async function runCodex(request: CodexRuntimeRequest): Promise<void> {
-  const codex = new Codex({
-    config: buildCodexConfig(request.rolloutBudgetTokens),
-  });
-  const threadOptions: ThreadOptions = {
-    model: request.model,
-    workingDirectory: request.cwd,
-    skipGitRepoCheck: true,
-    sandboxMode: "danger-full-access",
-    approvalPolicy: "never",
-    ...(request.reasoningEffort
-      ? { modelReasoningEffort: request.reasoningEffort }
-      : {}),
-  };
-  const thread = request.resumeSessionId
-    ? codex.resumeThread(request.resumeSessionId, threadOptions)
-    : codex.startThread(threadOptions);
+export class CodexRuntime implements AgentRuntime {
+  readonly harness = "codex" as const;
+  readonly sessionSuffix = ".codex.json";
 
-  const { events } = await thread.runStreamed(request.prompt);
-  for await (const event of events) {
-    const inspection = inspectCodexEvent(event);
-    if (inspection.sessionId) {
-      request.callbacks.onSessionId(inspection.sessionId);
-    }
-    if (inspection.progress) {
-      request.callbacks.onProgress();
-    }
-    if (inspection.error) {
-      throw inspection.error;
-    }
+  constructor(
+    private readonly model: string,
+    private readonly rolloutBudgetTokens?: number,
+    private readonly reasoningEffort?: ReasoningEffort,
+  ) {}
+
+  describeControls(): string {
+    return [
+      ...(this.rolloutBudgetTokens !== undefined
+        ? [`rolloutBudgetTokens=${this.rolloutBudgetTokens}`]
+        : []),
+      ...(this.reasoningEffort
+        ? [`reasoningEffort=${this.reasoningEffort}`]
+        : []),
+    ].join(", ");
   }
 
-  if (thread.id) {
-    request.callbacks.onSessionId(thread.id);
+  async run(request: RunRequest): Promise<void> {
+    const codex = new Codex({
+      config: buildCodexConfig(this.rolloutBudgetTokens),
+    });
+    const threadOptions: ThreadOptions = {
+      model: this.model,
+      workingDirectory: request.cwd,
+      skipGitRepoCheck: true,
+      sandboxMode: "danger-full-access",
+      approvalPolicy: "never",
+      ...(this.reasoningEffort
+        ? { modelReasoningEffort: this.reasoningEffort }
+        : {}),
+    };
+    const thread = request.resumeSessionId
+      ? codex.resumeThread(request.resumeSessionId, threadOptions)
+      : codex.startThread(threadOptions);
+
+    const { events } = await thread.runStreamed(request.prompt);
+    for await (const event of events) {
+      const inspection = inspectCodexEvent(event);
+      if (inspection.sessionId) {
+        request.callbacks.onSessionId(inspection.sessionId);
+      }
+      if (inspection.progress) {
+        request.callbacks.onProgress();
+      }
+      if (inspection.error) {
+        throw inspection.error;
+      }
+    }
+
+    if (thread.id) {
+      request.callbacks.onSessionId(thread.id);
+    }
   }
 }

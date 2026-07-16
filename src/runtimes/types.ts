@@ -7,24 +7,32 @@ export interface RuntimeCallbacks {
   onSessionId(sessionId: string): void;
 }
 
-interface RuntimeRequestBase {
+export interface RunRequest {
   prompt: string;
   cwd: string;
-  model: string;
   resumeSessionId?: string;
   callbacks: RuntimeCallbacks;
 }
 
-export interface ClaudeRuntimeRequest extends RuntimeRequestBase {
-  harness: "claude";
-  maxTurns: number;
-  maxBudgetUsd?: number;
+export interface AgentRuntime {
+  readonly harness: Harness;
+  readonly sessionSuffix: string;
+  describeControls(): string;
+  run(request: RunRequest): Promise<void>;
 }
 
-export interface CodexRuntimeRequest extends RuntimeRequestBase {
+export interface ClaudeRuntimeOpts {
+  harness: "claude";
+  model: string;
+  maxTurns: number;
+  maxBudget?: number;
+}
+
+export interface CodexRuntimeOpts {
   harness: "codex";
+  model: string;
   rolloutBudgetTokens?: number;
   reasoningEffort?: ReasoningEffort;
 }
 
-export type RuntimeRequest = ClaudeRuntimeRequest | CodexRuntimeRequest;
+export type RuntimeOpts = ClaudeRuntimeOpts | CodexRuntimeOpts;
