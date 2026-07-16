@@ -145,15 +145,14 @@ test("buildRuntimeOpts explicit --max-budget overrides default", () => {
   assert.equal(codex.maxBudget, 25);
 });
 
-test("buildRuntimeOpts rejects cross-harness controls", () => {
-  assert.throws(
-    () => buildRuntimeOpts("codex", undefined, { maxTurns: 10 }),
-    /requires --harness claude/,
-  );
-  assert.throws(
-    () => buildRuntimeOpts("claude", undefined, { rolloutBudgetTokens: 100000 }),
-    /requires --harness codex/,
-  );
+test("buildRuntimeOpts warns and ignores cross-harness controls", () => {
+  const codexOpts = buildRuntimeOpts("codex", undefined, { maxTurns: 10 });
+  assert.equal(codexOpts.harness, "codex");
+  assert.equal("maxTurns" in codexOpts, false);
+
+  const claudeOpts = buildRuntimeOpts("claude", undefined, { rolloutBudgetTokens: 100000 });
+  assert.equal(claudeOpts.harness, "claude");
+  assert.equal("rolloutBudgetTokens" in claudeOpts, false);
 });
 
 test("buildRuntimeOpts accepts reasoningEffort for Claude", () => {

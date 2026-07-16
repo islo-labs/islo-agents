@@ -149,7 +149,7 @@ SESSION_FILE="/workspace/.islo-agents/sessions/$(printf '%s' "${SESSION_KEY}" | 
 if [ -f "$SESSION_FILE" ]; then
   npx tsx src/agent.ts --resume --session-key "${SESSION_KEY}" \
     --cwd /workspace --max-budget "{{max_budget_usd}}" \
-    --reasoning-effort "{{reasoning_effort}}" \
+    --max-turns "{{max_turns}}" --reasoning-effort "{{reasoning_effort}}" \
     "The PR has been updated. Review the latest changes."
 else
   HARNESS="{{harness}}"

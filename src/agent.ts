@@ -148,7 +148,7 @@ export function buildRuntimeOpts(
 ): RuntimeOpts {
   if (harness === "claude") {
     if (args.rolloutBudgetTokens !== undefined) {
-      throw new Error("--rollout-budget-tokens requires --harness codex");
+      console.warn("--rollout-budget-tokens ignored for claude harness");
     }
     return {
       harness,
@@ -160,7 +160,7 @@ export function buildRuntimeOpts(
   }
 
   if (args.maxTurns !== undefined) {
-    throw new Error("--max-turns requires --harness claude");
+    console.warn("--max-turns ignored for codex harness");
   }
   return {
     harness,
@@ -360,16 +360,11 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
       );
     }
     if (!stored) {
-      console.warn(`Corrupt session file for '${args.sessionKey}'; removing and starting fresh`);
       unlinkSync(sessionPath!);
-      if (!args.prompt) {
-        throw new Error(
-          `Session '${args.sessionKey}' was corrupt and has been removed. ` +
-          `Provide --prompt to start a new session.`,
-        );
-      }
-      resolved = resolveRuntime(args, undefined);
-      prompt = await renderPrompt(args);
+      throw new Error(
+        `Session '${args.sessionKey}' was corrupt and has been removed. ` +
+        `Retry the job — next run will start a fresh session.`,
+      );
     } else {
       if (args.harness && args.harness !== stored.harness) {
         throw new Error(
