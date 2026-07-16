@@ -5,6 +5,8 @@ import { inspectClaudeMessage } from "../src/runtimes/claude.js";
 import {
   buildCodexConfig,
   inspectCodexEvent,
+  usdToTokens,
+  CODEX_TOKENS_PER_USD,
 } from "../src/runtimes/codex.js";
 import { createRuntime } from "../src/runtimes/index.js";
 
@@ -72,16 +74,33 @@ test("createRuntime returns ClaudeRuntime for claude opts", () => {
   assert.match(runtime.describeControls(), /maxBudgetUsd=10/);
 });
 
-test("createRuntime returns CodexRuntime for codex opts", () => {
+test("usdToTokens converts using the constant rate", () => {
+  assert.equal(usdToTokens(10), 10 * CODEX_TOKENS_PER_USD);
+  assert.equal(usdToTokens(1), CODEX_TOKENS_PER_USD);
+});
+
+test("createRuntime converts Codex maxBudget to rollout tokens", () => {
   const runtime = createRuntime({
     harness: "codex",
     model: "gpt-5.6",
-    rolloutBudgetTokens: 200000,
+    maxBudget: 10,
     reasoningEffort: "high",
   });
 
   assert.equal(runtime.harness, "codex");
   assert.equal(runtime.sessionSuffix, ".codex.json");
+  assert.match(runtime.describeControls(), /maxBudgetUsd=10/);
   assert.match(runtime.describeControls(), /rolloutBudgetTokens=200000/);
   assert.match(runtime.describeControls(), /reasoningEffort=high/);
+});
+
+test("createRuntime lets rolloutBudgetTokens override maxBudget", () => {
+  const runtime = createRuntime({
+    harness: "codex",
+    model: "gpt-5.6",
+    maxBudget: 10,
+    rolloutBudgetTokens: 500000,
+  });
+
+  assert.match(runtime.describeControls(), /rolloutBudgetTokens=500000/);
 });

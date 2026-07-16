@@ -52,10 +52,10 @@ type = "number"
 default = 5
 description = "Claude-only maximum budget in USD."
 
-[job.params.codex_rollout_budget_tokens]
-type = "integer"
-default = 100000
-description = "Codex-only weighted token budget. May overshoot by one model response."
+[job.params.codex_max_budget_usd]
+type = "number"
+default = 5
+description = "Codex maximum budget in USD (converted to weighted tokens internally)."
 
 [job.params.codex_reasoning_effort]
 type = "string"
@@ -141,7 +141,7 @@ case "${HARNESS}" in
     HARNESS_ARGS+=(--max-turns "{{claude_max_turns}}" --max-budget "{{claude_max_budget_usd}}")
     ;;
   codex)
-    HARNESS_ARGS+=(--rollout-budget-tokens "{{codex_rollout_budget_tokens}}" --reasoning-effort "{{codex_reasoning_effort}}")
+    HARNESS_ARGS+=(--max-budget "{{codex_max_budget_usd}}" --reasoning-effort "{{codex_reasoning_effort}}")
     ;;
   *)
     echo "Unsupported harness: ${HARNESS}" >&2

@@ -31,6 +31,7 @@ export interface ClaudeRuntimeOpts {
 export interface CodexRuntimeOpts {
   harness: "codex";
   model: string;
+  maxBudget?: number;
   rolloutBudgetTokens?: number;
   reasoningEffort?: ReasoningEffort;
 }

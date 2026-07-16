@@ -31,7 +31,7 @@ test("review defaults to Codex with GPT-5.6", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.codex_rollout_budget_tokens\][\s\S]*?default = 200000/,
+    /\[job\.params\.codex_max_budget_usd\][\s\S]*?default = 10/,
   );
 });
 
@@ -43,8 +43,8 @@ test("harness-specific params use provider prefixes", () => {
       `${role} must use claude_max_turns`);
     assert.match(manifest, /\[job\.params\.claude_max_budget_usd\]/,
       `${role} must use claude_max_budget_usd`);
-    assert.match(manifest, /\[job\.params\.codex_rollout_budget_tokens\]/,
-      `${role} must use codex_rollout_budget_tokens`);
+    assert.match(manifest, /\[job\.params\.codex_max_budget_usd\]/,
+      `${role} must use codex_max_budget_usd`);
     assert.match(manifest, /\[job\.params\.codex_reasoning_effort\]/,
       `${role} must use codex_reasoning_effort`);
   }

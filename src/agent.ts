@@ -136,12 +136,13 @@ function buildRuntimeOpts(
     };
   }
 
-  if (maxTurns !== undefined || maxBudget !== undefined) {
-    throw new Error("--max-turns and --max-budget require --harness claude");
+  if (maxTurns !== undefined) {
+    throw new Error("--max-turns requires --harness claude");
   }
   return {
     harness,
     model: model ?? "gpt-5.6",
+    ...(maxBudget !== undefined ? { maxBudget } : {}),
     ...(rolloutBudgetTokens !== undefined ? { rolloutBudgetTokens } : {}),
     ...(reasoningEffort ? { reasoningEffort } : {}),
   };

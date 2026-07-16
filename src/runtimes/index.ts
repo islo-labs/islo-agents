@@ -10,6 +10,7 @@ export function createRuntime(opts: RuntimeOpts): AgentRuntime {
   }
   return new CodexRuntime(
     opts.model,
+    opts.maxBudget,
     opts.rolloutBudgetTokens,
     opts.reasoningEffort,
   );

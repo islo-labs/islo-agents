@@ -19,8 +19,8 @@ test("parseArgs accepts Codex-specific controls", () => {
     "codex",
     "--model",
     "gpt-5.6",
-    "--rollout-budget-tokens",
-    "200000",
+    "--max-budget",
+    "10",
     "--reasoning-effort",
     "high",
   ]);
@@ -28,8 +28,8 @@ test("parseArgs accepts Codex-specific controls", () => {
   assert.equal(args.runtimeOpts.harness, "codex");
   assert.equal(args.runtimeOpts.model, "gpt-5.6");
   assert.equal(
-    args.runtimeOpts.harness === "codex" && args.runtimeOpts.rolloutBudgetTokens,
-    200000,
+    args.runtimeOpts.harness === "codex" && args.runtimeOpts.maxBudget,
+    10,
   );
   assert.equal(
     args.runtimeOpts.harness === "codex" && args.runtimeOpts.reasoningEffort,
@@ -48,7 +48,7 @@ test("parseArgs rejects controls from the wrong harness", () => {
         "--max-turns",
         "10",
       ]),
-    /require --harness claude/,
+    /requires --harness claude/,
   );
   assert.throws(
     () =>
@@ -60,6 +60,16 @@ test("parseArgs rejects controls from the wrong harness", () => {
       ]),
     /require --harness codex/,
   );
+});
+
+test("parseArgs allows --max-budget for both harnesses", () => {
+  const claude = parseArgs(["--prompt", "p.md", "--max-budget", "5"]);
+  assert.equal(claude.runtimeOpts.harness, "claude");
+  assert.equal(claude.runtimeOpts.harness === "claude" && claude.runtimeOpts.maxBudget, 5);
+
+  const codex = parseArgs(["--prompt", "p.md", "--harness", "codex", "--max-budget", "10"]);
+  assert.equal(codex.runtimeOpts.harness, "codex");
+  assert.equal(codex.runtimeOpts.harness === "codex" && codex.runtimeOpts.maxBudget, 10);
 });
 
 test("sessionStatePath isolates runtimes by suffix", () => {

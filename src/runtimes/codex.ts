@@ -11,6 +11,19 @@ interface CodexEventInspection {
   error?: Error;
 }
 
+/**
+ * Approximate weighted-token-per-USD rate for Codex rollout budgets.
+ * Agent workloads are output-heavy and the rollout budget counts reasoning
+ * tokens at higher weight, so this is deliberately conservative. Calibrated
+ * against GPT-5.6 Terra ($2.50/$15 per 1M input/output) for typical agent
+ * output ratios. Override with --rollout-budget-tokens for precision.
+ */
+export const CODEX_TOKENS_PER_USD = 20_000;
+
+export function usdToTokens(usd: number): number {
+  return Math.round(usd * CODEX_TOKENS_PER_USD);
+}
+
 export function buildCodexConfig(rolloutBudgetTokens?: number): CodexConfig {
   if (rolloutBudgetTokens === undefined) {
     return {};
@@ -72,17 +85,24 @@ export function inspectCodexEvent(event: unknown): CodexEventInspection {
 export class CodexRuntime implements AgentRuntime {
   readonly harness = "codex" as const;
   readonly sessionSuffix = ".codex.json";
+  private readonly effectiveTokens?: number;
 
   constructor(
     private readonly model: string,
-    private readonly rolloutBudgetTokens?: number,
+    private readonly maxBudgetUsd?: number,
+    rolloutBudgetTokens?: number,
     private readonly reasoningEffort?: ReasoningEffort,
-  ) {}
+  ) {
+    this.effectiveTokens = rolloutBudgetTokens ?? (maxBudgetUsd !== undefined ? usdToTokens(maxBudgetUsd) : undefined);
+  }
 
   describeControls(): string {
     return [
-      ...(this.rolloutBudgetTokens !== undefined
-        ? [`rolloutBudgetTokens=${this.rolloutBudgetTokens}`]
+      ...(this.maxBudgetUsd !== undefined
+        ? [`maxBudgetUsd=${this.maxBudgetUsd}`]
+        : []),
+      ...(this.effectiveTokens !== undefined
+        ? [`rolloutBudgetTokens=${this.effectiveTokens}`]
         : []),
       ...(this.reasoningEffort
         ? [`reasoningEffort=${this.reasoningEffort}`]
@@ -92,7 +112,7 @@ export class CodexRuntime implements AgentRuntime {
 
   async run(request: RunRequest): Promise<void> {
     const codex = new Codex({
-      config: buildCodexConfig(this.rolloutBudgetTokens),
+      config: buildCodexConfig(this.effectiveTokens),
     });
     const threadOptions: ThreadOptions = {
       model: this.model,
