@@ -49,9 +49,9 @@ This event fires when the `needs-changes` label is added to an `islo-loop` PR by
 
 Extract repo, PR number, and any issue IDs (from title, branch, body, or comments — Linear, Jira, etc.). Prefer visible conventions over guessing.
 
-## Agent catalog (this checkout)
+## Agent catalog
 
-Your cwd is the `islo-agents` checkout. Use it as the catalog of agents you can kick off:
+The agent pack is checked out at `/workspace/.islo-pack`. Use it as the catalog of agents you can kick off:
 
 | Intent | Job / agent | Typical sandbox naming |
 |--------|-------------|------------------------|
@@ -60,7 +60,7 @@ Your cwd is the `islo-agents` checkout. Use it as the catalog of agents you can 
 | Verify E2E | `verify` / `agents/verify` | `verify-<repo>-<pr>` |
 | Fix CI | `babysit` / `agents/babysit` | `babysit-<repo>-<workflow-run-id>` |
 
-Read the relevant `job.toml` / `prompt.md` under `agents/` when you need exact params or behavior. Treat naming as hints, not hard requirements.
+Read the relevant `job.toml` / `prompt.md` under `/workspace/.islo-pack/agents/` when you need exact params or behavior. Treat naming as hints, not hard requirements.
 
 ## Discover existing workers
 
@@ -136,7 +136,7 @@ Examples:
 - Verify / babysit: same pattern with their required params (read their `job.toml`).
 - Implement from an issue-shaped request: `islo job run implementer --param issue_id=…` (plus optional title/description/identifier/url); otherwise create an issue-scoped sandbox from `islo-stack` and start `agents/implementer` via the harness.
 
-3. If no job fits cleanly, create an appropriately named sandbox yourself (use the `islo-stack` snapshot for code work) and start the matching agent harness from this checkout — still in the **worker** sandbox, not here.
+3. If no job fits cleanly, create an appropriately named sandbox yourself (use the `islo-stack` snapshot for code work) and start the matching agent harness — still in the **worker** sandbox, not here.
 
 4. If the request is ambiguous (cannot tell implement vs review vs verify, or which issue/PR), ask **one** concise clarifying question on the source thread with `gh`, then stop.
 

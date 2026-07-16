@@ -31,14 +31,15 @@ npx tsx src/agent.ts --harness claude --model claude-opus-4-6 \
   --prompt agents/review/prompt.md --max-turns 50 --max-budget 10
 
 npx tsx src/agent.ts --harness codex --model gpt-5.6 \
-  --prompt agents/review/prompt.md \
-  --rollout-budget-tokens 200000 --reasoning-effort high
+  --prompt agents/review/prompt.md --max-budget 10 --reasoning-effort high
 ```
 
-Shared options include `--prompt`, `--cwd`, `--model`, `--session-key`,
-`--context-file`, `--knowledge-*`, and `--var`. Claude alone supports
-`--max-turns` and `--max-budget`. Codex alone supports
-`--rollout-budget-tokens` and `--reasoning-effort`.
+Shared options: `--prompt`, `--cwd`, `--model`, `--max-budget`,
+`--session-key`, `--context-file`, `--knowledge-*`, and `--var`.
+`--max-budget` sets a USD cap for both harnesses (Codex converts
+internally via `CODEX_TOKENS_PER_USD`). Claude alone supports
+`--max-turns`. Codex alone supports `--rollout-budget-tokens` (raw
+weighted-token override) and `--reasoning-effort`.
 
 Codex rollout budgets count weighted tokens across the thread and any
 subagents. The feature is currently marked under development by Codex and may
@@ -48,6 +49,11 @@ wall-clock bound. The Codex SDK is pinned exactly while this feature matures.
 Claude keeps the original `<session-key>.json` session file. Codex uses
 `<session-key>.codex.json`, preventing provider-native session IDs from being
 mixed when a durable sandbox changes harness.
+
+> **Note:** `harness` and `model` are independently overridable in job
+> params. If you override `harness` (e.g. `claude` → `codex`), also
+> override `model` to a compatible one — the SDK will reject mismatched
+> model names at runtime.
 
 Roles / job names: `review`, `implementer`, `verify`, `babysit`, `delegator`.
 The review job defaults to Codex with `gpt-5.6`; the other jobs default to

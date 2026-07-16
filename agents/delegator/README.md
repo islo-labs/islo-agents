@@ -24,7 +24,7 @@ GitHub mention routing is defined in `trigger-rules/github.json` and assembled i
 - `1` vCPU / `1024` MB — no stack snapshot
 - `teardown_on_complete = true`
 
-The run script clones `islo-agents` into the sandbox so the agent has the catalog of prompts/jobs as cwd context.
+The run script clones the agent pack into `/workspace/.islo-pack` so the agent has the catalog of prompts/jobs available.
 
 ## Behavior
 
