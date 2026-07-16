@@ -1,6 +1,6 @@
 import { parseArgs as nodeParseArgs } from "node:util";
 import { Islo } from "@islo-labs/sdk";
-import { readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, unlinkSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join, resolve } from "path";
 
@@ -352,20 +352,34 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   let resolved: ReturnType<typeof resolveRuntime>;
 
   if (args.resume) {
-    const stored = sessionPath ? readSession(sessionPath) : undefined;
-    if (!stored) {
+    const fileExists = sessionPath ? existsSync(sessionPath) : false;
+    const stored = fileExists && sessionPath ? readSession(sessionPath) : undefined;
+    if (!fileExists) {
       throw new Error(
         `Session '${args.sessionKey}' not found. Remove --resume to start a new session.`,
       );
     }
-    if (args.harness && args.harness !== stored.harness) {
-      throw new Error(
-        `Cannot resume: session uses ${stored.harness} but --harness ${args.harness} was specified.`,
-      );
+    if (!stored) {
+      console.warn(`Corrupt session file for '${args.sessionKey}'; removing and starting fresh`);
+      unlinkSync(sessionPath!);
+      if (!args.prompt) {
+        throw new Error(
+          `Session '${args.sessionKey}' was corrupt and has been removed. ` +
+          `Provide --prompt to start a new session.`,
+        );
+      }
+      resolved = resolveRuntime(args, undefined);
+      prompt = await renderPrompt(args);
+    } else {
+      if (args.harness && args.harness !== stored.harness) {
+        throw new Error(
+          `Cannot resume: session uses ${stored.harness} but --harness ${args.harness} was specified.`,
+        );
+      }
+      resolved = resolveRuntime(args, stored);
+      prompt = args.promptText!;
+      console.log(`Resuming ${stored.harness} session ${stored.sessionId}`);
     }
-    resolved = resolveRuntime(args, stored);
-    prompt = args.promptText!;
-    console.log(`Resuming ${stored.harness} session ${stored.sessionId}`);
   } else {
     if (sessionPath && existsSync(sessionPath)) {
       const existing = readSession(sessionPath);

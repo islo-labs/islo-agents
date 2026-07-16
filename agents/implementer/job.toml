@@ -171,24 +171,25 @@ ISLO_EOF
 cd /workspace/.islo-pack
 SESSION_KEY="implementer-$(tr -d '\n' < /workspace/.islo-job/issue_identifier)"
 SESSION_FILE="/workspace/.islo-agents/sessions/$(printf '%s' "${SESSION_KEY}" | tr -c 'a-zA-Z0-9_.-' '-').session.json"
-HARNESS="{{harness}}"
-HARNESS_ARGS=(--reasoning-effort "{{reasoning_effort}}")
-case "${HARNESS}" in
-  claude)
-    HARNESS_ARGS+=(--max-turns "{{max_turns}}")
-    ;;
-  codex)
-    ;;
-  *)
-    echo "Unsupported harness: ${HARNESS}" >&2
-    exit 2
-    ;;
-esac
 if [ -f "$SESSION_FILE" ]; then
   npx tsx src/agent.ts --resume --session-key "${SESSION_KEY}" \
-    --cwd /workspace --max-budget "{{max_budget_usd}}" "${HARNESS_ARGS[@]}" \
+    --cwd /workspace --max-budget "{{max_budget_usd}}" \
+    --reasoning-effort "{{reasoning_effort}}" \
     "Continue your implementation."
 else
+  HARNESS="{{harness}}"
+  HARNESS_ARGS=(--reasoning-effort "{{reasoning_effort}}")
+  case "${HARNESS}" in
+    claude)
+      HARNESS_ARGS+=(--max-turns "{{max_turns}}")
+      ;;
+    codex)
+      ;;
+    *)
+      echo "Unsupported harness: ${HARNESS}" >&2
+      exit 2
+      ;;
+  esac
   npx tsx src/agent.ts \
     --prompt agents/implementer/prompt.md \
     --harness "${HARNESS}" \
