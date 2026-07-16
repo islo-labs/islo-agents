@@ -31,21 +31,21 @@ test("review defaults to Codex with GPT-5.6", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.codex_max_budget_usd\][\s\S]*?default = 10/,
+    /\[job\.params\.max_budget_usd\][\s\S]*?default = 10/,
   );
 });
 
-test("harness-specific params use provider prefixes", () => {
+test("all jobs have shared budget and harness-specific params", () => {
   for (const role of roles) {
     const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
 
-    assert.match(manifest, /\[job\.params\.claude_max_turns\]/,
-      `${role} must use claude_max_turns`);
-    assert.match(manifest, /\[job\.params\.claude_max_budget_usd\]/,
-      `${role} must use claude_max_budget_usd`);
-    assert.match(manifest, /\[job\.params\.codex_max_budget_usd\]/,
-      `${role} must use codex_max_budget_usd`);
-    assert.match(manifest, /\[job\.params\.codex_reasoning_effort\]/,
-      `${role} must use codex_reasoning_effort`);
+    assert.match(manifest, /\[job\.params\.max_budget_usd\]/,
+      `${role} must have max_budget_usd`);
+    assert.match(manifest, /\[job\.params\.max_turns\]/,
+      `${role} must have max_turns`);
+    assert.match(manifest, /\[job\.params\.reasoning_effort\]/,
+      `${role} must have reasoning_effort`);
+    assert.match(manifest, /--max-budget "{{max_budget_usd}}"/,
+      `${role} must pass --max-budget outside the case`);
   }
 });

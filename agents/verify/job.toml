@@ -52,25 +52,20 @@ type = "string"
 default = "claude-opus-4-6"
 description = "Model name understood by the selected harness."
 
-[job.params.claude_max_turns]
+[job.params.max_turns]
 type = "integer"
 default = 150
-description = "Claude-only maximum agentic turns."
+description = "Maximum agentic turns (Claude only; ignored by Codex)."
 
-[job.params.claude_max_budget_usd]
+[job.params.max_budget_usd]
 type = "number"
 default = 20
-description = "Claude-only maximum budget in USD."
+description = "Maximum budget in USD."
 
-[job.params.codex_max_budget_usd]
-type = "number"
-default = 20
-description = "Codex maximum budget in USD (converted to weighted tokens internally)."
-
-[job.params.codex_reasoning_effort]
+[job.params.reasoning_effort]
 type = "string"
 default = "high"
-description = "Codex-only reasoning effort."
+description = "Reasoning effort (Codex only; ignored by Claude)."
 pattern = "^(minimal|low|medium|high|xhigh)$"
 
 [run]
@@ -201,10 +196,10 @@ HARNESS="{{harness}}"
 HARNESS_ARGS=()
 case "${HARNESS}" in
   claude)
-    HARNESS_ARGS+=(--max-turns "{{claude_max_turns}}" --max-budget "{{claude_max_budget_usd}}")
+    HARNESS_ARGS+=(--max-turns "{{max_turns}}")
     ;;
   codex)
-    HARNESS_ARGS+=(--max-budget "{{codex_max_budget_usd}}" --reasoning-effort "{{codex_reasoning_effort}}")
+    HARNESS_ARGS+=(--reasoning-effort "{{reasoning_effort}}")
     ;;
   *)
     echo "Unsupported harness: ${HARNESS}" >&2
@@ -216,6 +211,7 @@ npx tsx src/agent.ts \
   --harness "${HARNESS}" \
   --cwd /workspace \
   --model "{{model}}" \
+  --max-budget "{{max_budget_usd}}" \
   "${HARNESS_ARGS[@]}" \
   --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
   --context-file "/workspace/${REPO_SHORT}/VERIFY.md" \
