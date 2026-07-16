@@ -99,7 +99,7 @@ Use the harness to resume — it auto-detects the harness type and model from th
 
 ```bash
 islo use <sandbox> -- bash -lc 'cd /workspace/.islo-pack && npx tsx src/agent.ts \
-  --resume --session-key "<session-key>" \
+  --resume --session-key "<session-key>" --cwd /workspace \
   "<handoff prompt>"'
 ```
 
