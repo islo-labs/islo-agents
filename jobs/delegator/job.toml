@@ -104,9 +104,9 @@ exec = [
   '''
 set -euo pipefail
 cd /workspace
-rm -rf islo-agents
-git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
-cd islo-agents
+rm -rf .islo-pack
+git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git .islo-pack
+cd .islo-pack
 git fetch --depth=1 origin "{{agents_git_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
 ''',
@@ -120,7 +120,7 @@ exec = [
   "-lc",
   '''
 set -euo pipefail
-cd /workspace/islo-agents
+cd /workspace/.islo-pack
 npm ci
 ''',
 ]
@@ -133,7 +133,7 @@ exec = [
   "-lc",
   '''
 set -euo pipefail
-cd /workspace/islo-agents
+cd /workspace/.islo-pack
 HARNESS="{{harness}}"
 HARNESS_ARGS=()
 case "${HARNESS}" in
