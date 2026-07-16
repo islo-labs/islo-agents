@@ -368,9 +368,13 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     console.log(`Resuming ${stored.harness} session ${stored.sessionId}`);
   } else {
     if (sessionPath && existsSync(sessionPath)) {
-      throw new Error(
-        `Session '${args.sessionKey}' already exists. Use --resume to continue it.`,
-      );
+      const existing = readSession(sessionPath);
+      if (existing) {
+        throw new Error(
+          `Session '${args.sessionKey}' already exists. Use --resume to continue it.`,
+        );
+      }
+      console.warn(`Corrupt session file at ${sessionPath}; overwriting with new session`);
     }
     if (!args.prompt) {
       throw new Error("--prompt is required for new sessions");
