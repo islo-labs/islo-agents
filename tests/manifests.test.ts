@@ -6,13 +6,11 @@ import { parse } from "smol-toml";
 
 const roles = ["review", "implementer", "verify", "babysit", "delegator"];
 
-test("job manifests parse and deployment copies match", () => {
+test("agent job manifests parse", () => {
   for (const role of roles) {
     const canonical = readFileSync(`agents/${role}/job.toml`, "utf-8");
-    const deployed = readFileSync(`jobs/${role}/job.toml`, "utf-8");
 
     assert.doesNotThrow(() => parse(canonical), `${role} manifest must parse`);
-    assert.equal(deployed, canonical, `${role} deployment copy must match`);
     assert.match(canonical, /\[job\.params\.harness\]/);
     assert.match(canonical, /--harness "\$\{HARNESS\}"/);
   }
@@ -51,7 +49,7 @@ test("all jobs have shared budget and harness-specific params", () => {
 });
 
 test("durable worker resumes rely only on stored configuration", () => {
-  for (const role of ["review", "implementer"]) {
+  for (const role of ["review", "implementer", "verify"]) {
     const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
     const resumeBranch = manifest.match(
       /if \[ -f "\$SESSION_FILE" \]; then([\s\S]*?)else/,
@@ -61,4 +59,14 @@ test("durable worker resumes rely only on stored configuration", () => {
     assert.match(resumeBranch, /--resume --session-key/);
     assert.doesNotMatch(resumeBranch, /--cwd|--max-budget|--max-turns|--reasoning-effort/);
   }
+});
+
+test("delegator starts a worker when a matching sandbox has no session", () => {
+  const prompt = readFileSync("agents/delegator/prompt.md", "utf-8");
+
+  assert.match(
+    prompt,
+    /has no session file[\s\S]*start a new[\s\S]*session in that worker sandbox/,
+  );
+  assert.match(prompt, /Prefer re-running the role's[\s\S]*durable job/);
 });

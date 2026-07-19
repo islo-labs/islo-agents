@@ -74,9 +74,10 @@ and one completed response can exceed it. A resumed invocation gets a fresh
 allowance. Job timeouts remain the hard wall-clock bound, and the Codex SDK is
 pinned exactly while this experimental feature matures.
 
-All harnesses use a unified session file (`<session-key>.session.json`) that
-stores the provider session ID and complete resumable configuration. This lets
-delegators continue a worker using only its session key and a handoff prompt.
+Durable worker jobs (`review`, `implementer`, and `verify`) use a unified
+session file (`<session-key>.session.json`) that stores the provider session ID
+and complete resumable configuration. This lets delegators continue a worker
+using only its session key and a handoff prompt.
 
 > **Note:** `harness` and `model` are independently overridable in job
 > params. If you override `harness` (e.g. `claude` → `codex`), also
