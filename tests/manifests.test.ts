@@ -66,6 +66,5 @@ test("durable worker resumes rely only on stored configuration", () => {
 test("delegator verifies handoffs and reports missing sessions", () => {
   const prompt = readFileSync("agents/delegator/prompt.md", "utf-8");
 
-  assert.match(prompt, /Treat a handoff as successful only after/);
   assert.match(prompt, /has no session file[\s\S]*Report a concise routing failure/);
 });

@@ -18,8 +18,6 @@ Raw payload path: {{RAW_PAYLOAD_PATH}}
 - Prefer resuming an existing worker session over starting a new one.
 - If nothing fits, create/start the right worker — do not ask the user to do that for you unless the request is truly ambiguous.
 - If the mention is noise or not meant for Islo, do nothing.
-- Treat a handoff as successful only after the remote worker command exits
-  successfully.
 - After a successful handoff, usually post nothing. Let the worker reply on the source thread when it has something useful.
 
 ## Context gathering
