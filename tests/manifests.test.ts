@@ -49,3 +49,16 @@ test("all jobs have shared budget and harness-specific params", () => {
       `${role} must pass --max-budget outside the case`);
   }
 });
+
+test("durable worker resumes rely only on stored configuration", () => {
+  for (const role of ["review", "implementer"]) {
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+    const resumeBranch = manifest.match(
+      /if \[ -f "\$SESSION_FILE" \]; then([\s\S]*?)else/,
+    )?.[1];
+
+    assert.ok(resumeBranch, `${role} must have a resume branch`);
+    assert.match(resumeBranch, /--resume --session-key/);
+    assert.doesNotMatch(resumeBranch, /--cwd|--max-budget|--max-turns|--reasoning-effort/);
+  }
+});

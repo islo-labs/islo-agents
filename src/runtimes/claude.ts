@@ -1,6 +1,6 @@
-import { query, type EffortLevel } from "@anthropic-ai/claude-agent-sdk";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 
-import type { AgentRuntime, RunRequest } from "./types.js";
+import type { AgentRuntime, ClaudeRuntimeOpts, RunRequest } from "./types.js";
 
 interface ClaudeMessageInspection {
   progress: boolean;
@@ -38,20 +38,15 @@ export function inspectClaudeMessage(
 export class ClaudeRuntime implements AgentRuntime {
   readonly harness = "claude" as const;
 
-  constructor(
-    private readonly model: string,
-    private readonly maxTurns: number,
-    private readonly maxBudgetUsd?: number,
-    private readonly effort?: EffortLevel,
-  ) {}
+  constructor(private readonly opts: ClaudeRuntimeOpts) {}
 
   describeControls(): string {
     return [
-      `maxTurns=${this.maxTurns}`,
-      ...(this.maxBudgetUsd !== undefined
-        ? [`maxBudgetUsd=${this.maxBudgetUsd}`]
+      `maxTurns=${this.opts.maxTurns}`,
+      `maxBudgetUsd=${this.opts.maxBudgetUsd}`,
+      ...(this.opts.reasoningEffort
+        ? [`effort=${this.opts.reasoningEffort}`]
         : []),
-      ...(this.effort ? [`effort=${this.effort}`] : []),
     ].join(", ");
   }
 
@@ -62,12 +57,12 @@ export class ClaudeRuntime implements AgentRuntime {
         cwd: request.cwd,
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
-        maxTurns: this.maxTurns,
-        model: this.model,
-        ...(this.maxBudgetUsd
-          ? { maxBudgetUsd: this.maxBudgetUsd }
+        maxTurns: this.opts.maxTurns,
+        model: this.opts.model,
+        maxBudgetUsd: this.opts.maxBudgetUsd,
+        ...(this.opts.reasoningEffort
+          ? { effort: this.opts.reasoningEffort }
           : {}),
-        ...(this.effort ? { effort: this.effort } : {}),
         ...(request.resumeSessionId
           ? { resume: request.resumeSessionId }
           : {}),

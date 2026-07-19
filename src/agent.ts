@@ -1,11 +1,24 @@
 import { parseArgs as nodeParseArgs } from "node:util";
 import { Islo } from "@islo-labs/sdk";
-import { readFileSync, existsSync, mkdirSync, writeFileSync, unlinkSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join, resolve } from "path";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { createRuntime } from "./runtimes/index.js";
-import type { Harness, ReasoningEffort, RuntimeOpts } from "./runtimes/types.js";
+import type {
+  ClaudeReasoningEffort,
+  CodexBudget,
+  CodexReasoningEffort,
+  Harness,
+  ReasoningEffort,
+  RuntimeOpts,
+} from "./runtimes/types.js";
+import {
+  loadSession,
+  sessionStatePath,
+  writeSession,
+  type SessionRecord,
+} from "./session.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
@@ -16,12 +29,17 @@ type KnowledgeListRequest = NonNullable<
 >;
 type SdkKnowledgeLevel = NonNullable<KnowledgeListRequest["level"]>;
 
-export interface Args {
-  prompt?: string;
-  promptText?: string;
-  resume: boolean;
-  cwd: string;
-  sessionKey?: string;
+interface RuntimeOverrides {
+  harness?: Harness;
+  model?: string;
+  cwd?: string;
+  maxTurns?: number;
+  maxBudgetUsd?: number;
+  rolloutBudgetTokens?: number;
+  reasoningEffort?: ReasoningEffort;
+}
+
+interface PromptInputs {
   contextFiles: string[];
   vars: Record<string, string>;
   knowledgeRepo?: string;
@@ -29,12 +47,34 @@ export interface Args {
   knowledgeTag?: string;
   knowledgeQuery?: string;
   knowledgeIds: string[];
-  harness?: Harness;
-  model?: string;
-  maxTurns?: number;
-  maxBudget?: number;
-  rolloutBudgetTokens?: number;
-  reasoningEffort?: ReasoningEffort;
+}
+
+export interface StartInvocation extends RuntimeOverrides, PromptInputs {
+  mode: "start";
+  promptPath: string;
+  sessionKey?: string;
+}
+
+export interface ResumeInvocation extends RuntimeOverrides {
+  mode: "resume";
+  promptText: string;
+  sessionKey: string;
+}
+
+export type Invocation = StartInvocation | ResumeInvocation;
+
+export interface ResolvedRunPlan {
+  cwd: string;
+  runtime: RuntimeOpts;
+  resumeSessionId?: string;
+}
+
+export function shouldPersistSession(
+  mode: Invocation["mode"],
+  completed: boolean,
+  sessionId: string | undefined,
+): boolean {
+  return sessionId !== undefined && (mode === "start" || completed);
 }
 
 // ── Argument parsing ────────────────────────────────────────────────
@@ -72,7 +112,7 @@ const CLI_OPTIONS = {
   var:                     { type: "string" as const, multiple: true as const },
 };
 
-export function parseArgs(argv: string[] = process.argv.slice(2)): Args {
+export function parseArgs(argv: string[] = process.argv.slice(2)): Invocation {
   const { values, positionals } = nodeParseArgs({
     args: argv,
     options: CLI_OPTIONS,
@@ -88,13 +128,19 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): Args {
   if (resume && !promptText) {
     throw new Error("--resume requires a positional prompt text argument");
   }
-  if (!values.prompt && !promptText) {
+  if (resume && values.prompt) {
+    throw new Error("--resume accepts positional prompt text, not --prompt");
+  }
+  if (!resume && promptText) {
+    throw new Error("Positional prompt text requires --resume");
+  }
+  if (!resume && !values.prompt) {
     throw new Error(
       "Usage: tsx src/agent.ts --prompt <path> [--resume] [--session-key <key>] [--harness claude|codex] [--cwd <dir>] [--model <m>] [--max-turns <n>] [--max-budget <n>] [--rollout-budget-tokens <n>] [--reasoning-effort low|medium|high|xhigh|max] [--context-file <path>]... [--var KEY=VALUE]... [\"prompt text\"]",
     );
   }
 
-  const rawHarness = values.harness as string | undefined;
+  const rawHarness = values.harness;
   if (rawHarness !== undefined && rawHarness !== "claude" && rawHarness !== "codex") {
     throw new Error(`Unsupported harness '${rawHarness}'`);
   }
@@ -104,7 +150,7 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): Args {
     throw new Error(`Unsupported knowledge level '${knowledgeLevel}'`);
   }
 
-  const reasoningEffort = values["reasoning-effort"] as string | undefined;
+  const reasoningEffort = values["reasoning-effort"];
   if (reasoningEffort !== undefined && !isReasoningEffort(reasoningEffort)) {
     throw new Error(`Unsupported reasoning effort '${reasoningEffort}'`);
   }
@@ -116,58 +162,48 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): Args {
     vars[entry.slice(0, idx)] = entry.slice(idx + 1);
   }
 
+  const runtimeOverrides: RuntimeOverrides = {
+    ...(values.cwd ? { cwd: values.cwd } : {}),
+    ...(rawHarness ? { harness: rawHarness } : {}),
+    ...(values.model ? { model: values.model } : {}),
+    maxTurns: positiveInteger(values["max-turns"], "--max-turns"),
+    maxBudgetUsd: positiveNumber(values["max-budget"], "--max-budget"),
+    rolloutBudgetTokens: positiveInteger(
+      values["rollout-budget-tokens"],
+      "--rollout-budget-tokens",
+    ),
+    ...(reasoningEffort ? { reasoningEffort } : {}),
+  };
+
+  if (resume) {
+    const sessionKey = values["session-key"];
+    if (!sessionKey || !promptText) {
+      throw new Error("--resume requires --session-key and positional prompt text");
+    }
+    return {
+      mode: "resume",
+      promptText,
+      sessionKey,
+      ...runtimeOverrides,
+    };
+  }
+
+  const promptPath = values.prompt;
+  if (!promptPath) {
+    throw new Error("--prompt is required for new sessions");
+  }
   return {
-    ...(values.prompt ? { prompt: values.prompt } : {}),
-    ...(promptText ? { promptText } : {}),
-    resume,
-    cwd: values.cwd ?? process.cwd(),
+    mode: "start",
+    promptPath,
+    ...(values["session-key"] ? { sessionKey: values["session-key"] } : {}),
     contextFiles: values["context-file"] ?? [],
     vars,
     knowledgeIds: values["knowledge-id"] ?? [],
-    ...(values["session-key"] ? { sessionKey: values["session-key"] } : {}),
     ...(values["knowledge-repo"] ? { knowledgeRepo: values["knowledge-repo"] } : {}),
     ...(knowledgeLevel ? { knowledgeLevel } : {}),
     ...(values["knowledge-tag"] ? { knowledgeTag: values["knowledge-tag"] } : {}),
     ...(values["knowledge-query"] ? { knowledgeQuery: values["knowledge-query"] } : {}),
-    ...(rawHarness ? { harness: rawHarness as Harness } : {}),
-    ...(values.model ? { model: values.model } : {}),
-    maxTurns: positiveInteger(values["max-turns"] as string | undefined, "--max-turns"),
-    maxBudget: positiveNumber(values["max-budget"] as string | undefined, "--max-budget"),
-    rolloutBudgetTokens: positiveInteger(
-      values["rollout-budget-tokens"] as string | undefined,
-      "--rollout-budget-tokens",
-    ),
-    ...(reasoningEffort ? { reasoningEffort: reasoningEffort as ReasoningEffort } : {}),
-  };
-}
-
-export function buildRuntimeOpts(
-  harness: Harness,
-  model: string | undefined,
-  args: Pick<Args, "maxTurns" | "maxBudget" | "rolloutBudgetTokens" | "reasoningEffort">,
-): RuntimeOpts {
-  if (harness === "claude") {
-    if (args.rolloutBudgetTokens !== undefined) {
-      console.warn("--rollout-budget-tokens ignored for claude harness");
-    }
-    return {
-      harness,
-      model: model ?? "claude-opus-4-6",
-      maxTurns: args.maxTurns ?? 50,
-      maxBudget: args.maxBudget ?? 15,
-      ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),
-    };
-  }
-
-  if (args.maxTurns !== undefined) {
-    console.warn("--max-turns ignored for codex harness");
-  }
-  return {
-    harness,
-    model: model ?? "gpt-5.6-sol",
-    maxBudget: args.maxBudget ?? 15,
-    ...(args.rolloutBudgetTokens !== undefined ? { rolloutBudgetTokens: args.rolloutBudgetTokens } : {}),
-    ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),
+    ...runtimeOverrides,
   };
 }
 
@@ -179,60 +215,118 @@ function isReasoningEffort(v: string): v is ReasoningEffort {
   return ["minimal", "low", "medium", "high", "xhigh", "max"].includes(v);
 }
 
-// ── Session state ───────────────────────────────────────────────────
+// ── Run-plan resolution ─────────────────────────────────────────────
 
-export interface SessionData {
-  sessionId: string;
-  harness: Harness;
-  model: string | undefined;
+function isClaudeEffort(
+  effort: ReasoningEffort,
+): effort is ClaudeReasoningEffort {
+  return effort !== "minimal";
 }
 
-export function sessionStatePath(key: string): string {
-  const safeKey = key.replace(/[^a-zA-Z0-9_.-]/g, "-");
-  return join("/workspace/.islo-agents/sessions", `${safeKey}.session.json`);
+function isCodexEffort(
+  effort: ReasoningEffort,
+): effort is CodexReasoningEffort {
+  return effort !== "max";
 }
 
-export function readSession(path: string): SessionData | undefined {
-  if (!existsSync(path)) return undefined;
-  try {
-    const parsed = JSON.parse(readFileSync(path, "utf-8"));
-    if (typeof parsed.session_id !== "string") return undefined;
-    return {
-      sessionId: parsed.session_id,
-      harness: parsed.harness === "codex" ? "codex" : "claude",
-      model: typeof parsed.model === "string" && parsed.model ? parsed.model : undefined,
-    };
-  } catch {
-    return undefined;
+function resolveCodexBudget(
+  invocation: Invocation,
+  storedBudget: CodexBudget | undefined,
+): CodexBudget {
+  if (
+    invocation.maxBudgetUsd !== undefined &&
+    invocation.rolloutBudgetTokens !== undefined
+  ) {
+    throw new Error(
+      "--max-budget and --rollout-budget-tokens are alternative Codex controls; specify only one",
+    );
   }
+  if (invocation.rolloutBudgetTokens !== undefined) {
+    return {
+      kind: "rollout_tokens",
+      tokens: invocation.rolloutBudgetTokens,
+    };
+  }
+  if (invocation.maxBudgetUsd !== undefined) {
+    return { kind: "approximate_usd", maxUsd: invocation.maxBudgetUsd };
+  }
+  return storedBudget ?? { kind: "approximate_usd", maxUsd: 15 };
 }
 
-function writeSession(
-  path: string,
-  sessionId: string,
-  key: string,
-  harness: Harness,
-  model: string,
-): void {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(
-    path,
-    JSON.stringify(
-      { session_key: key, session_id: sessionId, harness, model, updated_at: new Date().toISOString() },
-      null,
-      2,
-    ) + "\n",
-  );
-}
+export function resolveRunPlan(
+  invocation: Invocation,
+  stored?: SessionRecord,
+): ResolvedRunPlan {
+  if (invocation.mode === "resume" && stored === undefined) {
+    throw new Error("A stored session is required to resume");
+  }
+  if (invocation.mode === "start" && stored !== undefined) {
+    throw new Error("A new run cannot reuse an existing session");
+  }
+  if (
+    stored &&
+    invocation.harness &&
+    invocation.harness !== stored.runtime.harness
+  ) {
+    throw new Error(
+      `Cannot resume: session uses ${stored.runtime.harness} but --harness ${invocation.harness} was specified.`,
+    );
+  }
 
-export function resolveRuntime(
-  args: Args,
-  stored: SessionData | undefined,
-): { harness: Harness; model: string | undefined; resumeSessionId: string | undefined } {
-  const harness = args.harness ?? stored?.harness ?? "claude";
-  const model = args.model ?? stored?.model ?? undefined;
-  const resumeSessionId = stored?.sessionId;
-  return { harness, model, resumeSessionId };
+  const harness = stored?.runtime.harness ?? invocation.harness ?? "claude";
+  const cwd = invocation.cwd ?? stored?.cwd ?? process.cwd();
+  const resumeSessionId =
+    invocation.mode === "resume" ? stored?.sessionId : undefined;
+
+  if (harness === "claude") {
+    if (invocation.rolloutBudgetTokens !== undefined) {
+      throw new Error("--rollout-budget-tokens requires --harness codex");
+    }
+    const storedRuntime =
+      stored?.runtime.harness === "claude" ? stored.runtime : undefined;
+    const effort =
+      invocation.reasoningEffort ?? storedRuntime?.reasoningEffort;
+    if (effort !== undefined && !isClaudeEffort(effort)) {
+      throw new Error(
+        `Reasoning effort '${effort}' is not supported by the claude harness`,
+      );
+    }
+    return {
+      cwd,
+      runtime: {
+        harness,
+        model:
+          invocation.model ?? storedRuntime?.model ?? "claude-opus-4-6",
+        maxTurns: invocation.maxTurns ?? storedRuntime?.maxTurns ?? 50,
+        maxBudgetUsd:
+          invocation.maxBudgetUsd ?? storedRuntime?.maxBudgetUsd ?? 15,
+        ...(effort ? { reasoningEffort: effort } : {}),
+      },
+      ...(resumeSessionId ? { resumeSessionId } : {}),
+    };
+  }
+
+  if (invocation.maxTurns !== undefined) {
+    throw new Error("--max-turns requires --harness claude");
+  }
+  const storedRuntime =
+    stored?.runtime.harness === "codex" ? stored.runtime : undefined;
+  const effort = invocation.reasoningEffort ?? storedRuntime?.reasoningEffort;
+  if (effort !== undefined && !isCodexEffort(effort)) {
+    throw new Error(
+      `Reasoning effort '${effort}' is not supported by the codex harness`,
+    );
+  }
+  return {
+    cwd,
+    runtime: {
+      harness,
+      model: invocation.model ?? storedRuntime?.model ?? "gpt-5.6-sol",
+      budget: resolveCodexBudget(invocation, storedRuntime?.budget),
+      ...(effort ? { reasoningEffort: effort } : {}),
+    },
+    ...(resumeSessionId ? { resumeSessionId } : {}),
+  };
 }
 
 // ── Knowledge loading ───────────────────────────────────────────────
@@ -241,7 +335,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function hasKnowledgeRequest(args: Args): boolean {
+function hasKnowledgeRequest(args: StartInvocation): boolean {
   return Boolean(
     args.knowledgeRepo ||
       args.knowledgeLevel ||
@@ -251,7 +345,7 @@ function hasKnowledgeRequest(args: Args): boolean {
   );
 }
 
-async function loadKnowledgeMarkdown(args: Args): Promise<string> {
+async function loadKnowledgeMarkdown(args: StartInvocation): Promise<string> {
   if (!hasKnowledgeRequest(args)) return "";
 
   const client = new Islo();
@@ -304,8 +398,8 @@ async function loadKnowledgeMarkdown(args: Args): Promise<string> {
 
 // ── Prompt rendering ────────────────────────────────────────────────
 
-async function renderPrompt(args: Args): Promise<string> {
-  const promptPath = resolve(PROJECT_ROOT, args.prompt!);
+async function renderPrompt(args: StartInvocation): Promise<string> {
+  const promptPath = resolve(PROJECT_ROOT, args.promptPath);
   if (!existsSync(promptPath)) {
     throw new Error(`Prompt file not found: ${promptPath}`);
   }
@@ -320,18 +414,21 @@ async function renderPrompt(args: Args): Promise<string> {
   }
 
   const knowledgeMarkdown = await loadKnowledgeMarkdown(args);
-  args.vars["KNOWLEDGE_SECTION"] = knowledgeMarkdown;
   if (knowledgeMarkdown) {
     contextSection = contextSection
       ? `${contextSection}\n${knowledgeMarkdown}\n`
       : `${knowledgeMarkdown}\n`;
   }
-  args.vars["CONTEXT_SECTION"] = contextSection;
+  const vars = {
+    ...args.vars,
+    KNOWLEDGE_SECTION: knowledgeMarkdown,
+    CONTEXT_SECTION: contextSection,
+  };
 
   const hadContextPlaceholder = promptTemplate.includes("{{CONTEXT_SECTION}}");
   const hadKnowledgePlaceholder = promptTemplate.includes("{{KNOWLEDGE_SECTION}}");
 
-  for (const [key, value] of Object.entries(args.vars)) {
+  for (const [key, value] of Object.entries(vars)) {
     promptTemplate = promptTemplate.replaceAll(`{{${key}}}`, value);
   }
 
@@ -345,78 +442,95 @@ async function renderPrompt(args: Args): Promise<string> {
 // ── Main ────────────────────────────────────────────────────────────
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
-  const args = parseArgs(argv);
-  const sessionPath = args.sessionKey ? sessionStatePath(args.sessionKey) : undefined;
+  const invocation = parseArgs(argv);
+  const sessionPath = invocation.sessionKey
+    ? sessionStatePath(invocation.sessionKey)
+    : undefined;
 
   let prompt: string;
-  let resolved: ReturnType<typeof resolveRuntime>;
+  let plan: ResolvedRunPlan;
 
-  if (args.resume) {
-    const fileExists = sessionPath ? existsSync(sessionPath) : false;
-    const stored = fileExists && sessionPath ? readSession(sessionPath) : undefined;
-    if (!fileExists) {
+  if (invocation.mode === "resume") {
+    const resumePath = sessionStatePath(invocation.sessionKey);
+    const loaded = loadSession(resumePath);
+    if (loaded.status === "missing") {
       throw new Error(
-        `Session '${args.sessionKey}' not found. Remove --resume to start a new session.`,
+        `Session '${invocation.sessionKey}' not found. Remove --resume to start a new session.`,
       );
     }
-    if (!stored) {
-      unlinkSync(sessionPath!);
+    if (loaded.status === "invalid") {
+      unlinkSync(resumePath);
       throw new Error(
-        `Session '${args.sessionKey}' was corrupt and has been removed. ` +
+        `Session '${invocation.sessionKey}' was invalid (${loaded.reason}) and has been removed. ` +
         `Retry the job — next run will start a fresh session.`,
       );
-    } else {
-      if (args.harness && args.harness !== stored.harness) {
-        throw new Error(
-          `Cannot resume: session uses ${stored.harness} but --harness ${args.harness} was specified.`,
-        );
-      }
-      resolved = resolveRuntime(args, stored);
-      prompt = args.promptText!;
-      console.log(`Resuming ${stored.harness} session ${stored.sessionId}`);
     }
+    if (loaded.session.sessionKey !== invocation.sessionKey) {
+      throw new Error(
+        `Session key collision: '${invocation.sessionKey}' resolved to a file owned by '${loaded.session.sessionKey}'`,
+      );
+    }
+    plan = resolveRunPlan(invocation, loaded.session);
+    prompt = invocation.promptText;
+    console.log(
+      `Resuming ${loaded.session.runtime.harness} session ${loaded.session.sessionId}`,
+    );
   } else {
-    if (sessionPath && existsSync(sessionPath)) {
-      const existing = readSession(sessionPath);
-      if (existing) {
+    if (sessionPath) {
+      const loaded = loadSession(sessionPath);
+      if (loaded.status === "loaded") {
         throw new Error(
-          `Session '${args.sessionKey}' already exists. Use --resume to continue it.`,
+          `Session '${invocation.sessionKey}' already exists. Use --resume to continue it.`,
         );
       }
-      console.warn(`Corrupt session file at ${sessionPath}; overwriting with new session`);
+      if (loaded.status === "invalid") {
+        console.warn(
+          `Invalid session file at ${sessionPath} (${loaded.reason}); overwriting with new session`,
+        );
+      }
     }
-    if (!args.prompt) {
-      throw new Error("--prompt is required for new sessions");
-    }
-    resolved = resolveRuntime(args, undefined);
-    prompt = await renderPrompt(args);
+    plan = resolveRunPlan(invocation);
+    prompt = await renderPrompt(invocation);
   }
 
-  const runtimeOpts = buildRuntimeOpts(resolved.harness, resolved.model, args);
-  const runtime = createRuntime(runtimeOpts);
-  let sessionId = resolved.resumeSessionId;
+  const runtime = createRuntime(plan.runtime);
+  let sessionId = plan.resumeSessionId;
+  let completed = false;
 
   const controls = runtime.describeControls();
   console.log(
-    `Running ${runtime.harness} harness with model ${runtimeOpts.model}${
+    `Running ${runtime.harness} harness with model ${plan.runtime.model}${
       controls ? ` (${controls})` : ""
     }`,
   );
-  if (args.prompt) console.log(`Prompt: ${args.prompt}`);
+  if (invocation.mode === "start") {
+    console.log(`Prompt: ${invocation.promptPath}`);
+  }
 
   try {
     await runtime.run({
       prompt,
-      cwd: args.cwd,
-      resumeSessionId: resolved.resumeSessionId,
+      cwd: plan.cwd,
+      resumeSessionId: plan.resumeSessionId,
       callbacks: {
         onProgress: () => process.stdout.write("."),
         onSessionId: (next) => { sessionId = next; },
       },
     });
+    completed = true;
   } finally {
-    if (sessionId && sessionPath && args.sessionKey) {
-      writeSession(sessionPath, sessionId, args.sessionKey, runtime.harness, runtimeOpts.model);
+    if (
+      shouldPersistSession(invocation.mode, completed, sessionId) &&
+      sessionId &&
+      sessionPath &&
+      invocation.sessionKey
+    ) {
+      writeSession(sessionPath, {
+        sessionKey: invocation.sessionKey,
+        sessionId,
+        cwd: plan.cwd,
+        runtime: plan.runtime,
+      });
     }
   }
 

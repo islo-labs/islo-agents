@@ -91,15 +91,15 @@ List the session files on the worker sandbox:
 islo use <sandbox> -- ls /workspace/.islo-agents/sessions/
 ```
 
-Each `.session.json` file is named after its session key (e.g. `review-repo-42.session.json`). The harness stores the provider session ID, harness type, and model inside the file automatically. Usually there is exactly one file.
+Each `.session.json` file is named after its session key (e.g. `review-repo-42.session.json`). The harness stores the provider session ID and complete resumable configuration inside the file automatically. Usually there is exactly one file.
 
 ### Resume via the harness
 
-Use the harness to resume — it auto-detects the harness type and model from the session file, so you don't need to specify them:
+Use the harness to resume — it restores the runtime, working directory, and limits from the session file, so you don't need to specify them:
 
 ```bash
 islo use <sandbox> -- bash -lc 'cd /workspace/.islo-pack && npx tsx src/agent.ts \
-  --resume --session-key "<session-key>" --cwd /workspace \
+  --resume --session-key "<session-key>" \
   "<handoff prompt>"'
 ```
 

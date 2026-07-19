@@ -1,258 +1,359 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
   parseArgs,
-  buildRuntimeOpts,
-  sessionStatePath,
-  readSession,
-  resolveRuntime,
-  type SessionData,
+  resolveRunPlan,
+  shouldPersistSession,
+  type ResumeInvocation,
 } from "../src/agent.js";
+import {
+  loadSession,
+  sessionStatePath,
+  writeSession,
+  type SessionRecord,
+} from "../src/session.js";
 
-// ── parseArgs ───────────────────────────────────────────────────────
-
-test("parseArgs returns undefined harness/model when not passed", () => {
-  const args = parseArgs(["--prompt", "agents/review/prompt.md"]);
-
-  assert.equal(args.harness, undefined);
-  assert.equal(args.model, undefined);
-  assert.equal(args.resume, false);
-});
-
-test("parseArgs returns explicit harness and model", () => {
-  const args = parseArgs([
-    "--prompt", "p.md",
+test("parseArgs returns a typed start invocation", () => {
+  const invocation = parseArgs([
+    "--prompt", "agents/review/prompt.md",
     "--harness", "codex",
-    "--model", "gpt-5.6",
-  ]);
-
-  assert.equal(args.harness, "codex");
-  assert.equal(args.model, "gpt-5.6");
-});
-
-test("parseArgs captures harness-specific controls as raw values", () => {
-  const args = parseArgs([
-    "--prompt", "p.md",
-    "--harness", "codex",
+    "--model", "gpt-5.6-sol",
     "--max-budget", "10",
     "--reasoning-effort", "high",
   ]);
 
-  assert.equal(args.maxBudget, 10);
-  assert.equal(args.reasoningEffort, "high");
-  assert.equal(args.maxTurns, undefined);
+  assert.equal(invocation.mode, "start");
+  assert.equal(invocation.harness, "codex");
+  assert.equal(invocation.model, "gpt-5.6-sol");
+  assert.equal(invocation.maxBudgetUsd, 10);
+  assert.equal(invocation.reasoningEffort, "high");
+  if (invocation.mode === "start") {
+    assert.equal(invocation.promptPath, "agents/review/prompt.md");
+  }
 });
 
-test("parseArgs captures Claude controls", () => {
-  const args = parseArgs([
-    "--prompt", "p.md",
-    "--harness", "claude",
-    "--max-turns", "25",
-    "--max-budget", "5",
+test("parseArgs returns a typed resume invocation", () => {
+  const invocation = parseArgs([
+    "--resume", "--session-key", "review-repo-7",
+    "Review the latest changes.",
   ]);
 
-  assert.equal(args.maxTurns, 25);
-  assert.equal(args.maxBudget, 5);
+  assert.deepEqual(invocation, {
+    mode: "resume",
+    sessionKey: "review-repo-7",
+    promptText: "Review the latest changes.",
+    maxTurns: undefined,
+    maxBudgetUsd: undefined,
+    rolloutBudgetTokens: undefined,
+  });
 });
 
-test("parseArgs rejects invalid harness", () => {
+test("parseArgs rejects invalid invocation modes", () => {
   assert.throws(
-    () => parseArgs(["--prompt", "p.md", "--harness", "invalid"]),
-    /Unsupported harness/,
+    () => parseArgs(["Review the latest changes."]),
+    /Positional prompt text requires --resume/,
   );
-});
-
-test("parseArgs captures positional text as promptText", () => {
-  const args = parseArgs([
-    "--prompt", "p.md",
-    "Continue your work",
-  ]);
-
-  assert.equal(args.prompt, "p.md");
-  assert.equal(args.promptText, "Continue your work");
-});
-
-test("parseArgs accepts positional text without --prompt", () => {
-  const args = parseArgs(["Review the latest changes"]);
-
-  assert.equal(args.prompt, undefined);
-  assert.equal(args.promptText, "Review the latest changes");
-});
-
-test("parseArgs captures --resume as boolean", () => {
-  const args = parseArgs([
-    "--resume", "--session-key", "test-key",
-    "Continue.",
-  ]);
-
-  assert.equal(args.resume, true);
-  assert.equal(args.sessionKey, "test-key");
-  assert.equal(args.promptText, "Continue.");
-});
-
-test("parseArgs errors when neither --prompt nor positional given", () => {
-  assert.throws(
-    () => parseArgs(["--harness", "claude"]),
-    /Usage:/,
-  );
-});
-
-test("parseArgs errors when --resume without --session-key", () => {
   assert.throws(
     () => parseArgs(["--resume", "Continue."]),
     /--resume requires --session-key/,
   );
-});
-
-test("parseArgs errors when --resume without positional text", () => {
   assert.throws(
-    () => parseArgs(["--resume", "--session-key", "test-key"]),
+    () => parseArgs(["--resume", "--session-key", "key"]),
     /--resume requires a positional prompt/,
+  );
+  assert.throws(
+    () =>
+      parseArgs([
+        "--resume", "--session-key", "key",
+        "--prompt", "prompt.md",
+        "Continue.",
+      ]),
+    /not --prompt/,
   );
 });
 
-// ── buildRuntimeOpts ────────────────────────────────────────────────
-
-test("buildRuntimeOpts fills Claude defaults", () => {
-  const opts = buildRuntimeOpts("claude", undefined, {});
-
-  assert.equal(opts.harness, "claude");
-  assert.equal(opts.model, "claude-opus-4-6");
-  assert.equal(opts.harness === "claude" && opts.maxTurns, 50);
+test("parseArgs validates harness, numbers, and effort", () => {
+  assert.throws(
+    () => parseArgs(["--prompt", "p.md", "--harness", "invalid"]),
+    /Unsupported harness/,
+  );
+  assert.throws(
+    () => parseArgs(["--prompt", "p.md", "--max-turns", "1.5"]),
+    /positive integer/,
+  );
+  assert.throws(
+    () => parseArgs(["--prompt", "p.md", "--reasoning-effort", "extreme"]),
+    /Unsupported reasoning effort/,
+  );
 });
 
-test("buildRuntimeOpts fills Codex defaults", () => {
-  const opts = buildRuntimeOpts("codex", undefined, {});
+test("resolveRunPlan applies Claude defaults", () => {
+  const plan = resolveRunPlan(parseArgs(["--prompt", "p.md"]));
 
-  assert.equal(opts.harness, "codex");
-  assert.equal(opts.model, "gpt-5.6-sol");
+  assert.deepEqual(plan.runtime, {
+    harness: "claude",
+    model: "claude-opus-4-6",
+    maxTurns: 50,
+    maxBudgetUsd: 15,
+  });
+  assert.equal(plan.resumeSessionId, undefined);
 });
 
-test("buildRuntimeOpts defaults maxBudget to 15", () => {
-  const claude = buildRuntimeOpts("claude", undefined, {});
-  assert.equal(claude.maxBudget, 15);
+test("resolveRunPlan applies Codex defaults", () => {
+  const plan = resolveRunPlan(
+    parseArgs(["--prompt", "p.md", "--harness", "codex"]),
+  );
 
-  const codex = buildRuntimeOpts("codex", undefined, {});
-  assert.equal(codex.maxBudget, 15);
+  assert.deepEqual(plan.runtime, {
+    harness: "codex",
+    model: "gpt-5.6-sol",
+    budget: { kind: "approximate_usd", maxUsd: 15 },
+  });
 });
 
-test("buildRuntimeOpts explicit --max-budget overrides default", () => {
-  const claude = buildRuntimeOpts("claude", undefined, { maxBudget: 5 });
-  assert.equal(claude.maxBudget, 5);
-
-  const codex = buildRuntimeOpts("codex", undefined, { maxBudget: 25 });
-  assert.equal(codex.maxBudget, 25);
-});
-
-test("buildRuntimeOpts warns and ignores cross-harness controls", () => {
-  const codexOpts = buildRuntimeOpts("codex", undefined, { maxTurns: 10 });
-  assert.equal(codexOpts.harness, "codex");
-  assert.equal("maxTurns" in codexOpts, false);
-
-  const claudeOpts = buildRuntimeOpts("claude", undefined, { rolloutBudgetTokens: 100000 });
-  assert.equal(claudeOpts.harness, "claude");
-  assert.equal("rolloutBudgetTokens" in claudeOpts, false);
-});
-
-test("buildRuntimeOpts accepts reasoningEffort for Claude", () => {
-  const opts = buildRuntimeOpts("claude", undefined, { reasoningEffort: "high" });
-  assert.equal(opts.harness, "claude");
-  assert.equal(opts.harness === "claude" && opts.reasoningEffort, "high");
-});
-
-test("parseArgs accepts max reasoning effort level", () => {
-  const args = parseArgs([
-    "--prompt", "p.md",
-    "--reasoning-effort", "max",
+test("resolveRunPlan restores a complete stored session", () => {
+  const invocation = parseArgs([
+    "--resume", "--session-key", "key", "Continue.",
   ]);
-  assert.equal(args.reasoningEffort, "max");
+  const stored: SessionRecord = {
+    sessionKey: "key",
+    sessionId: "thread-abc",
+    cwd: "/workspace",
+    runtime: {
+      harness: "codex",
+      model: "gpt-5.6-sol",
+      budget: { kind: "approximate_usd", maxUsd: 10 },
+      reasoningEffort: "high",
+    },
+  };
+
+  assert.deepEqual(resolveRunPlan(invocation, stored), {
+    cwd: "/workspace",
+    resumeSessionId: "thread-abc",
+    runtime: stored.runtime,
+  });
 });
 
-// ── sessionStatePath ────────────────────────────────────────────────
+test("a CLI USD budget replaces stored rollout tokens", () => {
+  const invocation = parseArgs([
+    "--resume", "--session-key", "key",
+    "--max-budget", "5",
+    "Continue.",
+  ]);
+  const stored: SessionRecord = {
+    sessionKey: "key",
+    sessionId: "thread-abc",
+    cwd: "/workspace",
+    runtime: {
+      harness: "codex",
+      model: "gpt-5.6-sol",
+      budget: { kind: "rollout_tokens", tokens: 500_000 },
+    },
+  };
 
-test("sessionStatePath uses unified .session.json suffix", () => {
+  const plan = resolveRunPlan(invocation, stored);
+  assert.equal(plan.runtime.harness, "codex");
+  assert.deepEqual(
+    plan.runtime.harness === "codex" ? plan.runtime.budget : undefined,
+    { kind: "approximate_usd", maxUsd: 5 },
+  );
+});
+
+test("resolveRunPlan rejects ambiguous and cross-harness controls", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs([
+          "--prompt", "p.md",
+          "--harness", "codex",
+          "--max-budget", "5",
+          "--rollout-budget-tokens", "1000",
+        ]),
+      ),
+    /alternative Codex controls/,
+  );
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs([
+          "--prompt", "p.md",
+          "--harness", "codex",
+          "--max-turns", "10",
+        ]),
+      ),
+    /requires --harness claude/,
+  );
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs([
+          "--prompt", "p.md",
+          "--harness", "claude",
+          "--rollout-budget-tokens", "1000",
+        ]),
+      ),
+    /requires --harness codex/,
+  );
+});
+
+test("resolveRunPlan enforces provider-specific effort levels", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs([
+          "--prompt", "p.md",
+          "--harness", "claude",
+          "--reasoning-effort", "minimal",
+        ]),
+      ),
+    /not supported by the claude/,
+  );
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs([
+          "--prompt", "p.md",
+          "--harness", "codex",
+          "--reasoning-effort", "max",
+        ]),
+      ),
+    /not supported by the codex/,
+  );
+});
+
+test("resolveRunPlan rejects a resume harness mismatch", () => {
+  const invocation = parseArgs([
+    "--resume", "--session-key", "key",
+    "--harness", "claude",
+    "Continue.",
+  ]);
+  const stored: SessionRecord = {
+    sessionKey: "key",
+    sessionId: "thread-abc",
+    cwd: "/workspace",
+    runtime: {
+      harness: "codex",
+      model: "gpt-5.6-sol",
+      budget: { kind: "approximate_usd", maxUsd: 10 },
+    },
+  };
+
+  assert.throws(
+    () => resolveRunPlan(invocation, stored),
+    /session uses codex/,
+  );
+});
+
+test("sessionStatePath uses the unified session suffix", () => {
   assert.equal(
     sessionStatePath("owner/repo-42"),
     "/workspace/.islo-agents/sessions/owner-repo-42.session.json",
   );
-  assert.equal(
-    sessionStatePath("review-myrepo-7"),
-    "/workspace/.islo-agents/sessions/review-myrepo-7.session.json",
-  );
 });
 
-// ── resolveRuntime ──────────────────────────────────────────────────
+test("session codec round-trips both runtime variants atomically", () => {
+  const dir = mkdtempSync(join(tmpdir(), "islo-agent-session-"));
+  try {
+    const sessions: SessionRecord[] = [
+      {
+        sessionKey: "claude-key",
+        sessionId: "claude-session",
+        cwd: "/workspace",
+        runtime: {
+          harness: "claude",
+          model: "claude-opus-4-6",
+          maxTurns: 100,
+          maxBudgetUsd: 10,
+          reasoningEffort: "max",
+        },
+      },
+      {
+        sessionKey: "codex-key",
+        sessionId: "codex-session",
+        cwd: "/workspace",
+        runtime: {
+          harness: "codex",
+          model: "gpt-5.6-sol",
+          budget: { kind: "rollout_tokens", tokens: 222_222 },
+          reasoningEffort: "minimal",
+        },
+      },
+    ];
 
-test("resolveRuntime defaults to claude when no session data", () => {
-  const args = parseArgs(["--prompt", "p.md"]);
-  const result = resolveRuntime(args, undefined);
-
-  assert.equal(result.harness, "claude");
-  assert.equal(result.model, undefined);
-  assert.equal(result.resumeSessionId, undefined);
+    sessions.forEach((session, index) => {
+      const path = join(dir, `${index}.session.json`);
+      writeSession(path, session);
+      assert.deepEqual(loadSession(path), { status: "loaded", session });
+    });
+    assert.equal(
+      readdirSync(dir).some((name) => name.endsWith(".tmp")),
+      false,
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
-test("resolveRuntime reads harness/model from session file", () => {
-  const args = parseArgs(["--resume", "--session-key", "k", "Continue."]);
-  const stored: SessionData = {
-    sessionId: "thread-abc",
-    harness: "codex",
-    model: "gpt-5.6",
+test("session loader distinguishes missing and invalid files", () => {
+  const dir = mkdtempSync(join(tmpdir(), "islo-agent-session-"));
+  try {
+    const path = join(dir, "session.json");
+    assert.deepEqual(loadSession(path), { status: "missing" });
+    writeFileSync(path, "{");
+    assert.deepEqual(loadSession(path), {
+      status: "invalid",
+      reason: "invalid JSON",
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("session loader rejects provider-incompatible persisted settings", () => {
+  const dir = mkdtempSync(join(tmpdir(), "islo-agent-session-"));
+  const path = join(dir, "session.json");
+  try {
+    writeFileSync(
+      path,
+      JSON.stringify({
+        version: 1,
+        session_key: "key",
+        session_id: "session",
+        cwd: "/workspace",
+        runtime: {
+          harness: "claude",
+          model: "claude-opus-4-6",
+          max_turns: 50,
+          max_budget_usd: 15,
+          reasoning_effort: "minimal",
+        },
+      }),
+    );
+    assert.deepEqual(loadSession(path), {
+      status: "invalid",
+      reason: "unsupported session schema",
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("failed starts preserve discovered sessions but failed resumes keep stored config", () => {
+  assert.equal(shouldPersistSession("start", false, "new-session"), true);
+  assert.equal(shouldPersistSession("resume", false, "stored-session"), false);
+  assert.equal(shouldPersistSession("resume", true, "stored-session"), true);
+  assert.equal(shouldPersistSession("start", true, undefined), false);
+});
+
+test("resume invocation type requires its session identity", () => {
+  const invocation: ResumeInvocation = {
+    mode: "resume",
+    sessionKey: "key",
+    promptText: "Continue.",
   };
-
-  const result = resolveRuntime(args, stored);
-
-  assert.equal(result.harness, "codex");
-  assert.equal(result.model, "gpt-5.6");
-  assert.equal(result.resumeSessionId, "thread-abc");
-});
-
-test("resolveRuntime CLI model overrides stored model", () => {
-  const args = parseArgs([
-    "--resume", "--session-key", "k",
-    "--model", "gpt-5.6-sol",
-    "Continue.",
-  ]);
-  const stored: SessionData = {
-    sessionId: "thread-abc",
-    harness: "codex",
-    model: "gpt-5.6",
-  };
-
-  const result = resolveRuntime(args, stored);
-
-  assert.equal(result.harness, "codex");
-  assert.equal(result.model, "gpt-5.6-sol");
-  assert.equal(result.resumeSessionId, "thread-abc");
-});
-
-test("resolveRuntime preserves session when harness matches", () => {
-  const args = parseArgs([
-    "--resume", "--session-key", "k", "--harness", "codex",
-    "Continue.",
-  ]);
-  const stored: SessionData = {
-    sessionId: "thread-abc",
-    harness: "codex",
-    model: "gpt-5.6",
-  };
-
-  const result = resolveRuntime(args, stored);
-
-  assert.equal(result.harness, "codex");
-  assert.equal(result.model, "gpt-5.6");
-  assert.equal(result.resumeSessionId, "thread-abc");
-});
-
-test("resolveRuntime treats empty stored model as undefined", () => {
-  const args = parseArgs(["--prompt", "p.md"]);
-  const stored: SessionData = {
-    sessionId: "thread-abc",
-    harness: "claude",
-    model: undefined,
-  };
-
-  const result = resolveRuntime(args, stored);
-  assert.equal(result.model, undefined, "empty model should fall through to undefined");
+  assert.equal(invocation.sessionKey, "key");
 });

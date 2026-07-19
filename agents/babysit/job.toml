@@ -50,7 +50,7 @@ description = "Maximum agentic turns (Claude only; ignored by Codex)."
 [job.params.max_budget_usd]
 type = "number"
 default = 10
-description = "Maximum budget in USD."
+description = "Maximum USD budget. Codex converts this to an approximate rollout-token limit."
 
 [job.params.reasoning_effort]
 type = "string"

@@ -45,7 +45,7 @@ description = "Maximum agentic turns (Claude only; ignored by Codex)."
 [job.params.max_budget_usd]
 type = "number"
 default = 10
-description = "Maximum budget in USD."
+description = "Maximum USD budget. Codex converts this to an approximate rollout-token limit."
 
 [job.params.reasoning_effort]
 type = "string"
@@ -148,8 +148,6 @@ SESSION_KEY="${REPO}-${PR_NUMBER}"
 SESSION_FILE="/workspace/.islo-agents/sessions/$(printf '%s' "${SESSION_KEY}" | tr -c 'a-zA-Z0-9_.-' '-').session.json"
 if [ -f "$SESSION_FILE" ]; then
   npx tsx src/agent.ts --resume --session-key "${SESSION_KEY}" \
-    --cwd /workspace --max-budget "{{max_budget_usd}}" \
-    --max-turns "{{max_turns}}" --reasoning-effort "{{reasoning_effort}}" \
     "The PR has been updated. Review the latest changes."
 else
   HARNESS="{{harness}}"

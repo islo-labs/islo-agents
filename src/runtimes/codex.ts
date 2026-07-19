@@ -1,6 +1,6 @@
 import { Codex, type ThreadOptions } from "@openai/codex-sdk";
 
-import type { AgentRuntime, ReasoningEffort, RunRequest } from "./types.js";
+import type { AgentRuntime, CodexRuntimeOpts, RunRequest } from "./types.js";
 
 type CodexOptions = NonNullable<ConstructorParameters<typeof Codex>[0]>;
 type CodexConfig = NonNullable<CodexOptions["config"]>;
@@ -13,9 +13,9 @@ interface CodexEventInspection {
 
 /**
  * Highest published per-million-token price for each model, including the
- * long-context output surcharge. Using the most expensive token category
- * makes the USD-to-rollout-token conversion conservative regardless of the
- * eventual input/output/cache mix.
+ * long-context output surcharge. This converts a USD input into an approximate
+ * rollout limit. Codex 0.144.5 excludes billed cached input from rollout
+ * accounting, so this is not a hard spending cap.
  */
 export const CODEX_MAX_TOKEN_PRICE_PER_MILLION_USD: Readonly<Record<string, number>> = {
   "gpt-5.6": 45,
@@ -106,29 +106,23 @@ export function inspectCodexEvent(event: unknown): CodexEventInspection {
 
 export class CodexRuntime implements AgentRuntime {
   readonly harness = "codex" as const;
-  private readonly effectiveTokens?: number;
+  private readonly effectiveTokens: number;
 
-  constructor(
-    private readonly model: string,
-    private readonly maxBudgetUsd?: number,
-    rolloutBudgetTokens?: number,
-    private readonly reasoningEffort?: ReasoningEffort,
-  ) {
+  constructor(private readonly opts: CodexRuntimeOpts) {
     this.effectiveTokens =
-      rolloutBudgetTokens ??
-      (maxBudgetUsd !== undefined ? usdToTokens(maxBudgetUsd, model) : undefined);
+      opts.budget.kind === "rollout_tokens"
+        ? opts.budget.tokens
+        : usdToTokens(opts.budget.maxUsd, opts.model);
   }
 
   describeControls(): string {
     return [
-      ...(this.maxBudgetUsd !== undefined
-        ? [`maxBudgetUsd=${this.maxBudgetUsd}`]
+      ...(this.opts.budget.kind === "approximate_usd"
+        ? [`approxMaxBudgetUsd=${this.opts.budget.maxUsd}`]
         : []),
-      ...(this.effectiveTokens !== undefined
-        ? [`rolloutBudgetTokens=${this.effectiveTokens}`]
-        : []),
-      ...(this.reasoningEffort
-        ? [`reasoningEffort=${this.reasoningEffort}`]
+      `rolloutBudgetTokens=${this.effectiveTokens}`,
+      ...(this.opts.reasoningEffort
+        ? [`reasoningEffort=${this.opts.reasoningEffort}`]
         : []),
     ].join(", ");
   }
@@ -138,13 +132,13 @@ export class CodexRuntime implements AgentRuntime {
       config: buildCodexConfig(this.effectiveTokens),
     });
     const threadOptions: ThreadOptions = {
-      model: this.model,
+      model: this.opts.model,
       workingDirectory: request.cwd,
       skipGitRepoCheck: true,
       sandboxMode: "danger-full-access",
       approvalPolicy: "never",
-      ...(this.reasoningEffort && this.reasoningEffort !== "max"
-        ? { modelReasoningEffort: this.reasoningEffort }
+      ...(this.opts.reasoningEffort
+        ? { modelReasoningEffort: this.opts.reasoningEffort }
         : {}),
     };
     const thread = request.resumeSessionId

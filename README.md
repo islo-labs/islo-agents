@@ -44,28 +44,39 @@ npx tsx src/agent.ts --prompt agents/review/prompt.md --cwd /workspace
 
 **Positional argument** is literal prompt text sent to the agent. Required when `--resume` is set.
 
-**`--resume`** explicitly resumes an existing session. Requires `--session-key`. Errors if the session file does not exist. On resume, harness and model are auto-detected from the session file; `--harness` and `--model` can override stored values, but a harness mismatch (resuming a Codex session as Claude) is an error.
+**`--resume`** explicitly resumes an existing session. Requires
+`--session-key` and positional prompt text. The session file restores the
+harness, model, reasoning effort, working directory, and per-invocation
+limits. Any corresponding CLI flag overrides the stored value, but a harness
+mismatch (resuming a Codex session as Claude) is an error.
 
-**`--session-key <key>`** without `--resume` errors if the session file already exists, preventing accidental overwrites. At least one of `--prompt` or positional text must be provided.
+**`--session-key <key>`** without `--resume` errors if the session file
+already exists, preventing accidental overwrites. New runs require `--prompt`;
+resume runs require positional prompt text.
 
 Shared options: `--prompt`, `--cwd`, `--model`, `--max-budget`,
 `--reasoning-effort`, `--session-key`, `--context-file`,
-`--knowledge-*`, and `--var`. `--max-budget` sets a USD spending cap
-(default **$15** when not specified). Codex converts this internally
-using a conservative per-model pricing map. Unknown Codex models require
-the raw `--rollout-budget-tokens` override. `--reasoning-effort` maps to
-`effort` in Claude and `reasoning_effort` in Codex; levels `low`–`xhigh`
-work on both, `minimal` is Codex-only, and `max` is Claude-only. Claude
-alone supports `--max-turns`. Codex alone supports
-`--rollout-budget-tokens` (raw weighted-token override).
+`--knowledge-*`, and `--var`. `--max-budget` defaults to **$15**. Claude
+enforces it as the SDK's USD budget; Codex converts it through a
+model-specific maximum-token price into an approximate rollout-token limit.
+Unknown Codex models require the raw `--rollout-budget-tokens` alternative.
+`--reasoning-effort` maps to `effort` in Claude and `reasoning_effort` in
+Codex; levels `low`–`xhigh` work on both, `minimal` is Codex-only, and `max`
+is Claude-only. Unsupported harness-specific values are rejected. Claude alone
+supports `--max-turns`. Codex alone supports `--rollout-budget-tokens`.
 
-Codex rollout budgets count weighted tokens across the thread and any
-subagents. The feature is currently marked under development by Codex and may
-overshoot by one completed model response, so job timeouts remain the hard
-wall-clock bound. The Codex SDK is pinned exactly while this feature matures.
+The Codex limit applies per harness invocation. Within that invocation it
+counts output and non-cached input across the root thread and subagents, and
+can abort between model responses during one prompt. Codex 0.144.5 excludes
+billed cached input from this counter and cannot interrupt an in-flight model
+response, so `--max-budget` is not a hard USD guarantee: cached-input charges
+and one completed response can exceed it. A resumed invocation gets a fresh
+allowance. Job timeouts remain the hard wall-clock bound, and the Codex SDK is
+pinned exactly while this experimental feature matures.
 
-All harnesses use a unified session file (`<session-key>.session.json`)
-that stores the provider session ID, harness type, and model.
+All harnesses use a unified session file (`<session-key>.session.json`) that
+stores the provider session ID and complete resumable configuration. This lets
+delegators continue a worker using only its session key and a handoff prompt.
 
 > **Note:** `harness` and `model` are independently overridable in job
 > params. If you override `harness` (e.g. `claude` → `codex`), also

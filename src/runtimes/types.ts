@@ -1,6 +1,9 @@
 export type Harness = "claude" | "codex";
 
-export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+export type SharedReasoningEffort = "low" | "medium" | "high" | "xhigh";
+export type ClaudeReasoningEffort = SharedReasoningEffort | "max";
+export type CodexReasoningEffort = "minimal" | SharedReasoningEffort;
+export type ReasoningEffort = ClaudeReasoningEffort | CodexReasoningEffort;
 
 export interface RuntimeCallbacks {
   onProgress(): void;
@@ -24,16 +27,19 @@ export interface ClaudeRuntimeOpts {
   harness: "claude";
   model: string;
   maxTurns: number;
-  maxBudget?: number;
-  reasoningEffort?: ReasoningEffort;
+  maxBudgetUsd: number;
+  reasoningEffort?: ClaudeReasoningEffort;
 }
+
+export type CodexBudget =
+  | { kind: "approximate_usd"; maxUsd: number }
+  | { kind: "rollout_tokens"; tokens: number };
 
 export interface CodexRuntimeOpts {
   harness: "codex";
   model: string;
-  maxBudget?: number;
-  rolloutBudgetTokens?: number;
-  reasoningEffort?: ReasoningEffort;
+  budget: CodexBudget;
+  reasoningEffort?: CodexReasoningEffort;
 }
 
 export type RuntimeOpts = ClaudeRuntimeOpts | CodexRuntimeOpts;

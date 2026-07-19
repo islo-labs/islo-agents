@@ -86,7 +86,7 @@ test("createRuntime returns ClaudeRuntime for claude opts", () => {
     harness: "claude",
     model: "claude-opus-4-6",
     maxTurns: 50,
-    maxBudget: 10,
+    maxBudgetUsd: 10,
   });
 
   assert.equal(runtime.harness, "claude");
@@ -99,13 +99,14 @@ test("createRuntime passes reasoningEffort to ClaudeRuntime", () => {
     harness: "claude",
     model: "claude-opus-4-6",
     maxTurns: 50,
+    maxBudgetUsd: 15,
     reasoningEffort: "high",
   });
 
   assert.match(runtime.describeControls(), /effort=high/);
 });
 
-test("usdToTokens uses conservative model-specific pricing", () => {
+test("usdToTokens uses model-specific maximum pricing", () => {
   assert.equal(usdToTokens(1, "gpt-5.6-sol"), 22_222);
   assert.equal(usdToTokens(1, "gpt-5.6-terra"), 44_444);
   assert.equal(usdToTokens(1, "gpt-5.6-luna"), 111_111);
@@ -115,26 +116,25 @@ test("usdToTokens uses conservative model-specific pricing", () => {
   );
 });
 
-test("createRuntime converts Codex maxBudget to rollout tokens", () => {
+test("createRuntime converts an approximate Codex USD budget to rollout tokens", () => {
   const runtime = createRuntime({
     harness: "codex",
     model: "gpt-5.6-sol",
-    maxBudget: 10,
+    budget: { kind: "approximate_usd", maxUsd: 10 },
     reasoningEffort: "high",
   });
 
   assert.equal(runtime.harness, "codex");
-  assert.match(runtime.describeControls(), /maxBudgetUsd=10/);
+  assert.match(runtime.describeControls(), /approxMaxBudgetUsd=10/);
   assert.match(runtime.describeControls(), /rolloutBudgetTokens=222222/);
   assert.match(runtime.describeControls(), /reasoningEffort=high/);
 });
 
-test("createRuntime lets rolloutBudgetTokens override maxBudget", () => {
+test("createRuntime accepts an explicit Codex rollout-token budget", () => {
   const runtime = createRuntime({
     harness: "codex",
     model: "unknown-model",
-    maxBudget: 10,
-    rolloutBudgetTokens: 500000,
+    budget: { kind: "rollout_tokens", tokens: 500000 },
   });
 
   assert.match(runtime.describeControls(), /rolloutBudgetTokens=500000/);
