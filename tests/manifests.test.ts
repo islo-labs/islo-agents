@@ -63,8 +63,12 @@ test("durable worker resumes rely only on stored configuration", () => {
   }
 });
 
-test("delegator verifies handoffs and reports missing sessions", () => {
+test("delegator starts a worker when a matching sandbox has no session", () => {
   const prompt = readFileSync("agents/delegator/prompt.md", "utf-8");
 
-  assert.match(prompt, /has no session file[\s\S]*Report a concise routing failure/);
+  assert.match(
+    prompt,
+    /has no session file[\s\S]*start a new[\s\S]*session in that worker sandbox/,
+  );
+  assert.match(prompt, /Prefer re-running the role's[\s\S]*durable job/);
 });

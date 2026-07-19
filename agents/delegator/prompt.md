@@ -93,11 +93,13 @@ islo use <sandbox> -- ls /workspace/.islo-agents/sessions/
 
 Each `.session.json` file is named after its session key (e.g. `review-repo-42.session.json`). The harness stores the provider session ID and complete resumable configuration inside the file automatically. Usually there is exactly one file.
 
-If a matching worker sandbox exists but has no session file, do not infer a
-provider session ID from `islo logs`, run the underlying work yourself, or post
-an answer based on worker artifacts. Report a concise routing failure on the
-source thread and recommend re-running the worker's durable job to establish a
-resumable session.
+If a matching worker sandbox exists but has no session file, start a new
+matching agent session in that worker sandbox. Prefer re-running the role's
+durable job with the original params so it reuses the prepared environment and
+establishes a stable resumable session. If the durable job does not fit, invoke
+the matching role's harness from the worker's agent pack with its full prompt
+and a new stable `--session-key`. Do not perform the role's work inside the
+delegator sandbox.
 
 ### Resume via the harness
 
