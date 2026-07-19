@@ -49,9 +49,9 @@ This event fires when the `needs-changes` label is added to an `islo-loop` PR by
 
 Extract repo, PR number, and any issue IDs (from title, branch, body, or comments — Linear, Jira, etc.). Prefer visible conventions over guessing.
 
-## Agent catalog (this checkout)
+## Agent catalog
 
-Your cwd is the `islo-agents` checkout. Use it as the catalog of agents you can kick off:
+The agent pack is checked out at `/workspace/.islo-pack`. Use it as the catalog of agents you can kick off:
 
 | Intent | Job / agent | Typical sandbox naming |
 |--------|-------------|------------------------|
@@ -60,7 +60,7 @@ Your cwd is the `islo-agents` checkout. Use it as the catalog of agents you can 
 | Verify E2E | `verify` / `agents/verify` | `verify-<repo>-<pr>` |
 | Fix CI | `babysit` / `agents/babysit` | `babysit-<repo>-<workflow-run-id>` |
 
-Read the relevant `job.toml` / `prompt.md` under `agents/` when you need exact params or behavior. Treat naming as hints, not hard requirements.
+Read the relevant `job.toml` / `prompt.md` under `/workspace/.islo-pack/agents/` when you need exact params or behavior. Treat naming as hints, not hard requirements.
 
 ## Discover existing workers
 
@@ -83,15 +83,29 @@ Pick the best session using `cwd`, `git_branch`, `first_user_text`, `last_timest
 
 ## Route to an existing session
 
-For Claude Code workers, resume an existing session — do **not** run plain `claude "..."` when a relevant session exists:
+### Discover the session key
+
+List the session files on the worker sandbox:
 
 ```bash
-islo use <sandbox> -- bash -lc 'cd /workspace && claude --resume <session_name> --model sonnet "<handoff prompt>"'
+islo use <sandbox> -- ls /workspace/.islo-agents/sessions/
 ```
 
-**Critical**: always `cd /workspace` before resuming. Claude scopes sessions by the **project directory** you launch from. All implementer sessions are created from `/workspace`, so resuming from any other directory (e.g. `/workspace/islo-frontend`) will fail with "No conversation found" because it looks in a different project scope.
+Each `.session.json` file is named after its session key (e.g. `review-repo-42.session.json`). The harness stores the provider session ID and complete resumable configuration inside the file automatically. Usually there is exactly one file.
 
-The `session_name` to use is the one from `islo logs <sandbox> --type agent` output. For implementer sandboxes, the session was created with `--session-key "implementer-<issue-id>"`, so try that name first.
+### Resume via the harness
+
+Use the harness to resume — it restores the runtime, working directory, and limits from the session file, so you don't need to specify them:
+
+```bash
+islo use <sandbox> -- bash -lc 'cd /workspace/.islo-pack && npx tsx src/agent.ts \
+  --resume --session-key "<session-key>" \
+  "<handoff prompt>"'
+```
+
+This works for both Claude and Codex workers. The `<session-key>` is the filename without `.session.json`. The positional argument is the prompt text sent to the agent on resume.
+
+### Handoff prompt
 
 Handoff prompt should be short and event-shaped. Include the source thread and the exact user mention, then ask the worker to inspect the thread and continue.
 
@@ -136,7 +150,7 @@ Examples:
 - Verify / babysit: same pattern with their required params (read their `job.toml`).
 - Implement from an issue-shaped request: `islo job run implementer --param issue_id=…` (plus optional title/description/identifier/url); otherwise create an issue-scoped sandbox from `islo-stack` and start `agents/implementer` via the harness.
 
-3. If no job fits cleanly, create an appropriately named sandbox yourself (use the `islo-stack` snapshot for code work) and start the matching agent harness from this checkout — still in the **worker** sandbox, not here.
+3. If no job fits cleanly, create an appropriately named sandbox yourself (use the `islo-stack` snapshot for code work) and start the matching agent harness — still in the **worker** sandbox, not here.
 
 4. If the request is ambiguous (cannot tell implement vs review vs verify, or which issue/PR), ask **one** concise clarifying question on the source thread with `gh`, then stop.
 

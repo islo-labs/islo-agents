@@ -85,13 +85,7 @@ The stack has been booted with the PR branch already checked out and running. Yo
      gh pr comment {{PR_NUMBER}} --repo {{REPO}} --body-file /tmp/verify-report.md
      gh pr edit {{PR_NUMBER}} --repo {{REPO}} --add-label passed-verify
      ```
-     Then notify the team on Slack:
-     ```bash
-     curl -s -X POST "https://slack.com/api/chat.postMessage" \
-       -H "Authorization: Bearer $SLACK_TOKEN" \
-       -H "Content-Type: application/json" \
-       -d "{\"channel\": \"#team-islo\", \"text\": \"Verification PASSED for {{REPO}}#{{PR_NUMBER}} — PR is ready to merge.\"}"
-     ```
+     Then post a message to `#team-islo` on Slack saying that verification passed, linking to the PR and the related Linear issue if one is referenced in the PR body. Use the Slack API with `$SLACK_TOKEN`.
 
    - **FAILED** or **PARTIAL**: Post a comment with what failed and add the `needs-changes` label:
      ```bash

@@ -1,6 +1,6 @@
 [job]
 name = "review"
-version = "0.5.0"
+version = "0.7.0"
 description = "Automated PR code review."
 
 [job.params.repo]
@@ -26,20 +26,32 @@ default = "main"
 description = "Git ref (branch, tag, or commit) of the agents pack to check out."
 pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
+[job.params.harness]
+type = "string"
+default = "codex"
+description = "Agent harness: claude or codex."
+pattern = "^(claude|codex)$"
+
 [job.params.model]
 type = "string"
-default = "claude-opus-4-6"
-description = "Claude model for the review agent."
+default = "gpt-5.6-sol"
+description = "Model name understood by the selected harness."
 
 [job.params.max_turns]
 type = "integer"
 default = 50
-description = "Maximum agentic turns."
+description = "Maximum agentic turns (Claude only; ignored by Codex)."
 
 [job.params.max_budget_usd]
 type = "number"
 default = 10
-description = "Maximum review budget in USD."
+description = "Maximum USD budget. Codex converts this to an approximate rollout-token limit."
+
+[job.params.reasoning_effort]
+type = "string"
+default = "high"
+description = "Reasoning effort level for both harnesses. Codex uses minimal–xhigh; Claude uses low–max."
+pattern = "^(minimal|low|medium|high|xhigh|max)$"
 
 [run]
 fail_fast = true
@@ -101,9 +113,9 @@ exec = [
   '''
 set -euo pipefail
 cd /workspace
-rm -rf islo-agents
-git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git
-cd islo-agents
+rm -rf .islo-pack
+git clone --depth=1 --no-checkout https://github.com/islo-labs/islo-agents.git .islo-pack
+cd .islo-pack
 git fetch --depth=1 origin "{{agents_git_ref}}"
 git -c advice.detachedHead=false checkout FETCH_HEAD
 ''',
@@ -117,7 +129,7 @@ exec = [
   "-lc",
   '''
 set -euo pipefail
-cd /workspace/islo-agents
+cd /workspace/.islo-pack
 npm ci
 ''',
 ]
@@ -131,18 +143,39 @@ exec = [
   '''
 set -euo pipefail
 source /workspace/.islo-job/env
-cd /workspace/islo-agents
-npx tsx src/agent.ts \
-  --prompt agents/review/prompt.md \
-  --cwd /workspace \
-  --model "{{model}}" \
-  --max-turns "{{max_turns}}" \
-  --max-budget "{{max_budget_usd}}" \
-  --session-key "${REPO}-${PR_NUMBER}" \
-  --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
-  --knowledge-id islo-integrations \
-  --var REPO="${REPO}" \
-  --var PR_NUMBER="${PR_NUMBER}"
+cd /workspace/.islo-pack
+SESSION_KEY="${REPO}-${PR_NUMBER}"
+SESSION_FILE="/workspace/.islo-agents/sessions/$(printf '%s' "${SESSION_KEY}" | tr -c 'a-zA-Z0-9_.-' '-').session.json"
+if [ -f "$SESSION_FILE" ]; then
+  npx tsx src/agent.ts --resume --session-key "${SESSION_KEY}" \
+    "The PR has been updated. Review the latest changes."
+else
+  HARNESS="{{harness}}"
+  HARNESS_ARGS=(--reasoning-effort "{{reasoning_effort}}")
+  case "${HARNESS}" in
+    claude)
+      HARNESS_ARGS+=(--max-turns "{{max_turns}}")
+      ;;
+    codex)
+      ;;
+    *)
+      echo "Unsupported harness: ${HARNESS}" >&2
+      exit 2
+      ;;
+  esac
+  npx tsx src/agent.ts \
+    --prompt agents/review/prompt.md \
+    --harness "${HARNESS}" \
+    --cwd /workspace \
+    --model "{{model}}" \
+    --max-budget "{{max_budget_usd}}" \
+    "${HARNESS_ARGS[@]}" \
+    --session-key "${SESSION_KEY}" \
+    --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
+    --knowledge-id islo-integrations \
+    --var REPO="${REPO}" \
+    --var PR_NUMBER="${PR_NUMBER}"
+fi
 ''',
 ]
 
