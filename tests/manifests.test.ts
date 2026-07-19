@@ -51,7 +51,7 @@ test("all jobs have shared budget and harness-specific params", () => {
 });
 
 test("durable worker resumes rely only on stored configuration", () => {
-  for (const role of ["review", "implementer"]) {
+  for (const role of ["review", "implementer", "verify"]) {
     const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
     const resumeBranch = manifest.match(
       /if \[ -f "\$SESSION_FILE" \]; then([\s\S]*?)else/,
@@ -61,4 +61,12 @@ test("durable worker resumes rely only on stored configuration", () => {
     assert.match(resumeBranch, /--resume --session-key/);
     assert.doesNotMatch(resumeBranch, /--cwd|--max-budget|--max-turns|--reasoning-effort/);
   }
+});
+
+test("delegator never substitutes its own answer for a failed handoff", () => {
+  const prompt = readFileSync("agents/delegator/prompt.md", "utf-8");
+
+  assert.match(prompt, /Never answer the underlying request/);
+  assert.match(prompt, /Treat a handoff as successful only after/);
+  assert.match(prompt, /has no session file[\s\S]*Report a concise routing failure/);
 });

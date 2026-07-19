@@ -14,10 +14,14 @@ Raw payload path: {{RAW_PAYLOAD_PATH}}
 ## Non-negotiables
 
 - Never do the underlying work in this sandbox.
+- Never answer the underlying request or post a substantive source-thread
+  response yourself, even when routing fails.
 - Never start a long coding/review/verify session here.
 - Prefer resuming an existing worker session over starting a new one.
 - If nothing fits, create/start the right worker — do not ask the user to do that for you unless the request is truly ambiguous.
 - If the mention is noise or not meant for Islo, do nothing.
+- Treat a handoff as successful only after the remote worker command exits
+  successfully.
 - After a successful handoff, usually post nothing. Let the worker reply on the source thread when it has something useful.
 
 ## Context gathering
@@ -93,6 +97,12 @@ islo use <sandbox> -- ls /workspace/.islo-agents/sessions/
 
 Each `.session.json` file is named after its session key (e.g. `review-repo-42.session.json`). The harness stores the provider session ID and complete resumable configuration inside the file automatically. Usually there is exactly one file.
 
+If a matching worker sandbox exists but has no session file, do not infer a
+provider session ID from `islo logs`, run the underlying work yourself, or post
+an answer based on worker artifacts. Report a concise routing failure on the
+source thread and recommend re-running the worker's durable job to establish a
+resumable session.
+
 ### Resume via the harness
 
 Use the harness to resume — it restores the runtime, working directory, and limits from the session file, so you don't need to specify them:
@@ -162,4 +172,5 @@ For GitHub, use `gh` on the same thread/PR.
 - Failure: what you tried and what blocked routing.
 - Successful delegation: usually silence.
 
-Do not over-explain internal routing.
+Failure messages must describe routing only; never substitute your own answer
+to the underlying request. Do not over-explain internal routing.
