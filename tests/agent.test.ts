@@ -126,7 +126,7 @@ test("buildRuntimeOpts fills Codex defaults", () => {
   const opts = buildRuntimeOpts("codex", undefined, {});
 
   assert.equal(opts.harness, "codex");
-  assert.equal(opts.model, "gpt-5.6");
+  assert.equal(opts.model, "gpt-5.6-sol");
 });
 
 test("buildRuntimeOpts defaults maxBudget to 15", () => {

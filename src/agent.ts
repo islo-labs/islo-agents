@@ -164,7 +164,7 @@ export function buildRuntimeOpts(
   }
   return {
     harness,
-    model: model ?? "gpt-5.6",
+    model: model ?? "gpt-5.6-sol",
     maxBudget: args.maxBudget ?? 15,
     ...(args.rolloutBudgetTokens !== undefined ? { rolloutBudgetTokens: args.rolloutBudgetTokens } : {}),
     ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),

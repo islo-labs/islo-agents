@@ -12,16 +12,27 @@ interface CodexEventInspection {
 }
 
 /**
- * Approximate weighted-token-per-USD rate for Codex rollout budgets.
- * Agent workloads are output-heavy and the rollout budget counts reasoning
- * tokens at higher weight, so this is deliberately conservative. Calibrated
- * against GPT-5.6 Terra ($2.50/$15 per 1M input/output) for typical agent
- * output ratios. Override with --rollout-budget-tokens for precision.
+ * Highest published per-million-token price for each model, including the
+ * long-context output surcharge. Using the most expensive token category
+ * makes the USD-to-rollout-token conversion conservative regardless of the
+ * eventual input/output/cache mix.
  */
-export const CODEX_TOKENS_PER_USD = 20_000;
+export const CODEX_MAX_TOKEN_PRICE_PER_MILLION_USD: Readonly<Record<string, number>> = {
+  "gpt-5.6": 45,
+  "gpt-5.6-sol": 45,
+  "gpt-5.6-terra": 22.5,
+  "gpt-5.6-luna": 9,
+};
 
-export function usdToTokens(usd: number): number {
-  return Math.round(usd * CODEX_TOKENS_PER_USD);
+export function usdToTokens(usd: number, model: string): number {
+  const pricePerMillion = CODEX_MAX_TOKEN_PRICE_PER_MILLION_USD[model];
+  if (pricePerMillion === undefined) {
+    throw new Error(
+      `No Codex pricing configured for model '${model}'. ` +
+        "Use --rollout-budget-tokens or add the model to the pricing map.",
+    );
+  }
+  return Math.max(1, Math.floor((usd * 1_000_000) / pricePerMillion));
 }
 
 export function buildCodexConfig(rolloutBudgetTokens?: number): CodexConfig {
@@ -29,14 +40,22 @@ export function buildCodexConfig(rolloutBudgetTokens?: number): CodexConfig {
     return {};
   }
 
+  const reminderAtRemainingTokens =
+    rolloutBudgetTokens > 1
+      ? [
+          Math.min(
+            Math.max(1, Math.round(rolloutBudgetTokens * 0.1)),
+            rolloutBudgetTokens - 1,
+          ),
+        ]
+      : [];
+
   return {
     features: {
       rollout_budget: {
         enabled: true,
         limit_tokens: rolloutBudgetTokens,
-        reminder_at_remaining_tokens: [
-          Math.max(1000, Math.round(rolloutBudgetTokens * 0.1)),
-        ],
+        reminder_at_remaining_tokens: reminderAtRemainingTokens,
       },
     },
   };
@@ -95,7 +114,9 @@ export class CodexRuntime implements AgentRuntime {
     rolloutBudgetTokens?: number,
     private readonly reasoningEffort?: ReasoningEffort,
   ) {
-    this.effectiveTokens = rolloutBudgetTokens ?? (maxBudgetUsd !== undefined ? usdToTokens(maxBudgetUsd) : undefined);
+    this.effectiveTokens =
+      rolloutBudgetTokens ??
+      (maxBudgetUsd !== undefined ? usdToTokens(maxBudgetUsd, model) : undefined);
   }
 
   describeControls(): string {

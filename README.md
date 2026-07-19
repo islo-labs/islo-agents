@@ -30,7 +30,7 @@ Select the coding-agent runtime independently from its model. Three invocation p
 # First run — render template, create session
 npx tsx src/agent.ts --prompt agents/review/prompt.md \
   --session-key "review-owner/repo-42" --cwd /workspace \
-  --harness codex --model gpt-5.6 --max-budget 10
+  --harness codex --model gpt-5.6-sol --max-budget 10
 
 # Resume — positional text sent to existing session
 npx tsx src/agent.ts --resume --session-key "review-owner/repo-42" \
@@ -52,11 +52,12 @@ Shared options: `--prompt`, `--cwd`, `--model`, `--max-budget`,
 `--reasoning-effort`, `--session-key`, `--context-file`,
 `--knowledge-*`, and `--var`. `--max-budget` sets a USD spending cap
 (default **$15** when not specified). Codex converts this internally
-via `CODEX_TOKENS_PER_USD`. `--reasoning-effort` maps to `effort` in
-Claude and `reasoning_effort` in Codex; levels `low`–`xhigh` work on
-both, `minimal` is Codex-only, and `max` is Claude-only. Claude alone
-supports `--max-turns`. Codex alone supports `--rollout-budget-tokens`
-(raw weighted-token override).
+using a conservative per-model pricing map. Unknown Codex models require
+the raw `--rollout-budget-tokens` override. `--reasoning-effort` maps to
+`effort` in Claude and `reasoning_effort` in Codex; levels `low`–`xhigh`
+work on both, `minimal` is Codex-only, and `max` is Claude-only. Claude
+alone supports `--max-turns`. Codex alone supports
+`--rollout-budget-tokens` (raw weighted-token override).
 
 Codex rollout budgets count weighted tokens across the thread and any
 subagents. The feature is currently marked under development by Codex and may
@@ -72,7 +73,7 @@ that stores the provider session ID, harness type, and model.
 > model names at runtime.
 
 Roles / job names: `review`, `implementer`, `verify`, `babysit`, `delegator`.
-The review job defaults to Codex with `gpt-5.6`; the other jobs default to
+The review job defaults to Codex with `gpt-5.6-sol`; the other jobs default to
 Claude. Every job exposes a `harness` parameter for explicit overrides.
 
 Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; default `main`). Override with `--param agents_git_ref=…` when pinning.

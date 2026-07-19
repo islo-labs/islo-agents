@@ -18,7 +18,7 @@ test("job manifests parse and deployment copies match", () => {
   }
 });
 
-test("review defaults to Codex with GPT-5.6", () => {
+test("review defaults to Codex with GPT-5.6 Sol", () => {
   const manifest = readFileSync("agents/review/job.toml", "utf-8");
 
   assert.match(
@@ -27,7 +27,7 @@ test("review defaults to Codex with GPT-5.6", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.model\][\s\S]*?default = "gpt-5\.6"/,
+    /\[job\.params\.model\][\s\S]*?default = "gpt-5\.6-sol"/,
   );
   assert.match(
     manifest,

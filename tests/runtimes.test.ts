@@ -6,7 +6,6 @@ import {
   buildCodexConfig,
   inspectCodexEvent,
   usdToTokens,
-  CODEX_TOKENS_PER_USD,
 } from "../src/runtimes/codex.js";
 import { createRuntime } from "../src/runtimes/index.js";
 
@@ -35,6 +34,27 @@ test("Codex rollout budget maps to CLI configuration", () => {
     },
   });
   assert.deepEqual(buildCodexConfig(), {});
+});
+
+test("Codex rollout reminders stay below small token budgets", () => {
+  assert.deepEqual(buildCodexConfig(1), {
+    features: {
+      rollout_budget: {
+        enabled: true,
+        limit_tokens: 1,
+        reminder_at_remaining_tokens: [],
+      },
+    },
+  });
+  assert.deepEqual(buildCodexConfig(2), {
+    features: {
+      rollout_budget: {
+        enabled: true,
+        limit_tokens: 2,
+        reminder_at_remaining_tokens: [1],
+      },
+    },
+  });
 });
 
 test("Codex events expose thread IDs, progress, and failures", () => {
@@ -85,29 +105,34 @@ test("createRuntime passes reasoningEffort to ClaudeRuntime", () => {
   assert.match(runtime.describeControls(), /effort=high/);
 });
 
-test("usdToTokens converts using the constant rate", () => {
-  assert.equal(usdToTokens(10), 10 * CODEX_TOKENS_PER_USD);
-  assert.equal(usdToTokens(1), CODEX_TOKENS_PER_USD);
+test("usdToTokens uses conservative model-specific pricing", () => {
+  assert.equal(usdToTokens(1, "gpt-5.6-sol"), 22_222);
+  assert.equal(usdToTokens(1, "gpt-5.6-terra"), 44_444);
+  assert.equal(usdToTokens(1, "gpt-5.6-luna"), 111_111);
+  assert.throws(
+    () => usdToTokens(1, "unknown-model"),
+    /No Codex pricing configured/,
+  );
 });
 
 test("createRuntime converts Codex maxBudget to rollout tokens", () => {
   const runtime = createRuntime({
     harness: "codex",
-    model: "gpt-5.6",
+    model: "gpt-5.6-sol",
     maxBudget: 10,
     reasoningEffort: "high",
   });
 
   assert.equal(runtime.harness, "codex");
   assert.match(runtime.describeControls(), /maxBudgetUsd=10/);
-  assert.match(runtime.describeControls(), /rolloutBudgetTokens=200000/);
+  assert.match(runtime.describeControls(), /rolloutBudgetTokens=222222/);
   assert.match(runtime.describeControls(), /reasoningEffort=high/);
 });
 
 test("createRuntime lets rolloutBudgetTokens override maxBudget", () => {
   const runtime = createRuntime({
     harness: "codex",
-    model: "gpt-5.6",
+    model: "unknown-model",
     maxBudget: 10,
     rolloutBudgetTokens: 500000,
   });
