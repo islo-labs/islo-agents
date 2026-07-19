@@ -14,8 +14,6 @@ Raw payload path: {{RAW_PAYLOAD_PATH}}
 ## Non-negotiables
 
 - Never do the underlying work in this sandbox.
-- Never answer the underlying request or post a substantive source-thread
-  response yourself, even when routing fails.
 - Never start a long coding/review/verify session here.
 - Prefer resuming an existing worker session over starting a new one.
 - If nothing fits, create/start the right worker — do not ask the user to do that for you unless the request is truly ambiguous.
@@ -172,5 +170,4 @@ For GitHub, use `gh` on the same thread/PR.
 - Failure: what you tried and what blocked routing.
 - Successful delegation: usually silence.
 
-Failure messages must describe routing only; never substitute your own answer
-to the underlying request. Do not over-explain internal routing.
+Do not over-explain internal routing.
