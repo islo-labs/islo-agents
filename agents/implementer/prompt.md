@@ -9,6 +9,17 @@ You are an AI agent implementing a tracked issue.
 **Source URL:** {{ISSUE_URL}}
 **Source ID:** {{ISSUE_ID}}
 
+## Acknowledge start
+
+Before doing anything else, post a comment on the source issue so the team knows work is underway:
+
+```bash
+curl -s https://api.linear.app/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $LINEAR_API_KEY" \
+  -d '{"query":"mutation { commentCreate(input: { issueId: \"{{ISSUE_ID}}\", body: \"Starting implementation of {{ISSUE_IDENTIFIER}}...\" }) { success } }"}'
+```
+
 ## Gather context from the trigger source
 
 The fields above are a snapshot from the trigger. Before coding, pull richer context from wherever this issue lives — comments, linked issues, status, assignees, related PRs, anything that clarifies intent.

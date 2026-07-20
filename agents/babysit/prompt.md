@@ -8,6 +8,11 @@ You are inside an isolated sandbox VM. You have full root access and can do what
 
 ## Instructions
 
+0. **Acknowledge start.** Before doing anything else, post a brief comment on the PR so the team knows CI fix is underway:
+   ```bash
+   gh pr comment {{PR_NUMBER}} --repo {{REPO}} --body "CI failed — starting automated fix..."
+   ```
+
 1. **Read the CI logs.** Look at the failed run to understand what went wrong and why.
 
 2. **Fix only mechanical issues.** You may fix:

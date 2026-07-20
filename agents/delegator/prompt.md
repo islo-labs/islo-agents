@@ -11,6 +11,25 @@ Raw payload path: {{RAW_PAYLOAD_PATH}}
 
 {{CONTEXT_SECTION}}
 
+## Acknowledge start
+
+Before doing anything else, acknowledge the trigger on the source thread so the team knows the request was received:
+
+For GitHub PR comments (`{{EVENT_TYPE}}` = `github_pr_comment`):
+```bash
+REPO="$(jq -r '.repository.full_name' "{{RAW_PAYLOAD_PATH}}")"
+PR_NUMBER="$(jq -r '.issue.number // .pull_request.number' "{{RAW_PAYLOAD_PATH}}")"
+COMMENT_ID="$(jq -r '.comment.id' "{{RAW_PAYLOAD_PATH}}")"
+gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions -f content=eyes
+```
+
+For PR needs-changes events (`{{EVENT_TYPE}}` = `pr_needs_changes`):
+```bash
+REPO="$(jq -r '.repository.full_name' "{{RAW_PAYLOAD_PATH}}")"
+PR_NUMBER="$(jq -r '.pull_request.number' "{{RAW_PAYLOAD_PATH}}")"
+gh pr comment "${PR_NUMBER}" --repo "${REPO}" --body "Routing feedback to implementer..."
+```
+
 ## Non-negotiables
 
 - Never do the underlying work in this sandbox.
@@ -18,7 +37,7 @@ Raw payload path: {{RAW_PAYLOAD_PATH}}
 - Prefer resuming an existing worker session over starting a new one.
 - If nothing fits, create/start the right worker — do not ask the user to do that for you unless the request is truly ambiguous.
 - If the mention is noise or not meant for Islo, do nothing.
-- After a successful handoff, usually post nothing. Let the worker reply on the source thread when it has something useful.
+- After a successful handoff, do not post again — the acknowledge comment above is enough. Let the worker reply on the source thread when it has something useful.
 
 ## Context gathering
 
