@@ -33,12 +33,12 @@ pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.boot_command]
 type = "string"
-default = "launch-fullstack ${LAUNCH_ARGS}"
+default = "launch-platform ${LAUNCH_ARGS}"
 description = "Shell command to boot the stack. Supports ${REPO}, ${PR_NUMBER}, ${LAUNCH_ARGS} substitution."
 
 [job.params.env_file]
 type = "string"
-default = "/workspace/.fullstack-env"
+default = "/workspace/.platform-env"
 description = "Path to env file to source before running the agent."
 
 [job.params.harness]
@@ -79,7 +79,7 @@ teardown_on_complete = false
 mode = "ensure"
 name = "verify-{{repo_name}}-{{pr_number}}"
 image = "docker.io/library/islo-runner:latest"
-snapshot_name = "islo-fullstack"
+snapshot_name = "islo-platform"
 vcpus = 8
 memory_mb = 16384
 gateway_profile = "default"
@@ -102,7 +102,7 @@ exec = [
 set -euo pipefail
 CONTEXT_DIR="/workspace/.islo/context"
 mkdir -p "${CONTEXT_DIR}"
-for slug in fullstack-env islo-integrations; do
+for slug in platform-env islo-integrations; do
   FILE="${CONTEXT_DIR}/${slug}.md"
   if [ -s "${FILE}" ]; then
     echo "Using cached ${slug} knowledge"
@@ -222,7 +222,7 @@ else
     --session-key "${SESSION_KEY}" \
     --context-file "/workspace/${REPO_SHORT}/REVIEW.md" \
     --context-file "/workspace/${REPO_SHORT}/VERIFY.md" \
-    --context-file "/workspace/.islo/context/fullstack-env.md" \
+    --context-file "/workspace/.islo/context/platform-env.md" \
     --context-file "/workspace/.islo/context/islo-integrations.md" \
     --var REPO="${REPO}" \
     --var REPO_SHORT="${REPO_SHORT}" \

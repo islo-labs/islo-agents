@@ -31,16 +31,16 @@ The stack has been booted with the PR branch already checked out and running. Yo
    ```
    If there are related PRs, read those too — they are part of the same feature spanning multiple repos. Use `gh pr view` and `gh pr diff` on each related PR to understand how the pieces fit together. Design your verification scenarios around how the PRs interact — the feature only makes sense when you understand all the changes as a whole.
 
-   **Deploy related PR branches.** If a related PR targets a service in the local stack, use `launch-fullstack` to rebuild and restart with those branches. The tool accepts `--<service> pr/<number>` or `--<service> <branch>` flags for each service:
+   **Deploy related PR branches.** If a related PR targets a service in the local stack, use `launch-platform` to rebuild and restart with those branches. The tool accepts `--<service> pr/<number>` or `--<service> <branch>` flags for each service:
    ```bash
    # Example: primary PR is frontend #244, related backend PR is islo-web-api #448
-   launch-fullstack --islo-frontend pr/244 --islo-web-api pr/448
+   launch-platform --islo-frontend pr/244 --islo-web-api pr/448
 
    # Supported services: --bear-agent, --islo-gateway, --islo-cli, --islo-web-api, --islo-frontend
    ```
    This checks out the PR branches, rebuilds only what changed, and restarts the stack. Use it whenever you find related PRs that need to be co-deployed.
 
-   **Do NOT skip end-to-end testing for features that span multiple repos.** If a related PR exists and provides the backend for a frontend change (or vice versa), deploy it with `launch-fullstack`. Mocking unrelated environment gaps (external services, third-party APIs, infra not part of the stack) is fine — but mocking a backend that has a related PR sitting right there is not.
+   **Do NOT skip end-to-end testing for features that span multiple repos.** If a related PR exists and provides the backend for a frontend change (or vice versa), deploy it with `launch-platform`. Mocking unrelated environment gaps (external services, third-party APIs, infra not part of the stack) is fine — but mocking a backend that has a related PR sitting right there is not.
 
 2. **Devise verification scenarios.** Think like a QA engineer — and more importantly, **act like a real user**. Based on what the PR changes, determine 2-5 concrete scenarios that would prove the change works correctly end-to-end. Consider:
    - Happy path: does the feature work as intended, end-to-end?
