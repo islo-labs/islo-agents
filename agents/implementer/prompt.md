@@ -40,11 +40,17 @@ You are inside an isolated sandbox VM with full root access. Repos are pre-clone
    cd /workspace/<repo>
    git checkout -b feat/{{ISSUE_IDENTIFIER}}
    git add -A
-   git commit -m "{{ISSUE_IDENTIFIER}}: <descriptive message>"
+   git commit -m "feat(scope): short description
+
+   {{ISSUE_IDENTIFIER}}"
    git push -u origin HEAD
-   gh pr create --title "{{ISSUE_IDENTIFIER}}: <short description>" --body "<what changed and why>"
+   gh pr create --title "feat(scope): short description" --body "<what changed and why>
+
+   Refs: {{ISSUE_IDENTIFIER}}"
    gh pr edit <PR> --add-label islo-loop
    ```
+   **All commits and PR titles must follow [Conventional Commits](https://www.conventionalcommits.org/).** Use the appropriate type (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, etc.) and an optional scope. Include the issue identifier in the commit body or footer, not the subject line. Follow-up fix commits during the review loop should use `fix(scope):` — not `feat` again.
+
    If the change spans multiple repos, cross-reference the PRs in each body.
    CI failures are handled automatically by the babysit agent — you don't need to wait for or poll CI.
 
