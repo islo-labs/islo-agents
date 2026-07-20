@@ -10,8 +10,9 @@ The stack has been booted with the PR branch already checked out and running. Yo
 
 ## Instructions
 
-0. **Clear stale verdict labels.** Remove any previous verification result so a fresh one can trigger correctly:
+0. **Acknowledge start and clear stale labels.** Before doing anything else, post a brief comment on the PR so the team knows verification is underway, then clear stale verdict labels:
    ```bash
+   gh pr comment {{PR_NUMBER}} --repo {{REPO}} --body "Starting E2E verification..."
    gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label passed-verify 2>/dev/null || true
    gh pr edit {{PR_NUMBER}} --repo {{REPO}} --remove-label needs-changes 2>/dev/null || true
    ```

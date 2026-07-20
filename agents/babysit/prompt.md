@@ -8,6 +8,11 @@ You are inside an isolated sandbox VM. You have full root access and can do what
 
 ## Instructions
 
+0. **Acknowledge start.** Before doing anything else, post a brief comment on the PR so the team knows CI fix is underway:
+   ```bash
+   gh pr comment {{PR_NUMBER}} --repo {{REPO}} --body "CI failed — starting automated fix..."
+   ```
+
 1. **Read the CI logs.** Look at the failed run to understand what went wrong and why.
 
 2. **Fix only mechanical issues.** You may fix:
@@ -20,6 +25,6 @@ You are inside an isolated sandbox VM. You have full root access and can do what
 
 4. **Verify your fix.** Re-run only the specific unit/integration tests that failed — not the full test suite. Use targeted test commands (e.g. pass the failing test file or test name) to confirm your fix works before pushing.
 
-5. **Push and comment.** Commit, push, and post a brief PR comment describing what you fixed (or what you couldn't fix and why).
+5. **Push and comment.** Commit using [Conventional Commits](https://www.conventionalcommits.org/) format (e.g. `fix(ci): correct import path`, `fix(lint): apply ruff formatting`), push, and post a brief PR comment describing what you fixed (or what you couldn't fix and why).
 
 Keep changes minimal and scoped. The goal is to get CI green, not to improve the code.

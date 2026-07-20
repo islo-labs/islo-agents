@@ -6,6 +6,11 @@ You are on the PR branch inside an isolated sandbox VM. You have full root acces
 
 ## Instructions
 
+0. **Acknowledge start.** Before doing anything else, post a brief comment on the PR so the team knows a review is underway:
+   ```bash
+   gh pr comment {{PR_NUMBER}} --repo {{REPO}} --body "Starting automated code review..."
+   ```
+
 1. **Understand the change.** Read the PR description and diff. Explore changed files and surrounding code for context. If other repos are available in `/workspace/`, check them for cross-repo impact.
 
 2. **Review for issues.** Look for bugs, edge cases, security concerns, performance issues, and unclear logic.
