@@ -20,7 +20,12 @@ For GitHub PR comments (`{{EVENT_TYPE}}` = `github_pr_comment`):
 REPO="$(jq -r '.repository.full_name' "{{RAW_PAYLOAD_PATH}}")"
 PR_NUMBER="$(jq -r '.issue.number // .pull_request.number' "{{RAW_PAYLOAD_PATH}}")"
 COMMENT_ID="$(jq -r '.comment.id' "{{RAW_PAYLOAD_PATH}}")"
-gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions -f content=eyes
+# Issue comments (PR conversation tab) have $.issue; inline review comments have $.pull_request.
+if jq -e '.issue' "{{RAW_PAYLOAD_PATH}}" > /dev/null 2>&1; then
+  gh api "repos/${REPO}/issues/comments/${COMMENT_ID}/reactions" -f content=eyes
+else
+  gh api "repos/${REPO}/pulls/comments/${COMMENT_ID}/reactions" -f content=eyes
+fi
 ```
 
 For PR needs-changes events (`{{EVENT_TYPE}}` = `pr_needs_changes`):
