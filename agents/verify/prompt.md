@@ -32,14 +32,14 @@ The stack has been booted with the PR branch already checked out and running. Yo
    ```
    If there are related PRs, read those too — they are part of the same feature spanning multiple repos. Use `gh pr view` and `gh pr diff` on each related PR to understand how the pieces fit together. Design your verification scenarios around how the PRs interact — the feature only makes sense when you understand all the changes as a whole.
 
-   **Deploy related PR branches.** If a related PR targets a service in the local stack, use `launch-fullstack` to rebuild and restart with those branches. The tool accepts `--<service> pr/<number>` or `--<service> <branch>` flags for each service:
+   **Deploy related PR branches.** If a related PR targets a service in the local stack, use `launch-fullstack` to rebuild and restart with those branches. **Important:** `launch-fullstack` resets any service you don't specify back to `main`. Always pass flags for **every** PR-pinned service in a single call — the primary PR and all related PRs together:
    ```bash
-   # Example: primary PR is frontend #244, related backend PR is islo-web-api #448
-   launch-fullstack --islo-frontend pr/244 --islo-web-api pr/448
+   # Example: primary PR is bear-agent #530, related PR is islo-web-api #455
+   launch-fullstack --bear-agent pr/530 --islo-web-api pr/455
 
    # Supported services: --bear-agent, --islo-gateway, --islo-cli, --islo-web-api, --islo-frontend
    ```
-   This checks out the PR branches, rebuilds only what changed, and restarts the stack. Use it whenever you find related PRs that need to be co-deployed.
+   If you only pass `--islo-web-api pr/455`, bear-agent reverts to main and you lose the primary PR. Always include all PRs.
 
    **Do NOT skip end-to-end testing for features that span multiple repos.** If a related PR exists and provides the backend for a frontend change (or vice versa), deploy it with `launch-fullstack`. Mocking unrelated environment gaps (external services, third-party APIs, infra not part of the stack) is fine — but mocking a backend that has a related PR sitting right there is not.
 
@@ -105,3 +105,4 @@ The stack has been booted with the PR branch already checked out and running. Yo
 - **Report failures honestly.** If something doesn't work, say so clearly with the error output.
 - **Check logs on failure.** If a request fails, check the relevant service log for the error.
 - **Time-box expensive operations.** If a scenario involves creating VMs or containers, account for startup time (~30-60s).
+- **Never `pkill -f` a service by name.** Your own process has repo names in its command line. `pkill -f <service>` will kill YOU. To restart a service, use its PID file (`kill $(cat /tmp/islo-logs/<service>.pid)`) or `launch-fullstack`.
