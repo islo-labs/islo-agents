@@ -180,9 +180,9 @@ Examples:
 
 - Review: `islo job run review --param repo=owner/name --param repo_name=name --param pr_number=N` (`repo_name` is required for the sandbox name; it cannot contain `/`)
 - Verify / babysit: same pattern with their required params (read their `job.toml`).
-- Implement from an issue-shaped request: `islo job run implementer --param issue_id=…` (plus optional title/description/identifier/url); otherwise create an issue-scoped sandbox from `islo-stack` and start `agents/implementer` via the harness.
+- Implement from an issue-shaped request: `islo job run implementer --param issue_id=…` (plus optional title/description/identifier/url); otherwise create an issue-scoped sandbox from `islo-code` and start `agents/implementer` via the harness.
 
-3. If no job fits cleanly, create an appropriately named sandbox yourself (use the `islo-stack` snapshot for code work) and start the matching agent harness — still in the **worker** sandbox, not here.
+3. If no job fits cleanly, create an appropriately named sandbox yourself (use the `islo-code` snapshot for code work) and start the matching agent harness — still in the **worker** sandbox, not here.
 
 4. If the request is ambiguous (cannot tell implement vs review vs verify, or which issue/PR), ask **one** concise clarifying question on the source thread with `gh`, then stop.
 
