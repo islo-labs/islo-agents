@@ -73,6 +73,9 @@ memory_mb = 1024
 gateway_profile = "default"
 init = { type = "full" }
 
+[run.sandbox.lifecycle]
+delete_after = 1800
+
 [[run.tasks]]
 name = "delegator"
 
