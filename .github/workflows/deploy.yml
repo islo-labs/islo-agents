@@ -31,7 +31,9 @@ jobs:
           AGENTS=()
           while IFS= read -r file; do
             if [[ "$file" =~ ^agents/([^/]+)/job\.toml$ ]]; then
-              AGENTS+=("${BASH_REMATCH[1]}")
+              name="${BASH_REMATCH[1]}"
+              # Skip deleted or renamed manifests
+              [ -f "agents/${name}/job.toml" ] && AGENTS+=("${name}")
             fi
           done <<< "$CHANGED"
 
@@ -80,6 +82,18 @@ jobs:
         run: |
           npm ci
           npm run assemble-webhooks
+
+          # Strip [auth] from assembled files so updates don't reset HMAC.
+          # The update endpoint merges partial payloads; omitting auth preserves it.
+          for f in webhooks/github-events.toml webhooks/linear-issues.toml; do
+            node -e "
+              const { readFileSync, writeFileSync } = require('fs');
+              const { parse, stringify } = require('smol-toml');
+              const doc = parse(readFileSync('$f', 'utf8'));
+              delete doc.auth;
+              writeFileSync('$f', stringify(doc) + '\n');
+            "
+          done
 
           if [ -n "${GITHUB_WEBHOOK_ID}" ]; then
             echo "::group::Updating GitHub webhook"

@@ -74,7 +74,7 @@ gateway_profile = "default"
 init = { type = "full" }
 
 [run.sandbox.lifecycle]
-delete_after = 1800
+delete_after = 3600
 
 [[run.tasks]]
 name = "delegator"
