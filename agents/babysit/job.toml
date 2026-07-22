@@ -44,12 +44,12 @@ description = "Model name understood by the selected harness."
 
 [job.params.max_turns]
 type = "integer"
-default = 50
+default = 150
 description = "Maximum agentic turns (Claude only; ignored by Codex)."
 
 [job.params.max_budget_usd]
 type = "number"
-default = 10
+default = 30
 description = "Maximum USD budget. Codex converts this to an approximate rollout-token limit."
 
 [job.params.reasoning_effort]
@@ -61,7 +61,7 @@ pattern = "^(minimal|low|medium|high|xhigh|max)$"
 [run]
 fail_fast = true
 fanout = false
-timeout = 900
+timeout = 2700
 workdir = "/workspace"
 teardown_on_complete = false
 
@@ -200,7 +200,7 @@ npm ci
 
 [[run.tasks.steps]]
 name = "run-agent"
-timeout = 900
+timeout = 2700
 exec = [
   "bash",
   "-lc",

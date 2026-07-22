@@ -29,7 +29,7 @@ test("review defaults to Codex with GPT-5.6 Sol", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.max_budget_usd\][\s\S]*?default = 10/,
+    /\[job\.params\.max_budget_usd\][\s\S]*?default = 30/,
   );
 });
 

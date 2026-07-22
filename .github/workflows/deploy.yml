@@ -1,0 +1,114 @@
+name: Deploy agents & webhooks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agents/**/job.toml"
+      - "agents/**/trigger-rules/**"
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: changes
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="HEAD~1"
+          fi
+          CHANGED=$(git diff --name-only "$BASE" HEAD)
+
+          AGENTS=()
+          while IFS= read -r file; do
+            if [[ "$file" =~ ^agents/([^/]+)/job\.toml$ ]]; then
+              name="${BASH_REMATCH[1]}"
+              # Skip deleted or renamed manifests
+              [ -f "agents/${name}/job.toml" ] && AGENTS+=("${name}")
+            fi
+          done <<< "$CHANGED"
+
+          UNIQUE_AGENTS=($(printf '%s\n' "${AGENTS[@]}" | sort -u))
+          echo "agents=$(printf '%s\n' "${UNIQUE_AGENTS[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+          if echo "$CHANGED" | grep -q '^agents/.*/trigger-rules/'; then
+            echo "webhooks=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "webhooks=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED"
+          echo "Agents to deploy: ${UNIQUE_AGENTS[*]:-none}"
+          echo "Webhooks changed: $(echo "$CHANGED" | grep -c '^agents/.*/trigger-rules/' || true)"
+
+      - name: Install Islo CLI
+        if: steps.changes.outputs.agents != '[]' || steps.changes.outputs.webhooks == 'true'
+        run: curl -fsSL https://islo.dev/install.sh | bash
+
+      - name: Deploy modified jobs
+        if: steps.changes.outputs.agents != '[]'
+        env:
+          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
+        run: |
+          for agent in $(echo '${{ steps.changes.outputs.agents }}' | jq -r '.[]'); do
+            echo "::group::Deploying job: ${agent}"
+            mkdir -p "jobs/${agent}"
+            cp "agents/${agent}/job.toml" "jobs/${agent}/job.toml"
+            islo job deploy "${agent}"
+            echo "::endgroup::"
+          done
+
+      - uses: actions/setup-node@v4
+        if: steps.changes.outputs.webhooks == 'true'
+        with:
+          node-version: 22
+
+      - name: Reassemble and deploy webhooks
+        if: steps.changes.outputs.webhooks == 'true'
+        env:
+          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
+          GITHUB_WEBHOOK_ID: ${{ secrets.ISLO_GITHUB_WEBHOOK_ID }}
+          LINEAR_WEBHOOK_ID: ${{ secrets.ISLO_LINEAR_WEBHOOK_ID }}
+        run: |
+          npm ci
+          npm run assemble-webhooks
+
+          # Strip [auth] from assembled files so updates don't reset HMAC.
+          # The update endpoint merges partial payloads; omitting auth preserves it.
+          for f in webhooks/github-events.toml webhooks/linear-issues.toml; do
+            node -e "
+              const { readFileSync, writeFileSync } = require('fs');
+              const { parse, stringify } = require('smol-toml');
+              const doc = parse(readFileSync('$f', 'utf8'));
+              delete doc.auth;
+              writeFileSync('$f', stringify(doc) + '\n');
+            "
+          done
+
+          if [ -n "${GITHUB_WEBHOOK_ID}" ]; then
+            echo "::group::Updating GitHub webhook"
+            islo webhook incoming update "${GITHUB_WEBHOOK_ID}" \
+              --request-toml @webhooks/github-events.toml
+            echo "::endgroup::"
+          else
+            echo "::warning::ISLO_GITHUB_WEBHOOK_ID secret not set — skipping GitHub webhook update"
+          fi
+
+          if [ -n "${LINEAR_WEBHOOK_ID}" ]; then
+            echo "::group::Updating Linear webhook"
+            islo webhook incoming update "${LINEAR_WEBHOOK_ID}" \
+              --request-toml @webhooks/linear-issues.toml
+            echo "::endgroup::"
+          else
+            echo "::warning::ISLO_LINEAR_WEBHOOK_ID secret not set — skipping Linear webhook update"
+          fi

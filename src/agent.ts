@@ -250,7 +250,7 @@ function resolveCodexBudget(
   if (invocation.maxBudgetUsd !== undefined) {
     return { kind: "approximate_usd", maxUsd: invocation.maxBudgetUsd };
   }
-  return storedBudget ?? { kind: "approximate_usd", maxUsd: 15 };
+  return storedBudget ?? { kind: "approximate_usd", maxUsd: 45 };
 }
 
 export function resolveRunPlan(
@@ -297,9 +297,9 @@ export function resolveRunPlan(
         harness,
         model:
           invocation.model ?? storedRuntime?.model ?? "claude-opus-4-6",
-        maxTurns: invocation.maxTurns ?? storedRuntime?.maxTurns ?? 50,
+        maxTurns: invocation.maxTurns ?? storedRuntime?.maxTurns ?? 150,
         maxBudgetUsd:
-          invocation.maxBudgetUsd ?? storedRuntime?.maxBudgetUsd ?? 15,
+          invocation.maxBudgetUsd ?? storedRuntime?.maxBudgetUsd ?? 45,
         ...(effort ? { reasoningEffort: effort } : {}),
       },
       ...(resumeSessionId ? { resumeSessionId } : {}),
