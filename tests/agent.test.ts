@@ -97,8 +97,8 @@ test("resolveRunPlan applies Claude defaults", () => {
   assert.deepEqual(plan.runtime, {
     harness: "claude",
     model: "claude-opus-4-6",
-    maxTurns: 50,
-    maxBudgetUsd: 15,
+    maxTurns: 150,
+    maxBudgetUsd: 45,
   });
   assert.equal(plan.resumeSessionId, undefined);
 });
@@ -111,7 +111,7 @@ test("resolveRunPlan applies Codex defaults", () => {
   assert.deepEqual(plan.runtime, {
     harness: "codex",
     model: "gpt-5.6-sol",
-    budget: { kind: "approximate_usd", maxUsd: 15 },
+    budget: { kind: "approximate_usd", maxUsd: 45 },
   });
 });
 

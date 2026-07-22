@@ -56,7 +56,7 @@ resume runs require positional prompt text.
 
 Shared options: `--prompt`, `--cwd`, `--model`, `--max-budget`,
 `--reasoning-effort`, `--session-key`, `--context-file`,
-`--knowledge-*`, and `--var`. `--max-budget` defaults to **$15**. Claude
+`--knowledge-*`, and `--var`. `--max-budget` defaults to **$45**. Claude
 enforces it as the SDK's USD budget; Codex converts it through a
 model-specific maximum-token price into an approximate rollout-token limit.
 Unknown Codex models require the raw `--rollout-budget-tokens` alternative.
