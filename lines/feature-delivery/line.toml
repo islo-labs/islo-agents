@@ -54,6 +54,24 @@ max_iterations = 3
 issue_id = "inputs.issue_id"
 pull_requests = "outputs.implement.pull_requests"
 
+[[decisions]]
+id = "implementation-blocked"
+after_stage = "implement"
+when = "true"
+allowed_actions = ["retry-stage", "cancel"]
+
+[[decisions]]
+id = "review-blocked"
+after_stage = "review"
+when = "true"
+allowed_actions = ["retry-stage", "cancel"]
+
+[[decisions]]
+id = "verification-blocked"
+after_stage = "verify"
+when = "true"
+allowed_actions = ["retry-stage", "cancel"]
+
 [[transitions]]
 id = "verification-passed"
 from = "verify"

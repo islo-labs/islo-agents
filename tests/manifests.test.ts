@@ -177,3 +177,35 @@ test("feature-delivery maps implement PRs through both feedback loops", () => {
   );
   assert.match(line, /issue_id = "inputs\.issue_id"/);
 });
+
+test("feature-delivery has a deployable manager and blocked-stage decisions", () => {
+  const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
+  const manager = readFileSync(
+    "managers/factory-operator/manager.toml",
+    "utf-8",
+  );
+
+  assert.doesNotThrow(() => parse(manager));
+  assert.match(manager, /name = "factory-operator"/);
+  for (const stage of ["implement", "review", "verify"]) {
+    assert.match(
+      line,
+      new RegExp(
+        `after_stage = "${stage}"[\\s\\S]*?when = "true"[\\s\\S]*?allowed_actions = \\["retry-stage", "cancel"\\]`,
+      ),
+    );
+  }
+});
+
+test("factory deployment orders managers, jobs, then lines", () => {
+  const workflow = readFileSync(".github/workflows/deploy.yml", "utf-8");
+  const managerStep = workflow.indexOf("Deploy modified managers");
+  const jobStep = workflow.indexOf("Deploy modified jobs");
+  const lineStep = workflow.indexOf("Deploy modified lines");
+
+  assert.ok(managerStep >= 0);
+  assert.ok(managerStep < jobStep);
+  assert.ok(jobStep < lineStep);
+  assert.match(workflow, /managers\/\*\*\/manager\.toml/);
+  assert.match(workflow, /lines\/\*\*\/line\.toml/);
+});
