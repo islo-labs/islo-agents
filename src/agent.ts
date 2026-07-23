@@ -94,6 +94,21 @@ function positiveInteger(raw: string | undefined, flag: string): number | undefi
   return n;
 }
 
+function validateModelProvider(model: string, provider: string | undefined): void {
+  const isCatalogModel = INFERENCE_CATALOG_MODELS.has(model);
+  if (isCatalogModel && provider !== "islo_inference") {
+    throw new Error(
+      `Model '${model}' requires --model-provider islo_inference`,
+    );
+  }
+  if (!isCatalogModel && provider === "islo_inference") {
+    throw new Error(
+      `Model '${model}' is not in the Islo inference catalog. ` +
+        `Available: ${[...INFERENCE_CATALOG_MODELS].join(", ")}`,
+    );
+  }
+}
+
 const CLI_OPTIONS = {
   prompt:                  { type: "string" as const },
   resume:                  { type: "boolean" as const },
@@ -299,15 +314,7 @@ export function resolveRunPlan(
       invocation.modelProvider ?? storedRuntime?.modelProvider;
     const claudeModel =
       invocation.model ?? storedRuntime?.model ?? "claude-opus-4-6";
-    if (
-      claudeProvider === "islo_inference" &&
-      !INFERENCE_CATALOG_MODELS.has(claudeModel)
-    ) {
-      throw new Error(
-        `Model '${claudeModel}' is not in the Islo inference catalog. ` +
-          `Available: ${[...INFERENCE_CATALOG_MODELS].join(", ")}`,
-      );
-    }
+    validateModelProvider(claudeModel, claudeProvider);
     return {
       cwd,
       runtime: {
@@ -338,11 +345,7 @@ export function resolveRunPlan(
     invocation.modelProvider ?? storedRuntime?.modelProvider;
   const codexModel =
     invocation.model ?? storedRuntime?.model ?? "kimi-k2.7-code";
-  if (!codexProvider && INFERENCE_CATALOG_MODELS.has(codexModel)) {
-    throw new Error(
-      `Model '${codexModel}' requires --model-provider islo_inference`,
-    );
-  }
+  validateModelProvider(codexModel, codexProvider);
   return {
     cwd,
     runtime: {

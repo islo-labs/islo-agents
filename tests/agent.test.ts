@@ -131,6 +131,16 @@ test("resolveRunPlan rejects Claude islo_inference with non-catalog model", () =
   );
 });
 
+test("resolveRunPlan rejects Claude catalog model without islo_inference", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs(["--prompt", "p.md", "--model", "kimi-k2.7-code"]),
+      ),
+    /requires --model-provider islo_inference/,
+  );
+});
+
 test("resolveRunPlan threads --model-provider to Codex runtime", () => {
   const plan = resolveRunPlan(
     parseArgs(["--prompt", "p.md", "--harness", "codex", "--model-provider", "islo_inference"]),
@@ -151,6 +161,21 @@ test("resolveRunPlan rejects Codex inference-catalog model without provider", ()
         parseArgs(["--prompt", "p.md", "--harness", "codex"]),
       ),
     /requires --model-provider islo_inference/,
+  );
+});
+
+test("resolveRunPlan rejects Codex islo_inference with non-catalog model", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs([
+          "--prompt", "p.md",
+          "--harness", "codex",
+          "--model-provider", "islo_inference",
+          "--model", "gpt-5.6-sol",
+        ]),
+      ),
+    /not in the Islo inference catalog/,
   );
 });
 
