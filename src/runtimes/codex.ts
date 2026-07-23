@@ -129,7 +129,7 @@ export class CodexRuntime implements AgentRuntime {
 
   async run(request: RunRequest): Promise<void> {
     const codex = new Codex({
-      config: buildCodexConfig(this.effectiveTokens),
+      config: { model_provider: "islo", ...buildCodexConfig(this.effectiveTokens) },
     });
     const threadOptions: ThreadOptions = {
       model: this.opts.model,
