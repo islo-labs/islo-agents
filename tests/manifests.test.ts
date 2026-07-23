@@ -33,6 +33,20 @@ test("review defaults to Codex with GPT-5.6 Sol", () => {
   );
 });
 
+test("reused PR sandboxes handle force-pushed branches by role", () => {
+  const review = readFileSync("agents/review/job.toml", "utf-8");
+  const babysit = readFileSync("agents/babysit/job.toml", "utf-8");
+
+  assert.match(
+    review,
+    /gh pr checkout "\$\{PR_NUMBER\}" --repo "\$\{REPO\}" --detach/,
+  );
+  assert.match(
+    babysit,
+    /gh pr checkout "\$\{PR_NUMBER\}" --repo "\$\{REPO\}" --force/,
+  );
+});
+
 test("all jobs have shared budget and harness-specific params", () => {
   for (const role of roles) {
     const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");

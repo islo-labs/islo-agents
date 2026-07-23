@@ -100,7 +100,9 @@ cd "${REPO_SHORT}"
 # Snapshot clones are often single-branch; widen fetch so PR checkout can track.
 git remote set-branches origin '*'
 git fetch --prune origin
-gh pr checkout "${PR_NUMBER}" --repo "${REPO}"
+# Reviews do not write to the PR branch. Detach so reruns can follow force-pushes
+# without resetting any local branch or requiring a fast-forward.
+gh pr checkout "${PR_NUMBER}" --repo "${REPO}" --detach
 ''',
 ]
 

@@ -143,7 +143,9 @@ cd "${REPO_SHORT}"
 # Snapshot clones are often single-branch; widen fetch so PR checkout can track.
 git remote set-branches origin '*'
 git fetch --prune origin
-gh pr checkout "${PR_NUMBER}" --repo "${REPO}"
+# Each CI repair starts from the current remote PR head. Force-reset the reused
+# local branch so a force-pushed PR cannot leave it on divergent history.
+gh pr checkout "${PR_NUMBER}" --repo "${REPO}" --force
 ''',
 ]
 
