@@ -34,7 +34,7 @@ pattern = "^(claude|codex)$"
 
 [job.params.model]
 type = "string"
-default = "gpt-5.6-sol"
+default = "kimi-k2.7-code"
 description = "Model name understood by the selected harness."
 
 [job.params.max_turns]

@@ -22,6 +22,10 @@ export const CODEX_MAX_TOKEN_PRICE_PER_MILLION_USD: Readonly<Record<string, numb
   "gpt-5.6-sol": 45,
   "gpt-5.6-terra": 22.5,
   "gpt-5.6-luna": 9,
+  "kimi-k2.7-code": 4,
+  "kimi-k2.7-code-fast": 8,
+  "minimax-m3": 1.2,
+  "qwen3.7-plus": 1.6,
 };
 
 export function usdToTokens(usd: number, model: string): number {
@@ -129,7 +133,7 @@ export class CodexRuntime implements AgentRuntime {
 
   async run(request: RunRequest): Promise<void> {
     const codex = new Codex({
-      config: { model_provider: "islo", ...buildCodexConfig(this.effectiveTokens) },
+      config: { model_provider: "islo_inference", ...buildCodexConfig(this.effectiveTokens) },
     });
     const threadOptions: ThreadOptions = {
       model: this.opts.model,

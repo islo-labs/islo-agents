@@ -110,6 +110,7 @@ test("usdToTokens uses model-specific maximum pricing", () => {
   assert.equal(usdToTokens(1, "gpt-5.6-sol"), 22_222);
   assert.equal(usdToTokens(1, "gpt-5.6-terra"), 44_444);
   assert.equal(usdToTokens(1, "gpt-5.6-luna"), 111_111);
+  assert.equal(usdToTokens(1, "kimi-k2.7-code"), 250_000);
   assert.throws(
     () => usdToTokens(1, "unknown-model"),
     /No Codex pricing configured/,
@@ -119,14 +120,14 @@ test("usdToTokens uses model-specific maximum pricing", () => {
 test("createRuntime converts an approximate Codex USD budget to rollout tokens", () => {
   const runtime = createRuntime({
     harness: "codex",
-    model: "gpt-5.6-sol",
+    model: "kimi-k2.7-code",
     budget: { kind: "approximate_usd", maxUsd: 10 },
     reasoningEffort: "high",
   });
 
   assert.equal(runtime.harness, "codex");
   assert.match(runtime.describeControls(), /approxMaxBudgetUsd=10/);
-  assert.match(runtime.describeControls(), /rolloutBudgetTokens=222222/);
+  assert.match(runtime.describeControls(), /rolloutBudgetTokens=2500000/);
   assert.match(runtime.describeControls(), /reasoningEffort=high/);
 });
 

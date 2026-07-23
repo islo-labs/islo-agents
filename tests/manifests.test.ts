@@ -16,7 +16,7 @@ test("agent job manifests parse", () => {
   }
 });
 
-test("review defaults to Codex with GPT-5.6 Sol", () => {
+test("review defaults to Codex with Kimi K2.7 Code", () => {
   const manifest = readFileSync("agents/review/job.toml", "utf-8");
 
   assert.match(
@@ -25,7 +25,7 @@ test("review defaults to Codex with GPT-5.6 Sol", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.model\][\s\S]*?default = "gpt-5\.6-sol"/,
+    /\[job\.params\.model\][\s\S]*?default = "kimi-k2\.7-code"/,
   );
   assert.match(
     manifest,
