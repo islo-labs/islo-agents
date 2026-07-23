@@ -129,3 +129,51 @@ test("delegator starts a worker when a matching sandbox has no session", () => {
   );
   assert.match(prompt, /Prefer re-running the role's[\s\S]*durable job/);
 });
+
+const factoryRoles = ["factory-implement", "factory-review", "factory-verify"];
+
+test("factory jobs use one native agent and compatible PR list contracts", () => {
+  for (const role of factoryRoles) {
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+    const prompt = readFileSync(`agents/${role}/prompt.md`, "utf-8");
+
+    assert.doesNotThrow(() => parse(manifest), `${role} manifest must parse`);
+    assert.equal(
+      (manifest.match(/\[run\.tasks\.steps\.run_agent\]/g) ?? []).length,
+      1,
+      `${role} must define exactly one native run_agent step`,
+    );
+    assert.match(manifest, /fanout = false/);
+    assert.doesNotMatch(manifest, /ISLO_(JOB|AGENT)_RESULT|AGENT_OUTPUT=/);
+    assert.doesNotMatch(prompt, /ISLO_(JOB|AGENT)_RESULT|AGENT_OUTPUT=/);
+    assert.match(
+      manifest,
+      /\[(?:job\.params|outputs)\.pull_requests\][\s\S]*?type = "array"[\s\S]*?items = "string"/,
+      `${role} must use string-list PR contracts`,
+    );
+  }
+  const implement = readFileSync("agents/factory-implement/job.toml", "utf-8");
+  assert.match(
+    implement,
+    /\[job\.params\.pull_requests\][\s\S]*?default = \[\]/,
+  );
+});
+
+test("factory review and verification require all-PR aggregate verdicts", () => {
+  const review = readFileSync("agents/factory-review/job.toml", "utf-8");
+  const verify = readFileSync("agents/factory-verify/job.toml", "utf-8");
+
+  assert.match(review, /Return approved only when every PR passes/);
+  assert.match(verify, /Return passed only after every PR/);
+});
+
+test("feature-delivery maps implement PRs through both feedback loops", () => {
+  const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
+  assert.doesNotThrow(() => parse(line));
+  assert.equal(
+    (line.match(/pull_requests = "outputs\.implement\.pull_requests"/g) ?? [])
+      .length,
+    4,
+  );
+  assert.match(line, /issue_id = "inputs\.issue_id"/);
+});

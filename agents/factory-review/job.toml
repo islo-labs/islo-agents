@@ -1,0 +1,56 @@
+[job]
+name = "factory-review"
+version = "0.1.0"
+description = "Review every pull request in a feature as one aggregate change."
+
+[job.params.pull_requests]
+type = "array"
+items = "string"
+required = true
+description = "Complete list of GitHub pull request URLs for the feature."
+
+[outputs.review_result]
+type = "string"
+required = true
+enum = ["approved", "needs_changes", "blocked"]
+
+[run]
+fail_fast = true
+fanout = false
+timeout = 7200
+workdir = "/workspace"
+teardown_on_complete = true
+
+[run.sandbox]
+mode = "provision"
+image = "docker.io/library/islo-runner:latest"
+snapshot_name = "islo-code"
+vcpus = 4
+memory_mb = 8192
+gateway_profile = "default"
+init = { type = "full" }
+
+[[run.tasks]]
+name = "review"
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 7200
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "claude-opus-4-6"
+prompt = """
+Review the supplied pull_requests as one coherent feature.
+
+Fetch every PR from GitHub and inspect its current head, diff, checks, existing
+threads, and cross-repository assumptions. Review all URLs before deciding.
+Post concrete findings to the relevant PRs using normal GitHub review
+mechanisms. Do not use orchestration labels.
+
+Return approved only when every PR passes and the combined feature is
+consistent. Return needs_changes when any actionable code change is needed.
+Return blocked only when review cannot complete because required information
+or infrastructure is unavailable.
+"""

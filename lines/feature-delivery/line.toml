@@ -1,0 +1,72 @@
+[line]
+name = "feature-delivery"
+description = "Implement, review, and verify one issue across its complete PR set."
+category = "engineering"
+
+[manager]
+ref = "factory-operator"
+
+[trigger]
+type = "manual"
+
+[limits]
+max_iterations = 10
+timeout = "24h"
+
+[[stages]]
+id = "implement"
+job = "factory-implement"
+
+[[stages]]
+id = "review"
+job = "factory-review"
+
+[[stages]]
+id = "verify"
+job = "factory-verify"
+
+[[transitions]]
+id = "implementation-ready"
+from = "implement"
+to = "review"
+when = "result.outputs.implementation_result == 'ready'"
+
+[transitions.params]
+pull_requests = "outputs.implement.pull_requests"
+
+[[transitions]]
+id = "review-approved"
+from = "review"
+to = "verify"
+when = "result.outputs.review_result == 'approved'"
+
+[transitions.params]
+pull_requests = "outputs.implement.pull_requests"
+
+[[transitions]]
+id = "review-needs-changes"
+from = "review"
+to = "implement"
+when = "result.outputs.review_result == 'needs_changes'"
+max_iterations = 3
+
+[transitions.params]
+issue_id = "inputs.issue_id"
+pull_requests = "outputs.implement.pull_requests"
+
+[[transitions]]
+id = "verification-passed"
+from = "verify"
+to = "done"
+when = "result.outputs.verification_result == 'passed'"
+
+[[transitions]]
+id = "verification-failed"
+from = "verify"
+to = "implement"
+when = "result.outputs.verification_result == 'failed'"
+max_iterations = 2
+
+[transitions.params]
+issue_id = "inputs.issue_id"
+pull_requests = "outputs.implement.pull_requests"

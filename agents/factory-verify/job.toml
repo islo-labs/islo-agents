@@ -1,0 +1,56 @@
+[job]
+name = "factory-verify"
+version = "0.1.0"
+description = "Verify an integrated feature across its complete pull-request set."
+
+[job.params.pull_requests]
+type = "array"
+items = "string"
+required = true
+description = "Complete list of GitHub pull request URLs for the feature."
+
+[outputs.verification_result]
+type = "string"
+required = true
+enum = ["passed", "failed", "blocked"]
+
+[run]
+fail_fast = true
+fanout = false
+timeout = 10800
+workdir = "/workspace"
+teardown_on_complete = true
+
+[run.sandbox]
+mode = "provision"
+image = "docker.io/library/islo-runner:latest"
+snapshot_name = "islo-platform"
+vcpus = 8
+memory_mb = 16384
+gateway_profile = "default"
+init = { type = "full" }
+
+[[run.tasks]]
+name = "verify"
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 10800
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "claude-opus-4-6"
+prompt = """
+Verify the integrated feature represented by all supplied pull_requests.
+
+Fetch live GitHub metadata and check out every current PR head. Determine the
+affected stack, run each repository's relevant checks, and exercise the
+cross-repository behavior end to end where practical. Publish detailed
+reports, logs, and comments to the relevant external systems.
+
+Return passed only after every PR and the integrated feature pass. Return
+failed when any reproducible code or integration failure needs implementation
+work. Return blocked only when verification cannot run because required
+infrastructure or credentials are unavailable.
+"""
