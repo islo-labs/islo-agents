@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createRuntime } from "./runtimes/index.js";
+import { INFERENCE_CATALOG_MODELS } from "./runtimes/codex.js";
 import type {
   ClaudeReasoningEffort,
   CodexBudget,
@@ -296,12 +297,22 @@ export function resolveRunPlan(
     }
     const claudeProvider =
       invocation.modelProvider ?? storedRuntime?.modelProvider;
+    const claudeModel =
+      invocation.model ?? storedRuntime?.model ?? "claude-opus-4-6";
+    if (
+      claudeProvider === "islo_inference" &&
+      !INFERENCE_CATALOG_MODELS.has(claudeModel)
+    ) {
+      throw new Error(
+        `Model '${claudeModel}' is not in the Islo inference catalog. ` +
+          `Available: ${[...INFERENCE_CATALOG_MODELS].join(", ")}`,
+      );
+    }
     return {
       cwd,
       runtime: {
         harness,
-        model:
-          invocation.model ?? storedRuntime?.model ?? "claude-opus-4-6",
+        model: claudeModel,
         maxTurns: invocation.maxTurns ?? storedRuntime?.maxTurns ?? 150,
         maxBudgetUsd:
           invocation.maxBudgetUsd ?? storedRuntime?.maxBudgetUsd ?? 45,
@@ -325,11 +336,18 @@ export function resolveRunPlan(
   }
   const codexProvider =
     invocation.modelProvider ?? storedRuntime?.modelProvider;
+  const codexModel =
+    invocation.model ?? storedRuntime?.model ?? "kimi-k2.7-code";
+  if (!codexProvider && INFERENCE_CATALOG_MODELS.has(codexModel)) {
+    throw new Error(
+      `Model '${codexModel}' requires --model-provider islo_inference`,
+    );
+  }
   return {
     cwd,
     runtime: {
       harness,
-      model: invocation.model ?? storedRuntime?.model ?? "kimi-k2.7-code",
+      model: codexModel,
       budget: resolveCodexBudget(invocation, storedRuntime?.budget),
       ...(effort ? { reasoningEffort: effort } : {}),
       ...(codexProvider ? { modelProvider: codexProvider } : {}),

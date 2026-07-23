@@ -3,7 +3,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { AgentRuntime, ClaudeRuntimeOpts, RunRequest } from "./types.js";
 
 const ISLO_INFERENCE_BASE_URLS: Readonly<Record<string, string>> = {
-  islo_inference: "https://gateway.islo.dev/inference/anthropic/v1",
+  islo_inference: "https://gateway.islo.dev/inference/anthropic",
 };
 
 interface ClaudeMessageInspection {

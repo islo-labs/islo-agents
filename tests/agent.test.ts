@@ -105,16 +105,30 @@ test("resolveRunPlan applies Claude defaults", () => {
 
 test("resolveRunPlan threads --model-provider to Claude runtime", () => {
   const plan = resolveRunPlan(
-    parseArgs(["--prompt", "p.md", "--model-provider", "islo_inference"]),
+    parseArgs([
+      "--prompt", "p.md",
+      "--model-provider", "islo_inference",
+      "--model", "kimi-k2.7-code",
+    ]),
   );
 
   assert.deepEqual(plan.runtime, {
     harness: "claude",
-    model: "claude-opus-4-6",
+    model: "kimi-k2.7-code",
     maxTurns: 150,
     maxBudgetUsd: 45,
     modelProvider: "islo_inference",
   });
+});
+
+test("resolveRunPlan rejects Claude islo_inference with non-catalog model", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs(["--prompt", "p.md", "--model-provider", "islo_inference"]),
+      ),
+    /not in the Islo inference catalog/,
+  );
 });
 
 test("resolveRunPlan threads --model-provider to Codex runtime", () => {
@@ -130,14 +144,24 @@ test("resolveRunPlan threads --model-provider to Codex runtime", () => {
   });
 });
 
-test("resolveRunPlan applies Codex defaults", () => {
+test("resolveRunPlan rejects Codex inference-catalog model without provider", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs(["--prompt", "p.md", "--harness", "codex"]),
+      ),
+    /requires --model-provider islo_inference/,
+  );
+});
+
+test("resolveRunPlan accepts Codex with explicit non-catalog model and no provider", () => {
   const plan = resolveRunPlan(
-    parseArgs(["--prompt", "p.md", "--harness", "codex"]),
+    parseArgs(["--prompt", "p.md", "--harness", "codex", "--model", "o4-mini"]),
   );
 
   assert.deepEqual(plan.runtime, {
     harness: "codex",
-    model: "kimi-k2.7-code",
+    model: "o4-mini",
     budget: { kind: "approximate_usd", maxUsd: 45 },
   });
 });
@@ -155,6 +179,7 @@ test("resolveRunPlan restores a complete stored session", () => {
       model: "kimi-k2.7-code",
       budget: { kind: "approximate_usd", maxUsd: 10 },
       reasoningEffort: "high",
+      modelProvider: "islo_inference",
     },
   };
 
@@ -179,6 +204,7 @@ test("a CLI USD budget replaces stored rollout tokens", () => {
       harness: "codex",
       model: "kimi-k2.7-code",
       budget: { kind: "rollout_tokens", tokens: 500_000 },
+      modelProvider: "islo_inference",
     },
   };
 
@@ -197,6 +223,7 @@ test("resolveRunPlan rejects ambiguous and cross-harness controls", () => {
         parseArgs([
           "--prompt", "p.md",
           "--harness", "codex",
+          "--model-provider", "islo_inference",
           "--max-budget", "5",
           "--rollout-budget-tokens", "1000",
         ]),
@@ -209,6 +236,7 @@ test("resolveRunPlan rejects ambiguous and cross-harness controls", () => {
         parseArgs([
           "--prompt", "p.md",
           "--harness", "codex",
+          "--model-provider", "islo_inference",
           "--max-turns", "10",
         ]),
       ),

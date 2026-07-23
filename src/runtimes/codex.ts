@@ -17,6 +17,13 @@ interface CodexEventInspection {
  * rollout limit. Codex 0.144.5 excludes billed cached input from rollout
  * accounting, so this is not a hard spending cap.
  */
+export const INFERENCE_CATALOG_MODELS: ReadonlySet<string> = new Set([
+  "kimi-k2.7-code",
+  "kimi-k2.7-code-fast",
+  "minimax-m3",
+  "qwen3.7-plus",
+]);
+
 export const CODEX_MAX_TOKEN_PRICE_PER_MILLION_USD: Readonly<Record<string, number>> = {
   "gpt-5.6": 45,
   "gpt-5.6-sol": 45,
