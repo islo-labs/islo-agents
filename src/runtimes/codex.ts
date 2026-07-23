@@ -139,12 +139,11 @@ export class CodexRuntime implements AgentRuntime {
   }
 
   async run(request: RunRequest): Promise<void> {
-    const providerConfig = this.opts.modelProvider
-      ? { model_provider: this.opts.modelProvider }
-      : {};
-    const codex = new Codex({
-      config: { ...providerConfig, ...buildCodexConfig(this.effectiveTokens) },
-    });
+    const baseConfig = buildCodexConfig(this.effectiveTokens);
+    if (this.opts.modelProvider) {
+      baseConfig.model_provider = this.opts.modelProvider;
+    }
+    const codex = new Codex({ config: baseConfig });
     const threadOptions: ThreadOptions = {
       model: this.opts.model,
       workingDirectory: request.cwd,
