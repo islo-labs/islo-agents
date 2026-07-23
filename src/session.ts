@@ -16,7 +16,7 @@ import type {
   RuntimeOpts,
 } from "./runtimes/types.js";
 
-const SESSION_VERSION = 1;
+const SESSION_VERSION = 2;
 const SESSION_DIRECTORY = "/workspace/.islo-agents/sessions";
 
 export interface SessionRecord {

@@ -321,7 +321,7 @@ export function resolveRunPlan(
     cwd,
     runtime: {
       harness,
-      model: invocation.model ?? storedRuntime?.model ?? "gpt-5.6-sol",
+      model: invocation.model ?? storedRuntime?.model ?? "kimi-k2.7-code",
       budget: resolveCodexBudget(invocation, storedRuntime?.budget),
       ...(effort ? { reasoningEffort: effort } : {}),
     },
