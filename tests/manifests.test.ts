@@ -31,6 +31,10 @@ test("review defaults to Codex with Kimi K2.7 Code", () => {
     manifest,
     /\[job\.params\.max_budget_usd\][\s\S]*?default = 30/,
   );
+  assert.match(
+    manifest,
+    /\[job\.params\.model_provider\][\s\S]*?default = "islo_inference"/,
+  );
 });
 
 test("all jobs have shared budget and harness-specific params", () => {
@@ -43,6 +47,8 @@ test("all jobs have shared budget and harness-specific params", () => {
       `${role} must have max_turns`);
     assert.match(manifest, /\[job\.params\.reasoning_effort\]/,
       `${role} must have reasoning_effort`);
+    assert.match(manifest, /\[job\.params\.model_provider\]/,
+      `${role} must have model_provider`);
     assert.match(manifest, /--max-budget "{{max_budget_usd}}"/,
       `${role} must pass --max-budget outside the case`);
   }

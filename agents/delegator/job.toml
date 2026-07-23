@@ -42,6 +42,11 @@ type = "string"
 default = "claude-sonnet-4-5"
 description = "Model name understood by the selected harness."
 
+[job.params.model_provider]
+type = "string"
+default = ""
+description = "Inference provider routed through the Islo gateway. Empty uses the harness default."
+
 [job.params.max_turns]
 type = "integer"
 default = 120
@@ -133,7 +138,9 @@ exec = [
 set -euo pipefail
 cd /workspace/.islo-pack
 HARNESS="{{harness}}"
+MODEL_PROVIDER="{{model_provider}}"
 HARNESS_ARGS=(--reasoning-effort "{{reasoning_effort}}")
+[ -n "${MODEL_PROVIDER}" ] && HARNESS_ARGS+=(--model-provider "${MODEL_PROVIDER}")
 case "${HARNESS}" in
   claude)
     HARNESS_ARGS+=(--max-turns "{{max_turns}}")

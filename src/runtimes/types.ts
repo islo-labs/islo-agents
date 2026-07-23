@@ -29,6 +29,7 @@ export interface ClaudeRuntimeOpts {
   maxTurns: number;
   maxBudgetUsd: number;
   reasoningEffort?: ClaudeReasoningEffort;
+  modelProvider?: string;
 }
 
 export type CodexBudget =
@@ -40,6 +41,7 @@ export interface CodexRuntimeOpts {
   model: string;
   budget: CodexBudget;
   reasoningEffort?: CodexReasoningEffort;
+  modelProvider?: string;
 }
 
 export type RuntimeOpts = ClaudeRuntimeOpts | CodexRuntimeOpts;

@@ -103,6 +103,33 @@ test("resolveRunPlan applies Claude defaults", () => {
   assert.equal(plan.resumeSessionId, undefined);
 });
 
+test("resolveRunPlan threads --model-provider to Claude runtime", () => {
+  const plan = resolveRunPlan(
+    parseArgs(["--prompt", "p.md", "--model-provider", "islo_inference"]),
+  );
+
+  assert.deepEqual(plan.runtime, {
+    harness: "claude",
+    model: "claude-opus-4-6",
+    maxTurns: 150,
+    maxBudgetUsd: 45,
+    modelProvider: "islo_inference",
+  });
+});
+
+test("resolveRunPlan threads --model-provider to Codex runtime", () => {
+  const plan = resolveRunPlan(
+    parseArgs(["--prompt", "p.md", "--harness", "codex", "--model-provider", "islo_inference"]),
+  );
+
+  assert.deepEqual(plan.runtime, {
+    harness: "codex",
+    model: "kimi-k2.7-code",
+    budget: { kind: "approximate_usd", maxUsd: 45 },
+    modelProvider: "islo_inference",
+  });
+});
+
 test("resolveRunPlan applies Codex defaults", () => {
   const plan = resolveRunPlan(
     parseArgs(["--prompt", "p.md", "--harness", "codex"]),
@@ -269,6 +296,7 @@ test("session codec round-trips both runtime variants atomically", () => {
           maxTurns: 100,
           maxBudgetUsd: 10,
           reasoningEffort: "max",
+          modelProvider: "islo_inference",
         },
       },
       {
@@ -280,6 +308,7 @@ test("session codec round-trips both runtime variants atomically", () => {
           model: "kimi-k2.7-code",
           budget: { kind: "rollout_tokens", tokens: 222_222 },
           reasoningEffort: "minimal",
+          modelProvider: "islo_inference",
         },
       },
     ];

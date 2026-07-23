@@ -2,6 +2,10 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 
 import type { AgentRuntime, ClaudeRuntimeOpts, RunRequest } from "./types.js";
 
+const ISLO_INFERENCE_BASE_URLS: Readonly<Record<string, string>> = {
+  islo_inference: "https://gateway.islo.dev/inference/anthropic/v1",
+};
+
 interface ClaudeMessageInspection {
   progress: boolean;
   sessionId?: string;
@@ -50,7 +54,23 @@ export class ClaudeRuntime implements AgentRuntime {
     ].join(", ");
   }
 
+  private buildEnv(): Record<string, string | undefined> | undefined {
+    if (!this.opts.modelProvider) return undefined;
+    const baseUrl = ISLO_INFERENCE_BASE_URLS[this.opts.modelProvider];
+    if (!baseUrl) {
+      throw new Error(
+        `Unknown Claude model provider '${this.opts.modelProvider}'. ` +
+          `Supported: ${Object.keys(ISLO_INFERENCE_BASE_URLS).join(", ")}`,
+      );
+    }
+    return {
+      ...process.env,
+      ANTHROPIC_BASE_URL: baseUrl,
+    };
+  }
+
   async run(request: RunRequest): Promise<void> {
+    const env = this.buildEnv();
     for await (const message of query({
       prompt: request.prompt,
       options: {
@@ -66,6 +86,7 @@ export class ClaudeRuntime implements AgentRuntime {
         ...(request.resumeSessionId
           ? { resume: request.resumeSessionId }
           : {}),
+        ...(env ? { env } : {}),
       },
     })) {
       const inspection = inspectClaudeMessage(message);
