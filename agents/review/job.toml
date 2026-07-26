@@ -1,6 +1,6 @@
 [job]
 name = "review"
-version = "0.7.0"
+version = "0.8.0"
 description = "Automated PR code review."
 
 [job.params.repo]
@@ -28,18 +28,18 @@ pattern = "^[a-zA-Z0-9._/@^~-]+$"
 
 [job.params.harness]
 type = "string"
-default = "codex"
+default = "claude"
 description = "Agent harness: claude or codex."
 pattern = "^(claude|codex)$"
 
 [job.params.model]
 type = "string"
-default = "kimi-k2.7-code"
+default = "claude-opus-5"
 description = "Model name understood by the selected harness."
 
 [job.params.model_provider]
 type = "string"
-default = "islo_inference"
+default = ""
 description = "Inference provider routed through the Islo gateway. Empty uses the harness default."
 
 [job.params.max_turns]

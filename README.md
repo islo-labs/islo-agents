@@ -85,8 +85,10 @@ using only its session key and a handoff prompt.
 > model names at runtime.
 
 Roles / job names: `review`, `implementer`, `verify`, `babysit`, `delegator`.
-The review job defaults to Codex with `kimi-k2.7-code`; the other jobs default to
-Claude. Every job exposes a `harness` parameter for explicit overrides.
+All jobs default to Claude: `review` on `claude-opus-5`, `implementer` /
+`verify` / `babysit` on `claude-opus-4-6`, and `delegator` on
+`claude-sonnet-4-5`. Every job exposes a `harness` parameter for explicit
+overrides.
 
 Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; default `main`). Override with `--param agents_git_ref=…` when pinning.
 
