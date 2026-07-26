@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createRuntime } from "./runtimes/index.js";
+import { INFERENCE_CATALOG_MODELS } from "./runtimes/codex.js";
 import type {
   ClaudeReasoningEffort,
   CodexBudget,
@@ -32,6 +33,7 @@ type SdkKnowledgeLevel = NonNullable<KnowledgeListRequest["level"]>;
 interface RuntimeOverrides {
   harness?: Harness;
   model?: string;
+  modelProvider?: string;
   cwd?: string;
   maxTurns?: number;
   maxBudgetUsd?: number;
@@ -92,12 +94,28 @@ function positiveInteger(raw: string | undefined, flag: string): number | undefi
   return n;
 }
 
+function validateModelProvider(model: string, provider: string | undefined): void {
+  const isCatalogModel = INFERENCE_CATALOG_MODELS.has(model);
+  if (isCatalogModel && provider !== "islo_inference") {
+    throw new Error(
+      `Model '${model}' requires --model-provider islo_inference`,
+    );
+  }
+  if (!isCatalogModel && provider === "islo_inference") {
+    throw new Error(
+      `Model '${model}' is not in the Islo inference catalog. ` +
+        `Available: ${[...INFERENCE_CATALOG_MODELS].join(", ")}`,
+    );
+  }
+}
+
 const CLI_OPTIONS = {
   prompt:                  { type: "string" as const },
   resume:                  { type: "boolean" as const },
   harness:                 { type: "string" as const },
   cwd:                     { type: "string" as const },
   model:                   { type: "string" as const },
+  "model-provider":        { type: "string" as const },
   "max-turns":             { type: "string" as const },
   "max-budget":            { type: "string" as const },
   "rollout-budget-tokens": { type: "string" as const },
@@ -136,7 +154,7 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): Invocation {
   }
   if (!resume && !values.prompt) {
     throw new Error(
-      "Usage: tsx src/agent.ts --prompt <path> [--resume] [--session-key <key>] [--harness claude|codex] [--cwd <dir>] [--model <m>] [--max-turns <n>] [--max-budget <n>] [--rollout-budget-tokens <n>] [--reasoning-effort low|medium|high|xhigh|max] [--context-file <path>]... [--var KEY=VALUE]... [\"prompt text\"]",
+      "Usage: tsx src/agent.ts --prompt <path> [--resume] [--session-key <key>] [--harness claude|codex] [--cwd <dir>] [--model <m>] [--model-provider <p>] [--max-turns <n>] [--max-budget <n>] [--rollout-budget-tokens <n>] [--reasoning-effort low|medium|high|xhigh|max] [--context-file <path>]... [--var KEY=VALUE]... [\"prompt text\"]",
     );
   }
 
@@ -166,6 +184,7 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): Invocation {
     ...(values.cwd ? { cwd: values.cwd } : {}),
     ...(rawHarness ? { harness: rawHarness } : {}),
     ...(values.model ? { model: values.model } : {}),
+    ...(values["model-provider"] ? { modelProvider: values["model-provider"] } : {}),
     maxTurns: positiveInteger(values["max-turns"], "--max-turns"),
     maxBudgetUsd: positiveNumber(values["max-budget"], "--max-budget"),
     rolloutBudgetTokens: positiveInteger(
@@ -291,16 +310,21 @@ export function resolveRunPlan(
         `Reasoning effort '${effort}' is not supported by the claude harness`,
       );
     }
+    const claudeProvider =
+      invocation.modelProvider ?? storedRuntime?.modelProvider;
+    const claudeModel =
+      invocation.model ?? storedRuntime?.model ?? "claude-opus-4-6";
+    validateModelProvider(claudeModel, claudeProvider);
     return {
       cwd,
       runtime: {
         harness,
-        model:
-          invocation.model ?? storedRuntime?.model ?? "claude-opus-4-6",
+        model: claudeModel,
         maxTurns: invocation.maxTurns ?? storedRuntime?.maxTurns ?? 150,
         maxBudgetUsd:
           invocation.maxBudgetUsd ?? storedRuntime?.maxBudgetUsd ?? 45,
         ...(effort ? { reasoningEffort: effort } : {}),
+        ...(claudeProvider ? { modelProvider: claudeProvider } : {}),
       },
       ...(resumeSessionId ? { resumeSessionId } : {}),
     };
@@ -317,13 +341,19 @@ export function resolveRunPlan(
       `Reasoning effort '${effort}' is not supported by the codex harness`,
     );
   }
+  const codexProvider =
+    invocation.modelProvider ?? storedRuntime?.modelProvider;
+  const codexModel =
+    invocation.model ?? storedRuntime?.model ?? "kimi-k2.7-code";
+  validateModelProvider(codexModel, codexProvider);
   return {
     cwd,
     runtime: {
       harness,
-      model: invocation.model ?? storedRuntime?.model ?? "gpt-5.6-sol",
+      model: codexModel,
       budget: resolveCodexBudget(invocation, storedRuntime?.budget),
       ...(effort ? { reasoningEffort: effort } : {}),
+      ...(codexProvider ? { modelProvider: codexProvider } : {}),
     },
     ...(resumeSessionId ? { resumeSessionId } : {}),
   };

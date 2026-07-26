@@ -21,14 +21,14 @@ test("parseArgs returns a typed start invocation", () => {
   const invocation = parseArgs([
     "--prompt", "agents/review/prompt.md",
     "--harness", "codex",
-    "--model", "gpt-5.6-sol",
+    "--model", "kimi-k2.7-code",
     "--max-budget", "10",
     "--reasoning-effort", "high",
   ]);
 
   assert.equal(invocation.mode, "start");
   assert.equal(invocation.harness, "codex");
-  assert.equal(invocation.model, "gpt-5.6-sol");
+  assert.equal(invocation.model, "kimi-k2.7-code");
   assert.equal(invocation.maxBudgetUsd, 10);
   assert.equal(invocation.reasoningEffort, "high");
   if (invocation.mode === "start") {
@@ -103,14 +103,90 @@ test("resolveRunPlan applies Claude defaults", () => {
   assert.equal(plan.resumeSessionId, undefined);
 });
 
-test("resolveRunPlan applies Codex defaults", () => {
+test("resolveRunPlan threads --model-provider to Claude runtime", () => {
   const plan = resolveRunPlan(
-    parseArgs(["--prompt", "p.md", "--harness", "codex"]),
+    parseArgs([
+      "--prompt", "p.md",
+      "--model-provider", "islo_inference",
+      "--model", "kimi-k2.7-code",
+    ]),
+  );
+
+  assert.deepEqual(plan.runtime, {
+    harness: "claude",
+    model: "kimi-k2.7-code",
+    maxTurns: 150,
+    maxBudgetUsd: 45,
+    modelProvider: "islo_inference",
+  });
+});
+
+test("resolveRunPlan rejects Claude islo_inference with non-catalog model", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs(["--prompt", "p.md", "--model-provider", "islo_inference"]),
+      ),
+    /not in the Islo inference catalog/,
+  );
+});
+
+test("resolveRunPlan rejects Claude catalog model without islo_inference", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs(["--prompt", "p.md", "--model", "kimi-k2.7-code"]),
+      ),
+    /requires --model-provider islo_inference/,
+  );
+});
+
+test("resolveRunPlan threads --model-provider to Codex runtime", () => {
+  const plan = resolveRunPlan(
+    parseArgs(["--prompt", "p.md", "--harness", "codex", "--model-provider", "islo_inference"]),
   );
 
   assert.deepEqual(plan.runtime, {
     harness: "codex",
-    model: "gpt-5.6-sol",
+    model: "kimi-k2.7-code",
+    budget: { kind: "approximate_usd", maxUsd: 45 },
+    modelProvider: "islo_inference",
+  });
+});
+
+test("resolveRunPlan rejects Codex inference-catalog model without provider", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs(["--prompt", "p.md", "--harness", "codex"]),
+      ),
+    /requires --model-provider islo_inference/,
+  );
+});
+
+test("resolveRunPlan rejects Codex islo_inference with non-catalog model", () => {
+  assert.throws(
+    () =>
+      resolveRunPlan(
+        parseArgs([
+          "--prompt", "p.md",
+          "--harness", "codex",
+          "--model-provider", "islo_inference",
+          "--model", "gpt-5.6-sol",
+        ]),
+      ),
+    /not in the Islo inference catalog/,
+  );
+});
+
+test("resolveRunPlan accepts Codex with explicit non-catalog model and no provider", () => {
+  const plan = resolveRunPlan(
+    parseArgs(["--prompt", "p.md", "--harness", "codex", "--model", "o4-mini"]),
+  );
+
+  assert.deepEqual(plan.runtime, {
+    harness: "codex",
+    model: "o4-mini",
     budget: { kind: "approximate_usd", maxUsd: 45 },
   });
 });
@@ -125,9 +201,10 @@ test("resolveRunPlan restores a complete stored session", () => {
     cwd: "/workspace",
     runtime: {
       harness: "codex",
-      model: "gpt-5.6-sol",
+      model: "kimi-k2.7-code",
       budget: { kind: "approximate_usd", maxUsd: 10 },
       reasoningEffort: "high",
+      modelProvider: "islo_inference",
     },
   };
 
@@ -150,8 +227,9 @@ test("a CLI USD budget replaces stored rollout tokens", () => {
     cwd: "/workspace",
     runtime: {
       harness: "codex",
-      model: "gpt-5.6-sol",
+      model: "kimi-k2.7-code",
       budget: { kind: "rollout_tokens", tokens: 500_000 },
+      modelProvider: "islo_inference",
     },
   };
 
@@ -170,6 +248,7 @@ test("resolveRunPlan rejects ambiguous and cross-harness controls", () => {
         parseArgs([
           "--prompt", "p.md",
           "--harness", "codex",
+          "--model-provider", "islo_inference",
           "--max-budget", "5",
           "--rollout-budget-tokens", "1000",
         ]),
@@ -182,6 +261,7 @@ test("resolveRunPlan rejects ambiguous and cross-harness controls", () => {
         parseArgs([
           "--prompt", "p.md",
           "--harness", "codex",
+          "--model-provider", "islo_inference",
           "--max-turns", "10",
         ]),
       ),
@@ -237,7 +317,7 @@ test("resolveRunPlan rejects a resume harness mismatch", () => {
     cwd: "/workspace",
     runtime: {
       harness: "codex",
-      model: "gpt-5.6-sol",
+      model: "kimi-k2.7-code",
       budget: { kind: "approximate_usd", maxUsd: 10 },
     },
   };
@@ -269,6 +349,7 @@ test("session codec round-trips both runtime variants atomically", () => {
           maxTurns: 100,
           maxBudgetUsd: 10,
           reasoningEffort: "max",
+          modelProvider: "islo_inference",
         },
       },
       {
@@ -277,9 +358,10 @@ test("session codec round-trips both runtime variants atomically", () => {
         cwd: "/workspace",
         runtime: {
           harness: "codex",
-          model: "gpt-5.6-sol",
+          model: "kimi-k2.7-code",
           budget: { kind: "rollout_tokens", tokens: 222_222 },
           reasoningEffort: "minimal",
+          modelProvider: "islo_inference",
         },
       },
     ];
@@ -320,7 +402,7 @@ test("session loader rejects provider-incompatible persisted settings", () => {
     writeFileSync(
       path,
       JSON.stringify({
-        version: 1,
+        version: 2,
         session_key: "key",
         session_id: "session",
         cwd: "/workspace",

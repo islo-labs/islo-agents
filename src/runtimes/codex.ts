@@ -17,11 +17,22 @@ interface CodexEventInspection {
  * rollout limit. Codex 0.144.5 excludes billed cached input from rollout
  * accounting, so this is not a hard spending cap.
  */
+export const INFERENCE_CATALOG_MODELS: ReadonlySet<string> = new Set([
+  "kimi-k2.7-code",
+  "kimi-k2.7-code-fast",
+  "minimax-m3",
+  "qwen3.7-plus",
+]);
+
 export const CODEX_MAX_TOKEN_PRICE_PER_MILLION_USD: Readonly<Record<string, number>> = {
   "gpt-5.6": 45,
   "gpt-5.6-sol": 45,
   "gpt-5.6-terra": 22.5,
   "gpt-5.6-luna": 9,
+  "kimi-k2.7-code": 4,
+  "kimi-k2.7-code-fast": 8,
+  "minimax-m3": 1.2,
+  "qwen3.7-plus": 1.6,
 };
 
 export function usdToTokens(usd: number, model: string): number {
@@ -128,9 +139,11 @@ export class CodexRuntime implements AgentRuntime {
   }
 
   async run(request: RunRequest): Promise<void> {
-    const codex = new Codex({
-      config: buildCodexConfig(this.effectiveTokens),
-    });
+    const baseConfig = buildCodexConfig(this.effectiveTokens);
+    if (this.opts.modelProvider) {
+      baseConfig.model_provider = this.opts.modelProvider;
+    }
+    const codex = new Codex({ config: baseConfig });
     const threadOptions: ThreadOptions = {
       model: this.opts.model,
       workingDirectory: request.cwd,

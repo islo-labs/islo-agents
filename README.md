@@ -30,7 +30,7 @@ Select the coding-agent runtime independently from its model. Three invocation p
 # First run — render template, create session
 npx tsx src/agent.ts --prompt agents/review/prompt.md \
   --session-key "review-owner/repo-42" --cwd /workspace \
-  --harness codex --model gpt-5.6-sol --max-budget 10
+  --harness codex --model kimi-k2.7-code --max-budget 10
 
 # Resume — positional text sent to existing session
 npx tsx src/agent.ts --resume --session-key "review-owner/repo-42" \
@@ -85,7 +85,7 @@ using only its session key and a handoff prompt.
 > model names at runtime.
 
 Roles / job names: `review`, `implementer`, `verify`, `babysit`, `delegator`.
-The review job defaults to Codex with `gpt-5.6-sol`; the other jobs default to
+The review job defaults to Codex with `kimi-k2.7-code`; the other jobs default to
 Claude. Every job exposes a `harness` parameter for explicit overrides.
 
 Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; default `main`). Override with `--param agents_git_ref=…` when pinning.

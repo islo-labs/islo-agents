@@ -16,7 +16,7 @@ import type {
   RuntimeOpts,
 } from "./runtimes/types.js";
 
-const SESSION_VERSION = 1;
+const SESSION_VERSION = 2;
 const SESSION_DIRECTORY = "/workspace/.islo-agents/sessions";
 
 export interface SessionRecord {
@@ -85,6 +85,9 @@ function parseClaudeRuntime(value: JsonRecord): ClaudeRuntimeOpts | undefined {
     ...(value.reasoning_effort
       ? { reasoningEffort: value.reasoning_effort }
       : {}),
+    ...(typeof value.model_provider === "string" && value.model_provider.length > 0
+      ? { modelProvider: value.model_provider }
+      : {}),
   };
 }
 
@@ -117,6 +120,9 @@ function parseCodexRuntime(value: JsonRecord): CodexRuntimeOpts | undefined {
     budget,
     ...(value.reasoning_effort
       ? { reasoningEffort: value.reasoning_effort }
+      : {}),
+    ...(typeof value.model_provider === "string" && value.model_provider.length > 0
+      ? { modelProvider: value.model_provider }
       : {}),
   };
 }
@@ -195,6 +201,9 @@ function runtimeJson(runtime: RuntimeOpts): JsonRecord {
       ...(runtime.reasoningEffort
         ? { reasoning_effort: runtime.reasoningEffort }
         : {}),
+      ...(runtime.modelProvider
+        ? { model_provider: runtime.modelProvider }
+        : {}),
     };
   }
 
@@ -213,6 +222,9 @@ function runtimeJson(runtime: RuntimeOpts): JsonRecord {
           },
     ...(runtime.reasoningEffort
       ? { reasoning_effort: runtime.reasoningEffort }
+      : {}),
+    ...(runtime.modelProvider
+      ? { model_provider: runtime.modelProvider }
       : {}),
   };
 }

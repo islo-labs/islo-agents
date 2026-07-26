@@ -16,7 +16,7 @@ test("agent job manifests parse", () => {
   }
 });
 
-test("review defaults to Codex with GPT-5.6 Sol", () => {
+test("review defaults to Codex with Kimi K2.7 Code", () => {
   const manifest = readFileSync("agents/review/job.toml", "utf-8");
 
   assert.match(
@@ -25,11 +25,15 @@ test("review defaults to Codex with GPT-5.6 Sol", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.model\][\s\S]*?default = "gpt-5\.6-sol"/,
+    /\[job\.params\.model\][\s\S]*?default = "kimi-k2\.7-code"/,
   );
   assert.match(
     manifest,
     /\[job\.params\.max_budget_usd\][\s\S]*?default = 30/,
+  );
+  assert.match(
+    manifest,
+    /\[job\.params\.model_provider\][\s\S]*?default = "islo_inference"/,
   );
 });
 
@@ -57,6 +61,8 @@ test("all jobs have shared budget and harness-specific params", () => {
       `${role} must have max_turns`);
     assert.match(manifest, /\[job\.params\.reasoning_effort\]/,
       `${role} must have reasoning_effort`);
+    assert.match(manifest, /\[job\.params\.model_provider\]/,
+      `${role} must have model_provider`);
     assert.match(manifest, /--max-budget "{{max_budget_usd}}"/,
       `${role} must pass --max-budget outside the case`);
   }
