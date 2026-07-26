@@ -16,16 +16,16 @@ test("agent job manifests parse", () => {
   }
 });
 
-test("review defaults to Codex with Kimi K2.7 Code", () => {
+test("review defaults to Claude with Opus 5", () => {
   const manifest = readFileSync("agents/review/job.toml", "utf-8");
 
   assert.match(
     manifest,
-    /\[job\.params\.harness\][\s\S]*?default = "codex"/,
+    /\[job\.params\.harness\][\s\S]*?default = "claude"/,
   );
   assert.match(
     manifest,
-    /\[job\.params\.model\][\s\S]*?default = "kimi-k2\.7-code"/,
+    /\[job\.params\.model\][\s\S]*?default = "claude-opus-5"/,
   );
   assert.match(
     manifest,
@@ -33,7 +33,7 @@ test("review defaults to Codex with Kimi K2.7 Code", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.model_provider\][\s\S]*?default = "islo_inference"/,
+    /\[job\.params\.model_provider\][\s\S]*?default = ""/,
   );
 });
 
