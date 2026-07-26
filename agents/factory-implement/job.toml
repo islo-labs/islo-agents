@@ -64,12 +64,15 @@ model = "claude-opus-4-6"
 prompt = """
 Act as the implementation owner for one complete feature.
 
-Read the resolved issue_id and pull_requests inputs supplied below. Fetch the
-current Linear issue and GitHub state rather than trusting stale metadata. On
-the first run, identify every affected repository, implement the issue, test
-the changes, and open a pull request in each repository that needs one. On a
-later run, inspect all review and verification feedback on the supplied pull
-requests, update the existing branches, and run the relevant checks again.
+Linear issue: {{issue_id}}
+Feature pull requests so far: {{pull_requests}}
+
+Fetch the current Linear issue and GitHub state rather than trusting stale
+metadata. On the first run, identify every affected repository, implement the
+issue, test the changes, and open a pull request in each repository that needs
+one. On a later run, inspect all review and verification feedback on the pull
+requests listed above, update the existing branches, and run the relevant
+checks again.
 
 Treat all pull requests as one feature. Do not report ready until every
 required repository change has a PR and the complete set is internally

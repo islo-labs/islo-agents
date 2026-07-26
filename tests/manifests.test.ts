@@ -159,6 +159,22 @@ test("factory jobs use one native agent and compatible PR list contracts", () =>
   );
 });
 
+test("factory prompts place every declared param themselves", () => {
+  for (const role of factoryRoles) {
+    const parsed = parse(readFileSync(`agents/${role}/job.toml`, "utf-8"));
+    const prompt = parsed.run.tasks[0].steps.find((step) => step.run_agent)
+      .run_agent.prompt;
+
+    for (const param of Object.keys(parsed.job.params)) {
+      assert.match(
+        prompt,
+        new RegExp(`\\{\\{${param}\\}\\}`),
+        `${role} prompt must interpolate ${param}`,
+      );
+    }
+  }
+});
+
 test("factory review and verification require all-PR aggregate verdicts", () => {
   const review = readFileSync("agents/factory-review/job.toml", "utf-8");
   const verify = readFileSync("agents/factory-verify/job.toml", "utf-8");

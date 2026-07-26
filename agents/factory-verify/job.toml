@@ -42,7 +42,8 @@ mode = "session"
 harness = "claude"
 model = "claude-opus-4-6"
 prompt = """
-Verify the integrated feature represented by all supplied pull_requests.
+Verify the integrated feature represented by these pull requests:
+{{pull_requests}}
 
 Fetch live GitHub metadata and check out every current PR head. Determine the
 affected stack, run each repository's relevant checks, and exercise the

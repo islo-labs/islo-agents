@@ -42,7 +42,8 @@ mode = "session"
 harness = "claude"
 model = "claude-opus-4-6"
 prompt = """
-Review the supplied pull_requests as one coherent feature.
+Review these pull requests as one coherent feature:
+{{pull_requests}}
 
 Fetch every PR from GitHub and inspect its current head, diff, checks, existing
 threads, and cross-repository assumptions. Review all URLs before deciding.
