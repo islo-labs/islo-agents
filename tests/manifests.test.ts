@@ -183,6 +183,22 @@ test("factory review and verification require all-PR aggregate verdicts", () => 
   assert.match(verify, /Return passed only after every PR/);
 });
 
+test("factory review and verification post to GitHub before their verdict", () => {
+  const review = readFileSync("agents/factory-review/job.toml", "utf-8");
+  const verify = readFileSync("agents/factory-verify/job.toml", "utf-8");
+
+  assert.match(review, /gh pr review <pr-url> --comment/);
+  assert.match(verify, /gh pr comment <pr-url>/);
+
+  for (const role of factoryRoles) {
+    assert.doesNotMatch(
+      readFileSync(`agents/${role}/job.toml`, "utf-8"),
+      /--(add|remove)-label/,
+      `${role} must not drive islo-loop labels; the line owns orchestration`,
+    );
+  }
+});
+
 test("feature-delivery maps implement PRs through both feedback loops", () => {
   const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
   assert.doesNotThrow(() => parse(line));

@@ -47,8 +47,13 @@ Review these pull requests as one coherent feature:
 
 Fetch every PR from GitHub and inspect its current head, diff, checks, existing
 threads, and cross-repository assumptions. Review all URLs before deciding.
-Post concrete findings to the relevant PRs using normal GitHub review
-mechanisms. Do not use orchestration labels.
+
+Post your findings on every pull request before you return a verdict:
+
+    gh pr review <pr-url> --comment --body "<findings>"
+
+Use --comment; GitHub blocks --approve and --request-changes on self-authored
+pull requests. Do not use orchestration labels.
 
 Return approved only when every PR passes and the combined feature is
 consistent. Return needs_changes when any actionable code change is needed.

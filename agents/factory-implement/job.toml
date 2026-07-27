@@ -74,6 +74,10 @@ one. On a later run, inspect all review and verification feedback on the pull
 requests listed above, update the existing branches, and run the relevant
 checks again.
 
+Run targeted checks for the code you changed rather than building every target
+in a workspace, and remove build artifact directories when you no longer need
+them. This sandbox persists across iterations on a fixed-size disk.
+
 Treat all pull requests as one feature. Do not report ready until every
 required repository change has a PR and the complete set is internally
 consistent. Always return the full current PR URL list, including unchanged

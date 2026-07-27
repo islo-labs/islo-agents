@@ -47,8 +47,16 @@ Verify the integrated feature represented by these pull requests:
 
 Fetch live GitHub metadata and check out every current PR head. Determine the
 affected stack, run each repository's relevant checks, and exercise the
-cross-repository behavior end to end where practical. Publish detailed
-reports, logs, and comments to the relevant external systems.
+cross-repository behavior end to end where practical.
+
+Post your verification report as a comment on every pull request before you
+return a verdict:
+
+    gh pr comment <pr-url> --body "<report>"
+
+A failed verdict must include the command you ran and its real output so the
+implementer can reproduce it. Do not return failed without posting that
+evidence.
 
 Return passed only after every PR and the integrated feature pass. Return
 failed when any reproducible code or integration failure needs implementation
