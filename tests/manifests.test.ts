@@ -94,7 +94,9 @@ test("delegator starts a worker when a matching sandbox has no session", () => {
 test("verifier preserves earlier screenshots and screen recordings", () => {
   const prompt = readFileSync("agents/verify/prompt.md", "utf-8");
 
+  assert.match(prompt, /short slug that describes the scenario and step/);
   assert.match(prompt, /screenshot and screen recording[\s\S]*fresh UUID/);
+  assert.match(prompt, /filename must identify what the evidence shows/);
   assert.match(prompt, /`screenshot\.png` or `recording\.webm`/);
   assert.match(prompt, /never use `--clobber`/);
 });
