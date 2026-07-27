@@ -32,6 +32,7 @@ to = "review"
 when = "result.outputs.implementation_result == 'ready'"
 
 [transitions.params]
+issue_id = "inputs.issue_id"
 pull_requests = "outputs.implement.pull_requests"
 
 [[transitions]]
@@ -41,6 +42,7 @@ to = "verify"
 when = "result.outputs.review_result == 'approved'"
 
 [transitions.params]
+issue_id = "inputs.issue_id"
 pull_requests = "outputs.implement.pull_requests"
 
 [[transitions]]

@@ -199,6 +199,40 @@ test("factory review and verification post to GitHub before their verdict", () =
   }
 });
 
+test("factory sandboxes outlive their run so later rounds can reuse them", () => {
+  for (const role of factoryRoles) {
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+
+    assert.match(manifest, /teardown_on_complete = false/, `${role} must not delete its sandbox`);
+    assert.match(
+      manifest,
+      new RegExp(`mode = "ensure"\\nname = "${role}-\\{\\{issue_id\\}\\}"`),
+      `${role} must key its sandbox on the issue so rounds share one`,
+    );
+    assert.match(manifest, /delete_after = 604800/, `${role} must keep the sandbox for a week`);
+    assert.match(
+      manifest,
+      /name = "pause-sandbox"\npause = true/,
+      `${role} must pause rather than leave the sandbox running`,
+    );
+  }
+});
+
+test("every stage that needs the issue gets it routed in", () => {
+  const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
+  const needsIssue = factoryRoles.filter((role) =>
+    readFileSync(`agents/${role}/job.toml`, "utf-8").includes("[job.params.issue_id]"),
+  );
+
+  assert.deepEqual(needsIssue, factoryRoles);
+  // Sandbox names interpolate issue_id, so an unmapped transition would name a
+  // sandbox after a blank and collapse separate issues into one.
+  assert.equal(
+    (line.match(/issue_id = "inputs\.issue_id"/g) ?? []).length,
+    4,
+  );
+});
+
 test("feature-delivery maps implement PRs through both feedback loops", () => {
   const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
   assert.doesNotThrow(() => parse(line));
