@@ -27,7 +27,6 @@ image = "docker.io/library/islo-runner:latest"
 snapshot_name = "islo-code"
 vcpus = 4
 memory_mb = 8192
-disk_gb = 80
 gateway_profile = "default"
 init = { type = "full" }
 
