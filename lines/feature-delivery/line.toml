@@ -10,7 +10,7 @@ ref = "factory-operator"
 type = "manual"
 
 [limits]
-max_iterations = 10
+max_iterations = 20
 timeout = "24h"
 
 [[stages]]
