@@ -86,7 +86,7 @@ The stack has been booted with the PR branch already checked out and running. Yo
 
    Upload screenshots to a GitHub release on the PR's repo (create one if needed), then reference them by URL.
 
-   Give every screenshot and screen recording a short slug that describes the scenario and step, then append a fresh UUID. For example, use `verification-{{PR_NUMBER}}-login-submit-success-$(uuidgen).png` or `verification-{{PR_NUMBER}}-checkout-validation-flow-$(uuidgen).webm`. The filename must identify what the evidence shows without opening it. Never upload a fixed name such as `screenshot.png` or `recording.webm`, and never use `--clobber`. Evidence from previous verification runs must remain available.
+   Give every screenshot and screen recording a short slug that describes the scenario and step, then append a fresh UUID from `/proc/sys/kernel/random/uuid`. For example, use `verification-{{PR_NUMBER}}-login-submit-success-$(cat /proc/sys/kernel/random/uuid).png` or `verification-{{PR_NUMBER}}-checkout-validation-flow-$(cat /proc/sys/kernel/random/uuid).webm`. The filename must identify what the evidence shows without opening it. Never upload a fixed name such as `screenshot.png` or `recording.webm`. Never `--clobber` an asset from an earlier run; only re-upload the same unique name if your own upload failed midway. Evidence from previous verification runs must remain available.
 
    - **PASSED**: Post the report comment and add the `passed-verify` label:
      ```bash

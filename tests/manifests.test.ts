@@ -96,7 +96,9 @@ test("verifier preserves earlier screenshots and screen recordings", () => {
 
   assert.match(prompt, /short slug that describes the scenario and step/);
   assert.match(prompt, /screenshot and screen recording[\s\S]*fresh UUID/);
+  assert.match(prompt, /\$\(cat \/proc\/sys\/kernel\/random\/uuid\)/);
   assert.match(prompt, /filename must identify what the evidence shows/);
   assert.match(prompt, /`screenshot\.png` or `recording\.webm`/);
-  assert.match(prompt, /never use `--clobber`/);
+  assert.match(prompt, /Never `--clobber` an asset from an earlier run/);
+  assert.match(prompt, /only re-upload the same unique name if your own upload failed midway/);
 });
