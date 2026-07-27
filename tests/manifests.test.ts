@@ -91,9 +91,10 @@ test("delegator starts a worker when a matching sandbox has no session", () => {
   assert.match(prompt, /Prefer re-running the role's[\s\S]*durable job/);
 });
 
-test("verifier preserves earlier screen recordings", () => {
+test("verifier preserves earlier screenshots and screen recordings", () => {
   const prompt = readFileSync("agents/verify/prompt.md", "utf-8");
 
-  assert.match(prompt, /screen recording[\s\S]*fresh UUID/);
-  assert.match(prompt, /Never upload a fixed name[\s\S]*use `--clobber`/);
+  assert.match(prompt, /screenshot and screen recording[\s\S]*fresh UUID/);
+  assert.match(prompt, /`screenshot\.png` or `recording\.webm`/);
+  assert.match(prompt, /never use `--clobber`/);
 });
