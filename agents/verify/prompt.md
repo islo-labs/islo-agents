@@ -86,6 +86,8 @@ The stack has been booted with the PR branch already checked out and running. Yo
 
    Upload screenshots to a GitHub release on the PR's repo (create one if needed), then reference them by URL.
 
+   For every screen recording, generate a fresh UUID and include it in the uploaded asset's filename, for example `verification-{{PR_NUMBER}}-$(uuidgen).webm`. Never upload a fixed name such as `recording.webm` or use `--clobber`. Previous verification recordings must remain available.
+
    - **PASSED**: Post the report comment and add the `passed-verify` label:
      ```bash
      gh pr comment {{PR_NUMBER}} --repo {{REPO}} --body-file /tmp/verify-report.md
