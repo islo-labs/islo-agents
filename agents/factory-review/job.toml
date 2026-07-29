@@ -1,6 +1,6 @@
 [job]
 name = "factory-review"
-version = "0.1.0"
+version = "0.2.0"
 description = "Review every pull request in a feature as one aggregate change."
 
 [job.params.issue_id]
@@ -13,6 +13,11 @@ type = "array"
 items = "string"
 required = true
 description = "Complete list of GitHub pull request URLs for the feature."
+
+[job.params.model]
+type = "string"
+default = "claude-opus-4-6"
+description = "Model name for the agent harness."
 
 [outputs.review_result]
 type = "string"
@@ -50,33 +55,11 @@ timeout = 7200
 [run.tasks.steps.run_agent]
 mode = "session"
 harness = "claude"
-model = "claude-opus-4-6"
-prompt = """
-Review these pull requests as one coherent feature:
-{{pull_requests}}
-
-They implement Linear issue {{issue_id}}. Read the issue so you can judge
-whether the feature does what was actually asked for.
-
-Fetch every PR from GitHub and inspect its current head, diff, checks, existing
-threads, and cross-repository assumptions. Review all URLs before deciding.
-
-This sandbox persists across review rounds for this issue, so checkouts from an
-earlier round may already be on disk. Re-fetch every PR head instead of
-trusting what you find there.
-
-Post your findings on every pull request before you return a verdict:
-
-    gh pr review <pr-url> --comment --body "<findings>"
-
-Use --comment; GitHub blocks --approve and --request-changes on self-authored
-pull requests. Do not use orchestration labels.
-
-Return approved only when every PR passes and the combined feature is
-consistent. Return needs_changes when any actionable code change is needed.
-Return blocked only when review cannot complete because required information
-or infrastructure is unavailable.
-"""
+model = "{{model}}"
+prompt_ref = "factory-review-prompt"
+resume_prompt = "The pull requests have been updated. Review the latest changes across all PRs."
+knowledge = ["islo-integrations"]
+session = "factory-review-{{issue_id}}"
 
 [[run.tasks.steps]]
 name = "pause-sandbox"

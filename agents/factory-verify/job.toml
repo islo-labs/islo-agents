@@ -1,6 +1,6 @@
 [job]
 name = "factory-verify"
-version = "0.1.0"
+version = "0.2.0"
 description = "Verify an integrated feature across its complete pull-request set."
 
 [job.params.issue_id]
@@ -13,6 +13,11 @@ type = "array"
 items = "string"
 required = true
 description = "Complete list of GitHub pull request URLs for the feature."
+
+[job.params.model]
+type = "string"
+default = "claude-opus-4-6"
+description = "Model name for the agent harness."
 
 [outputs.verification_result]
 type = "string"
@@ -50,37 +55,11 @@ timeout = 10800
 [run.tasks.steps.run_agent]
 mode = "session"
 harness = "claude"
-model = "claude-opus-4-6"
-prompt = """
-Verify the integrated feature represented by these pull requests:
-{{pull_requests}}
-
-They implement Linear issue {{issue_id}}. Read the issue so you verify the
-behavior it asked for, not only that the code builds.
-
-Fetch live GitHub metadata and check out every current PR head. Determine the
-affected stack, run each repository's relevant checks, and exercise the
-cross-repository behavior end to end where practical.
-
-This sandbox persists across verification rounds for this issue, so earlier
-checkouts and build artifacts may already be on disk. Re-fetch every PR head
-before you trust anything there, and delete build artifact directories you no
-longer need so the disk survives later rounds.
-
-Post your verification report as a comment on every pull request before you
-return a verdict:
-
-    gh pr comment <pr-url> --body "<report>"
-
-A failed verdict must include the command you ran and its real output so the
-implementer can reproduce it. Do not return failed without posting that
-evidence.
-
-Return passed only after every PR and the integrated feature pass. Return
-failed when any reproducible code or integration failure needs implementation
-work. Return blocked only when verification cannot run because required
-infrastructure or credentials are unavailable.
-"""
+model = "{{model}}"
+prompt_ref = "factory-verify-prompt"
+resume_prompt = "The pull requests have been updated after verification failure. Re-fetch PR heads, re-run checks, and verify the integrated feature again."
+knowledge = ["islo-integrations", "fullstack-env"]
+session = "factory-verify-{{issue_id}}"
 
 [[run.tasks.steps]]
 name = "pause-sandbox"

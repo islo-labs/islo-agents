@@ -1,6 +1,6 @@
 [job]
 name = "factory-implement"
-version = "0.1.0"
+version = "0.2.0"
 description = "Implement one issue as a coherent feature across one or more repositories."
 
 [job.params.issue_id]
@@ -13,6 +13,11 @@ type = "array"
 items = "string"
 default = []
 description = "Current complete feature PR set for feedback-loop iterations."
+
+[job.params.model]
+type = "string"
+default = "claude-opus-4-6"
+description = "Model name for the agent harness."
 
 [outputs.implementation_result]
 type = "string"
@@ -49,41 +54,17 @@ delete_after = 604800
 name = "implement"
 
 [[run.tasks.steps]]
-name = "prepare-workspace"
-timeout = 30
-exec = ["bash", "-lc", "mkdir -p /workspace/feature"]
-
-[[run.tasks.steps]]
 name = "run-agent"
 timeout = 10800
 
 [run.tasks.steps.run_agent]
 mode = "session"
 harness = "claude"
-model = "claude-opus-4-6"
-prompt = """
-Act as the implementation owner for one complete feature.
-
-Linear issue: {{issue_id}}
-Feature pull requests so far: {{pull_requests}}
-
-Fetch the current Linear issue and GitHub state rather than trusting stale
-metadata. On the first run, identify every affected repository, implement the
-issue, test the changes, and open a pull request in each repository that needs
-one. On a later run, inspect all review and verification feedback on the pull
-requests listed above, update the existing branches, and run the relevant
-checks again.
-
-Run targeted checks for the code you changed rather than building every target
-in a workspace, and remove build artifact directories when you no longer need
-them. This sandbox persists across iterations on a fixed-size disk.
-
-Treat all pull requests as one feature. Do not report ready until every
-required repository change has a PR and the complete set is internally
-consistent. Always return the full current PR URL list, including unchanged
-PRs from prior iterations. Return blocked only when progress requires a human
-decision or unavailable external dependency.
-"""
+model = "{{model}}"
+prompt_ref = "factory-implement-prompt"
+resume_prompt = "Feedback arrived on the pull requests. Address all review and verification comments, update the branches, and re-run checks."
+knowledge = ["islo-integrations"]
+session = "factory-implement-{{issue_id}}"
 
 [[run.tasks.steps]]
 name = "pause-sandbox"
