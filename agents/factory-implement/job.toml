@@ -14,11 +14,6 @@ items = "string"
 default = []
 description = "Current complete feature PR set for feedback-loop iterations."
 
-[job.params.model]
-type = "string"
-default = "claude-opus-4-6"
-description = "Model name for the agent harness."
-
 [outputs.implementation_result]
 type = "string"
 required = true
@@ -60,7 +55,7 @@ timeout = 10800
 [run.tasks.steps.run_agent]
 mode = "session"
 harness = "claude"
-model = "{{model}}"
+model = "claude-opus-4-6"
 prompt_ref = "factory-implement-prompt"
 resume_prompt = "Feedback arrived on the pull requests. Address all review and verification comments, update the branches, and re-run checks."
 knowledge = ["islo-integrations"]

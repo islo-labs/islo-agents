@@ -14,11 +14,6 @@ items = "string"
 required = true
 description = "Complete list of GitHub pull request URLs for the feature."
 
-[job.params.model]
-type = "string"
-default = "claude-opus-4-6"
-description = "Model name for the agent harness."
-
 [outputs.verification_result]
 type = "string"
 required = true
@@ -55,7 +50,7 @@ timeout = 10800
 [run.tasks.steps.run_agent]
 mode = "session"
 harness = "claude"
-model = "{{model}}"
+model = "claude-opus-4-6"
 prompt_ref = "factory-verify-prompt"
 resume_prompt = "The pull requests have been updated after verification failure. Re-fetch PR heads, re-run checks, and verify the integrated feature again."
 knowledge = ["islo-integrations", "fullstack-env"]
