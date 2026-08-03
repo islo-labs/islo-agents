@@ -6,6 +6,14 @@ const ISLO_INFERENCE_BASE_URLS: Readonly<Record<string, string>> = {
   islo_inference: "https://gateway.islo.dev/inference/anthropic",
 };
 
+export const CLAUDE_INFERENCE_CATALOG_MODELS: ReadonlySet<string> = new Set([
+  "kimi-k2.7-code",
+  "kimi-k2.7-code-fast",
+  "minimax-m3",
+  "qwen3.7-plus",
+  "ship-like/claude-opus-5",
+]);
+
 interface ClaudeMessageInspection {
   progress: boolean;
   sessionId?: string;

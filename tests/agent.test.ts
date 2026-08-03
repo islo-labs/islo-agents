@@ -108,13 +108,13 @@ test("resolveRunPlan threads --model-provider to Claude runtime", () => {
     parseArgs([
       "--prompt", "p.md",
       "--model-provider", "islo_inference",
-      "--model", "kimi-k2.7-code",
+      "--model", "ship-like/claude-opus-5",
     ]),
   );
 
   assert.deepEqual(plan.runtime, {
     harness: "claude",
-    model: "kimi-k2.7-code",
+    model: "ship-like/claude-opus-5",
     maxTurns: 150,
     maxBudgetUsd: 45,
     modelProvider: "islo_inference",
@@ -172,7 +172,7 @@ test("resolveRunPlan rejects Codex islo_inference with non-catalog model", () =>
           "--prompt", "p.md",
           "--harness", "codex",
           "--model-provider", "islo_inference",
-          "--model", "gpt-5.6-sol",
+          "--model", "ship-like/claude-opus-5",
         ]),
       ),
     /not in the Islo inference catalog/,

@@ -16,7 +16,7 @@ test("agent job manifests parse", () => {
   }
 });
 
-test("review defaults to Claude with Opus 5", () => {
+test("review defaults to Thesean Ship Claude Opus 5", () => {
   const manifest = readFileSync("agents/review/job.toml", "utf-8");
 
   assert.match(
@@ -25,7 +25,7 @@ test("review defaults to Claude with Opus 5", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.model\][\s\S]*?default = "claude-opus-5"/,
+    /\[job\.params\.model\][\s\S]*?default = "ship-like\/claude-opus-5"/,
   );
   assert.match(
     manifest,
@@ -33,7 +33,7 @@ test("review defaults to Claude with Opus 5", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.model_provider\][\s\S]*?default = ""/,
+    /\[job\.params\.model_provider\][\s\S]*?default = "islo_inference"/,
   );
 });
 

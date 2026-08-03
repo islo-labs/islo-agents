@@ -5,7 +5,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createRuntime } from "./runtimes/index.js";
-import { INFERENCE_CATALOG_MODELS } from "./runtimes/codex.js";
+import { CLAUDE_INFERENCE_CATALOG_MODELS } from "./runtimes/claude.js";
+import { CODEX_INFERENCE_CATALOG_MODELS } from "./runtimes/codex.js";
 import type {
   ClaudeReasoningEffort,
   CodexBudget,
@@ -94,8 +95,12 @@ function positiveInteger(raw: string | undefined, flag: string): number | undefi
   return n;
 }
 
-function validateModelProvider(model: string, provider: string | undefined): void {
-  const isCatalogModel = INFERENCE_CATALOG_MODELS.has(model);
+function validateModelProvider(
+  model: string,
+  provider: string | undefined,
+  catalogModels: ReadonlySet<string>,
+): void {
+  const isCatalogModel = catalogModels.has(model);
   if (isCatalogModel && provider !== "islo_inference") {
     throw new Error(
       `Model '${model}' requires --model-provider islo_inference`,
@@ -104,7 +109,7 @@ function validateModelProvider(model: string, provider: string | undefined): voi
   if (!isCatalogModel && provider === "islo_inference") {
     throw new Error(
       `Model '${model}' is not in the Islo inference catalog. ` +
-        `Available: ${[...INFERENCE_CATALOG_MODELS].join(", ")}`,
+        `Available: ${[...catalogModels].join(", ")}`,
     );
   }
 }
@@ -314,7 +319,11 @@ export function resolveRunPlan(
       invocation.modelProvider ?? storedRuntime?.modelProvider;
     const claudeModel =
       invocation.model ?? storedRuntime?.model ?? "claude-opus-4-6";
-    validateModelProvider(claudeModel, claudeProvider);
+    validateModelProvider(
+      claudeModel,
+      claudeProvider,
+      CLAUDE_INFERENCE_CATALOG_MODELS,
+    );
     return {
       cwd,
       runtime: {
@@ -345,7 +354,11 @@ export function resolveRunPlan(
     invocation.modelProvider ?? storedRuntime?.modelProvider;
   const codexModel =
     invocation.model ?? storedRuntime?.model ?? "kimi-k2.7-code";
-  validateModelProvider(codexModel, codexProvider);
+  validateModelProvider(
+    codexModel,
+    codexProvider,
+    CODEX_INFERENCE_CATALOG_MODELS,
+  );
   return {
     cwd,
     runtime: {
