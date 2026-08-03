@@ -12,6 +12,14 @@ op = "equals"
 json_path = "$.action"
 value = "opened"
 
+[[rules.when.conditions]]
+op = "not"
+
+[rules.when.conditions.condition]
+op = "equals"
+json_path = "$.pull_request.user.login"
+value = "islo-labs[bot]"
+
 [[rules.actions]]
 action_type = "trigger_job"
 job_name = "review"
@@ -38,6 +46,14 @@ json_path = "$.pull_request"
 op = "equals"
 json_path = "$.action"
 value = "reopened"
+
+[[rules.when.conditions]]
+op = "not"
+
+[rules.when.conditions.condition]
+op = "equals"
+json_path = "$.pull_request.user.login"
+value = "islo-labs[bot]"
 
 [[rules.actions]]
 action_type = "trigger_job"
@@ -71,6 +87,14 @@ op = "equals"
 json_path = "$.label.name"
 value = "islo-review"
 
+[[rules.when.conditions]]
+op = "not"
+
+[rules.when.conditions.condition]
+op = "equals"
+json_path = "$.pull_request.user.login"
+value = "islo-labs[bot]"
+
 [[rules.actions]]
 action_type = "trigger_job"
 job_name = "review"
@@ -103,6 +127,14 @@ value = "synchronize"
 op = "contains"
 json_path = "$.pull_request.labels[*].name"
 value = "islo-loop"
+
+[[rules.when.conditions]]
+op = "not"
+
+[rules.when.conditions.condition]
+op = "equals"
+json_path = "$.pull_request.user.login"
+value = "islo-labs[bot]"
 
 [[rules.actions]]
 action_type = "trigger_job"

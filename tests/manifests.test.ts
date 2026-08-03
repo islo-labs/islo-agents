@@ -37,6 +37,17 @@ test("review defaults to Thesean Ship Claude Opus 5", () => {
   );
 });
 
+test("review triggers exclude pull requests created by the Islo app", () => {
+  const rules = readFileSync(
+    "agents/review/trigger-rules/github.toml",
+    "utf-8",
+  );
+  const appExclusion =
+    /op = "not"\s+\[rules\.when\.conditions\.condition\]\s+op = "equals"\s+json_path = "\$\.pull_request\.user\.login"\s+value = "islo-labs\[bot\]"/g;
+
+  assert.equal([...rules.matchAll(appExclusion)].length, 4);
+});
+
 test("reused PR sandboxes handle force-pushed branches by role", () => {
   const review = readFileSync("agents/review/job.toml", "utf-8");
   const babysit = readFileSync("agents/babysit/job.toml", "utf-8");
