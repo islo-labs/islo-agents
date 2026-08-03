@@ -6,6 +6,10 @@ const ISLO_INFERENCE_BASE_URLS: Readonly<Record<string, string>> = {
   islo_inference: "https://gateway.islo.dev/inference/anthropic",
 };
 
+const CLAUDE_EXPERIMENTAL_BETAS_DISABLED_MODELS: ReadonlySet<string> = new Set([
+  "ship-like/claude-opus-5",
+]);
+
 export const CLAUDE_INFERENCE_CATALOG_MODELS: ReadonlySet<string> = new Set([
   "kimi-k2.7-code",
   "kimi-k2.7-code-fast",
@@ -13,6 +17,25 @@ export const CLAUDE_INFERENCE_CATALOG_MODELS: ReadonlySet<string> = new Set([
   "qwen3.7-plus",
   "ship-like/claude-opus-5",
 ]);
+
+export function buildClaudeProviderEnv(
+  opts: Pick<ClaudeRuntimeOpts, "model" | "modelProvider">,
+): Record<string, string> | undefined {
+  if (!opts.modelProvider) return undefined;
+  const baseUrl = ISLO_INFERENCE_BASE_URLS[opts.modelProvider];
+  if (!baseUrl) {
+    throw new Error(
+      `Unknown Claude model provider '${opts.modelProvider}'. ` +
+        `Supported: ${Object.keys(ISLO_INFERENCE_BASE_URLS).join(", ")}`,
+    );
+  }
+  return {
+    ANTHROPIC_BASE_URL: baseUrl,
+    ...(CLAUDE_EXPERIMENTAL_BETAS_DISABLED_MODELS.has(opts.model)
+      ? { CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: "1" }
+      : {}),
+  };
+}
 
 interface ClaudeMessageInspection {
   progress: boolean;
@@ -63,18 +86,8 @@ export class ClaudeRuntime implements AgentRuntime {
   }
 
   private buildEnv(): Record<string, string | undefined> | undefined {
-    if (!this.opts.modelProvider) return undefined;
-    const baseUrl = ISLO_INFERENCE_BASE_URLS[this.opts.modelProvider];
-    if (!baseUrl) {
-      throw new Error(
-        `Unknown Claude model provider '${this.opts.modelProvider}'. ` +
-          `Supported: ${Object.keys(ISLO_INFERENCE_BASE_URLS).join(", ")}`,
-      );
-    }
-    return {
-      ...process.env,
-      ANTHROPIC_BASE_URL: baseUrl,
-    };
+    const providerEnv = buildClaudeProviderEnv(this.opts);
+    return providerEnv ? { ...process.env, ...providerEnv } : undefined;
   }
 
   async run(request: RunRequest): Promise<void> {

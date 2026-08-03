@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { inspectClaudeMessage } from "../src/runtimes/claude.js";
+import {
+  buildClaudeProviderEnv,
+  inspectClaudeMessage,
+} from "../src/runtimes/claude.js";
 import {
   buildCodexConfig,
   inspectCodexEvent,
@@ -21,6 +24,51 @@ test("Claude messages expose progress and resumable session IDs", () => {
   assert.deepEqual(inspectClaudeMessage({ type: "assistant" }), {
     progress: true,
   });
+});
+
+test("Ship Claude disables unsupported experimental betas", () => {
+  assert.deepEqual(
+    buildClaudeProviderEnv({
+      model: "ship-like/claude-opus-5",
+      modelProvider: "islo_inference",
+    }),
+    {
+      ANTHROPIC_BASE_URL: "https://gateway.islo.dev/inference/anthropic",
+      CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: "1",
+    },
+  );
+});
+
+test("other Islo inference models retain experimental betas", () => {
+  assert.deepEqual(
+    buildClaudeProviderEnv({
+      model: "kimi-k2.7-code",
+      modelProvider: "islo_inference",
+    }),
+    {
+      ANTHROPIC_BASE_URL: "https://gateway.islo.dev/inference/anthropic",
+    },
+  );
+});
+
+test("direct Claude does not override its environment", () => {
+  assert.equal(
+    buildClaudeProviderEnv({
+      model: "claude-opus-4-6",
+    }),
+    undefined,
+  );
+});
+
+test("Claude rejects unknown model providers", () => {
+  assert.throws(
+    () =>
+      buildClaudeProviderEnv({
+        model: "claude-opus-4-6",
+        modelProvider: "unknown",
+      }),
+    /Unknown Claude model provider 'unknown'/,
+  );
 });
 
 test("Codex rollout budget maps to CLI configuration", () => {
