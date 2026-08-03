@@ -68,7 +68,7 @@ fail_fast = true
 fanout = false
 timeout = 2700
 workdir = "/workspace"
-teardown_on_complete = false
+teardown_on_complete = true
 
 [run.sandbox]
 mode = "ensure"
@@ -245,7 +245,3 @@ npx tsx src/agent.ts \
   --var RUN_ID="${RUN_ID}"
 ''',
 ]
-
-[[run.tasks.steps]]
-name = "pause-sandbox"
-pause = true

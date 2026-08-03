@@ -69,7 +69,7 @@ test("all jobs have shared budget and harness-specific params", () => {
 });
 
 test("durable worker sandboxes expire after two days", () => {
-  for (const role of ["review", "implementer", "verify", "babysit"]) {
+  for (const role of ["review", "implementer", "verify"]) {
     const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
 
     assert.match(
@@ -78,6 +78,18 @@ test("durable worker sandboxes expire after two days", () => {
       `${role} must delete its sandbox after two days`,
     );
   }
+});
+
+test("babysit tears down its sandbox after completion", () => {
+  const manifest = readFileSync("agents/babysit/job.toml", "utf-8");
+
+  assert.match(manifest, /teardown_on_complete = true/);
+  assert.doesNotMatch(manifest, /name = "pause-sandbox"[\s\S]*?pause = true/);
+  assert.match(
+    manifest,
+    /\[run\.sandbox\.lifecycle\][\s\S]*?delete_after = 172800/,
+    "babysit must retain a two-day cleanup fallback",
+  );
 });
 
 test("durable worker resumes rely only on stored configuration", () => {
