@@ -1,6 +1,6 @@
 [job]
 name = "review"
-version = "0.8.0"
+version = "0.9.0"
 description = "Automated PR code review."
 
 [job.params.repo]
@@ -34,12 +34,12 @@ pattern = "^(claude|codex)$"
 
 [job.params.model]
 type = "string"
-default = "claude-opus-5"
+default = "ship-like/claude-opus-5"
 description = "Model name understood by the selected harness."
 
 [job.params.model_provider]
 type = "string"
-default = ""
+default = "islo_inference"
 description = "Inference provider routed through the Islo gateway. Empty uses the harness default."
 
 [job.params.max_turns]
@@ -77,7 +77,7 @@ init = { type = "full" }
 
 [run.sandbox.lifecycle]
 pause_after_idle = 1800
-delete_after = 604800
+delete_after = 172800
 
 [[run.tasks]]
 name = "review"

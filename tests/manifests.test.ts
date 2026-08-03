@@ -16,7 +16,7 @@ test("agent job manifests parse", () => {
   }
 });
 
-test("review defaults to Claude with Opus 5", () => {
+test("review defaults to Thesean Ship Claude Opus 5", () => {
   const manifest = readFileSync("agents/review/job.toml", "utf-8");
 
   assert.match(
@@ -25,7 +25,7 @@ test("review defaults to Claude with Opus 5", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.model\][\s\S]*?default = "claude-opus-5"/,
+    /\[job\.params\.model\][\s\S]*?default = "ship-like\/claude-opus-5"/,
   );
   assert.match(
     manifest,
@@ -33,8 +33,19 @@ test("review defaults to Claude with Opus 5", () => {
   );
   assert.match(
     manifest,
-    /\[job\.params\.model_provider\][\s\S]*?default = ""/,
+    /\[job\.params\.model_provider\][\s\S]*?default = "islo_inference"/,
   );
+});
+
+test("review triggers exclude pull requests created by the Islo app", () => {
+  const rules = readFileSync(
+    "agents/review/trigger-rules/github.toml",
+    "utf-8",
+  );
+  const appExclusion =
+    /op = "not"\s+\[rules\.when\.conditions\.condition\]\s+op = "equals"\s+json_path = "\$\.pull_request\.user\.login"\s+value = "islo-labs\[bot\]"/g;
+
+  assert.equal([...rules.matchAll(appExclusion)].length, 4);
 });
 
 test("reused PR sandboxes handle force-pushed branches by role", () => {
@@ -66,6 +77,30 @@ test("all jobs have shared budget and harness-specific params", () => {
     assert.match(manifest, /--max-budget "{{max_budget_usd}}"/,
       `${role} must pass --max-budget outside the case`);
   }
+});
+
+test("durable worker sandboxes expire after two days", () => {
+  for (const role of ["review", "implementer", "verify"]) {
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+
+    assert.match(
+      manifest,
+      /\[run\.sandbox\.lifecycle\][\s\S]*?delete_after = 172800/,
+      `${role} must delete its sandbox after two days`,
+    );
+  }
+});
+
+test("babysit tears down its sandbox after completion", () => {
+  const manifest = readFileSync("agents/babysit/job.toml", "utf-8");
+
+  assert.match(manifest, /teardown_on_complete = true/);
+  assert.doesNotMatch(manifest, /name = "pause-sandbox"[\s\S]*?pause = true/);
+  assert.match(
+    manifest,
+    /\[run\.sandbox\.lifecycle\][\s\S]*?delete_after = 172800/,
+    "babysit must retain a two-day cleanup fallback",
+  );
 });
 
 test("durable worker resumes rely only on stored configuration", () => {

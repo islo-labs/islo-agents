@@ -1,6 +1,6 @@
 [job]
 name = "implementer"
-version = "0.7.0"
+version = "0.7.1"
 description = "Implement a tracked issue: enrich context from the source system, change code, open PR(s), report back."
 
 [job.params.issue_id]
@@ -90,7 +90,7 @@ init = { type = "full" }
 
 [run.sandbox.lifecycle]
 pause_after_idle = 1800
-delete_after = 604800
+delete_after = 172800
 
 [[run.tasks]]
 name = "implementer"
