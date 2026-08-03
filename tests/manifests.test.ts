@@ -37,15 +37,19 @@ test("review defaults to Thesean Ship Claude Opus 5", () => {
   );
 });
 
-test("review triggers exclude pull requests created by the Islo app", () => {
+test("only review creation excludes pull requests from the Islo app", () => {
   const rules = readFileSync(
     "agents/review/trigger-rules/github.toml",
     "utf-8",
   );
+  const ruleBlocks = rules.split("[[rules]]").slice(1);
   const appExclusion =
-    /op = "not"\s+\[rules\.when\.conditions\.condition\]\s+op = "equals"\s+json_path = "\$\.pull_request\.user\.login"\s+value = "islo-labs\[bot\]"/g;
+    /op = "not"\s+\[rules\.when\.conditions\.condition\]\s+op = "equals"\s+json_path = "\$\.pull_request\.user\.login"\s+value = "islo-labs\[bot\]"/;
 
-  assert.equal([...rules.matchAll(appExclusion)].length, 4);
+  assert.match(ruleBlocks[0] ?? "", appExclusion);
+  for (const rule of ruleBlocks.slice(1)) {
+    assert.doesNotMatch(rule, appExclusion);
+  }
 });
 
 test("reused PR sandboxes handle force-pushed branches by role", () => {
