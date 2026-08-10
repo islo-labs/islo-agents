@@ -59,7 +59,7 @@ model = "claude-opus-4-6"
 prompt_ref = "factory-implement-prompt"
 resume_prompt = "Feedback arrived on the pull requests. Address all review and verification comments, update the branches, and re-run checks."
 knowledge = ["islo-integrations"]
-session = "factory-implement-{{issue_id}}"
+session = "factory-impl-{{issue_id}}"
 
 [[run.tasks.steps]]
 name = "pause-sandbox"

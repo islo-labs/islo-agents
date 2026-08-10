@@ -7,7 +7,27 @@ category = "engineering"
 ref = "factory-operator"
 
 [trigger]
-type = "manual"
+type = "integration_trigger"
+provider = "linear"
+name = "issue.updated"
+
+[trigger.selector]
+provider = "linear"
+kind = "issue"
+scope = "selected"
+labels = ["islo-loop"]
+
+[[trigger.filters]]
+path = "$.action"
+op = "eq"
+value = "update"
+
+[[trigger.filters]]
+path = "$.updatedFrom.labelIds"
+op = "exists"
+
+[trigger.outputs]
+issue_id = "trigger.raw.data.identifier"
 
 [limits]
 max_iterations = 20
@@ -16,14 +36,17 @@ timeout = "24h"
 [[stages]]
 id = "implement"
 job = "factory-implement"
+job_version_id = "019faeb0-f08b-7511-8061-00960e255a32"
 
 [[stages]]
 id = "review"
 job = "factory-review"
+job_version_id = "019faea2-e0bc-743c-b836-6cab44e62d6b"
 
 [[stages]]
 id = "verify"
 job = "factory-verify"
+job_version_id = "019faea2-e480-75f9-865f-27fd2fdcff49"
 
 [[transitions]]
 id = "implementation-ready"
@@ -32,8 +55,8 @@ to = "review"
 when = "result.outputs.implementation_result == 'ready'"
 
 [transitions.params]
-issue_id = "inputs.issue_id"
-pull_requests = "outputs.implement.pull_requests"
+issue_id = { source = "inputs.issue_id" }
+pull_requests = { source = "outputs.implement.pull_requests" }
 
 [[transitions]]
 id = "review-approved"
@@ -42,8 +65,8 @@ to = "verify"
 when = "result.outputs.review_result == 'approved'"
 
 [transitions.params]
-issue_id = "inputs.issue_id"
-pull_requests = "outputs.implement.pull_requests"
+issue_id = { source = "inputs.issue_id" }
+pull_requests = { source = "outputs.implement.pull_requests" }
 
 [[transitions]]
 id = "review-needs-changes"
@@ -53,8 +76,8 @@ when = "result.outputs.review_result == 'needs_changes'"
 max_iterations = 3
 
 [transitions.params]
-issue_id = "inputs.issue_id"
-pull_requests = "outputs.implement.pull_requests"
+issue_id = { source = "inputs.issue_id" }
+pull_requests = { source = "outputs.implement.pull_requests" }
 
 [[decisions]]
 id = "implementation-blocked"
@@ -88,5 +111,5 @@ when = "result.outputs.verification_result == 'failed'"
 max_iterations = 2
 
 [transitions.params]
-issue_id = "inputs.issue_id"
-pull_requests = "outputs.implement.pull_requests"
+issue_id = { source = "inputs.issue_id" }
+pull_requests = { source = "outputs.implement.pull_requests" }

@@ -161,11 +161,12 @@ test("factory jobs use one native agent and compatible PR list contracts", () =>
 
 test("factory prompts place every declared param themselves", () => {
   for (const role of factoryRoles) {
-    const parsed = parse(readFileSync(`agents/${role}/job.toml`, "utf-8"));
-    const prompt = parsed.run.tasks[0].steps.find((step) => step.run_agent)
-      .run_agent.prompt;
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+    const prompt = readFileSync(`agents/${role}/prompt.md`, "utf-8");
+    const params = [...manifest.matchAll(/^\[job\.params\.([^\]]+)\]$/gm)]
+      .flatMap((match) => match[1] ? [match[1]] : []);
 
-    for (const param of Object.keys(parsed.job.params)) {
+    for (const param of params) {
       assert.match(
         prompt,
         new RegExp(`\\{\\{${param}\\}\\}`),
@@ -176,23 +177,26 @@ test("factory prompts place every declared param themselves", () => {
 });
 
 test("factory review and verification require all-PR aggregate verdicts", () => {
-  const review = readFileSync("agents/factory-review/job.toml", "utf-8");
-  const verify = readFileSync("agents/factory-verify/job.toml", "utf-8");
+  const review = readFileSync("agents/factory-review/prompt.md", "utf-8");
+  const verify = readFileSync("agents/factory-verify/prompt.md", "utf-8");
 
-  assert.match(review, /Return approved only when every PR passes/);
-  assert.match(verify, /Return passed only after every PR/);
+  assert.match(review, /Return `approved` only when every PR passes/);
+  assert.match(verify, /Return `passed` only after every PR/);
 });
 
 test("factory review and verification post to GitHub before their verdict", () => {
-  const review = readFileSync("agents/factory-review/job.toml", "utf-8");
-  const verify = readFileSync("agents/factory-verify/job.toml", "utf-8");
+  const review = readFileSync("agents/factory-review/prompt.md", "utf-8");
+  const verify = readFileSync("agents/factory-verify/prompt.md", "utf-8");
 
   assert.match(review, /gh pr review <pr-url> --comment/);
   assert.match(verify, /gh pr comment <pr-url>/);
 
   for (const role of factoryRoles) {
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+    const prompt = readFileSync(`agents/${role}/prompt.md`, "utf-8");
+
     assert.doesNotMatch(
-      readFileSync(`agents/${role}/job.toml`, "utf-8"),
+      `${manifest}\n${prompt}`,
       /--(add|remove)-label/,
       `${role} must not drive islo-loop labels; the line owns orchestration`,
     );
@@ -228,7 +232,7 @@ test("every stage that needs the issue gets it routed in", () => {
   // Sandbox names interpolate issue_id, so an unmapped transition would name a
   // sandbox after a blank and collapse separate issues into one.
   assert.equal(
-    (line.match(/issue_id = "inputs\.issue_id"/g) ?? []).length,
+    (line.match(/issue_id = \{ source = "inputs\.issue_id" \}/g) ?? []).length,
     4,
   );
 });
@@ -237,11 +241,14 @@ test("feature-delivery maps implement PRs through both feedback loops", () => {
   const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
   assert.doesNotThrow(() => parse(line));
   assert.equal(
-    (line.match(/pull_requests = "outputs\.implement\.pull_requests"/g) ?? [])
-      .length,
+    (
+      line.match(
+        /pull_requests = \{ source = "outputs\.implement\.pull_requests" \}/g,
+      ) ?? []
+    ).length,
     4,
   );
-  assert.match(line, /issue_id = "inputs\.issue_id"/);
+  assert.match(line, /issue_id = \{ source = "inputs\.issue_id" \}/);
 });
 
 test("feature-delivery has a deployable manager and blocked-stage decisions", () => {

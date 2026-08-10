@@ -37,7 +37,7 @@ const receivers = {
         sandbox_name: "linear-issues",
       },
       idempotency: { source: "header", name: "Linear-Delivery" },
-      status: "active",
+      status: "disabled",
     },
   },
 };

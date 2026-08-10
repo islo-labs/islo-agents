@@ -1,5 +1,5 @@
 name = "linear-issues"
-status = "active"
+status = "disabled"
 
 [auth]
 auth_type = "none"
