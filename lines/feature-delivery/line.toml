@@ -3,9 +3,6 @@ name = "feature-delivery"
 description = "Implement, review, and verify one issue across its complete PR set."
 category = "engineering"
 
-[manager]
-ref = "factory-operator"
-
 [trigger]
 type = "integration_trigger"
 provider = "linear"
@@ -32,6 +29,17 @@ issue_id = "trigger.raw.data.identifier"
 [limits]
 max_iterations = 20
 timeout = "24h"
+
+[decision_policy]
+instructions = """
+Preserve completed work and inspect the Linear issue, every linked pull
+request, the failed stage result, and recent line events before deciding.
+Retry the current stage only when the blocker is transient or external state
+has changed enough to make another attempt useful. Cancel when requirements
+conflict, required access or input is unavailable, the same root cause keeps
+failing, or continuing could damage customer work. Explain the evidence for
+the choice and do not retry merely to exhaust the iteration limit.
+"""
 
 [[stages]]
 id = "implement"
