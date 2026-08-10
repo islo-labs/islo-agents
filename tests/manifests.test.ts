@@ -203,7 +203,7 @@ test("factory review and verification post to GitHub before their verdict", () =
   }
 });
 
-test("factory sandboxes outlive their run so later rounds can reuse them", () => {
+test("factory sandboxes survive rounds and expire after two days", () => {
   for (const role of factoryRoles) {
     const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
 
@@ -213,7 +213,11 @@ test("factory sandboxes outlive their run so later rounds can reuse them", () =>
       new RegExp(`mode = "ensure"\\nname = "${role}-\\{\\{issue_id\\}\\}"`),
       `${role} must key its sandbox on the issue so rounds share one`,
     );
-    assert.match(manifest, /delete_after = 604800/, `${role} must keep the sandbox for a week`);
+    assert.match(
+      manifest,
+      /delete_after = 172800/,
+      `${role} must delete its sandbox after two days`,
+    );
     assert.match(
       manifest,
       /name = "pause-sandbox"\npause = true/,

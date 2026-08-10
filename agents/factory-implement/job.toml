@@ -43,7 +43,7 @@ init = { type = "full" }
 
 [run.sandbox.lifecycle]
 pause_after_idle = 1800
-delete_after = 604800
+delete_after = 172800
 
 [[run.tasks]]
 name = "implement"
