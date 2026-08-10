@@ -6,6 +6,8 @@ on:
     paths:
       - "agents/**/job.toml"
       - "agents/**/trigger-rules/**"
+      - "managers/**/manager.toml"
+      - "lines/**/line.toml"
 
 concurrency:
   group: deploy
@@ -29,16 +31,28 @@ jobs:
           CHANGED=$(git diff --name-only "$BASE" HEAD)
 
           AGENTS=()
+          MANAGERS=()
+          LINES=()
           while IFS= read -r file; do
             if [[ "$file" =~ ^agents/([^/]+)/job\.toml$ ]]; then
               name="${BASH_REMATCH[1]}"
               # Skip deleted or renamed manifests
               [ -f "agents/${name}/job.toml" ] && AGENTS+=("${name}")
+            elif [[ "$file" =~ ^managers/([^/]+)/manager\.toml$ ]]; then
+              name="${BASH_REMATCH[1]}"
+              [ -f "managers/${name}/manager.toml" ] && MANAGERS+=("${name}")
+            elif [[ "$file" =~ ^lines/([^/]+)/line\.toml$ ]]; then
+              name="${BASH_REMATCH[1]}"
+              [ -f "lines/${name}/line.toml" ] && LINES+=("${name}")
             fi
           done <<< "$CHANGED"
 
           UNIQUE_AGENTS=($(printf '%s\n' "${AGENTS[@]}" | sort -u))
-          echo "agents=$(printf '%s\n' "${UNIQUE_AGENTS[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+          UNIQUE_MANAGERS=($(printf '%s\n' "${MANAGERS[@]}" | sort -u))
+          UNIQUE_LINES=($(printf '%s\n' "${LINES[@]}" | sort -u))
+          echo "agents=$(printf '%s\n' "${UNIQUE_AGENTS[@]}" | jq -R 'select(length > 0)' | jq -sc .)" >> "$GITHUB_OUTPUT"
+          echo "managers=$(printf '%s\n' "${UNIQUE_MANAGERS[@]}" | jq -R 'select(length > 0)' | jq -sc .)" >> "$GITHUB_OUTPUT"
+          echo "lines=$(printf '%s\n' "${UNIQUE_LINES[@]}" | jq -R 'select(length > 0)' | jq -sc .)" >> "$GITHUB_OUTPUT"
 
           if echo "$CHANGED" | grep -q '^agents/.*/trigger-rules/'; then
             echo "webhooks=true" >> "$GITHUB_OUTPUT"
@@ -48,12 +62,26 @@ jobs:
 
           echo "Changed files:"
           echo "$CHANGED"
+          echo "Managers to deploy: ${UNIQUE_MANAGERS[*]:-none}"
           echo "Agents to deploy: ${UNIQUE_AGENTS[*]:-none}"
+          echo "Lines to deploy: ${UNIQUE_LINES[*]:-none}"
           echo "Webhooks changed: $(echo "$CHANGED" | grep -c '^agents/.*/trigger-rules/' || true)"
 
       - name: Install Islo CLI
         if: steps.changes.outputs.agents != '[]' || steps.changes.outputs.webhooks == 'true'
         run: curl -fsSL https://islo.dev/install.sh | bash
+
+      - name: Deploy modified managers
+        if: steps.changes.outputs.managers != '[]'
+        env:
+          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
+        run: |
+          for manager in $(echo '${{ steps.changes.outputs.managers }}' | jq -r '.[]'); do
+            echo "::group::Deploying manager: ${manager}"
+            python scripts/deploy_factory_manifest.py \
+              manager "managers/${manager}/manager.toml"
+            echo "::endgroup::"
+          done
 
       - name: Deploy modified jobs
         if: steps.changes.outputs.agents != '[]'
@@ -65,6 +93,17 @@ jobs:
             mkdir -p "jobs/${agent}"
             cp "agents/${agent}/job.toml" "jobs/${agent}/job.toml"
             islo job deploy "${agent}"
+            echo "::endgroup::"
+          done
+
+      - name: Deploy modified lines
+        if: steps.changes.outputs.lines != '[]'
+        env:
+          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
+        run: |
+          for line in $(echo '${{ steps.changes.outputs.lines }}' | jq -r '.[]'); do
+            echo "::group::Deploying line: ${line}"
+            python scripts/deploy_factory_manifest.py line "lines/${line}/line.toml"
             echo "::endgroup::"
           done
 

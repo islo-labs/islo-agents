@@ -129,3 +129,160 @@ test("delegator starts a worker when a matching sandbox has no session", () => {
   );
   assert.match(prompt, /Prefer re-running the role's[\s\S]*durable job/);
 });
+
+const factoryRoles = ["factory-implement", "factory-review", "factory-verify"];
+
+test("factory jobs use one native agent and compatible PR list contracts", () => {
+  for (const role of factoryRoles) {
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+    const prompt = readFileSync(`agents/${role}/prompt.md`, "utf-8");
+
+    assert.doesNotThrow(() => parse(manifest), `${role} manifest must parse`);
+    assert.equal(
+      (manifest.match(/\[run\.tasks\.steps\.run_agent\]/g) ?? []).length,
+      1,
+      `${role} must define exactly one native run_agent step`,
+    );
+    assert.match(manifest, /fanout = false/);
+    assert.doesNotMatch(manifest, /ISLO_(JOB|AGENT)_RESULT|AGENT_OUTPUT=/);
+    assert.doesNotMatch(prompt, /ISLO_(JOB|AGENT)_RESULT|AGENT_OUTPUT=/);
+    assert.match(
+      manifest,
+      /\[(?:job\.params|outputs)\.pull_requests\][\s\S]*?type = "array"[\s\S]*?items = "string"/,
+      `${role} must use string-list PR contracts`,
+    );
+  }
+  const implement = readFileSync("agents/factory-implement/job.toml", "utf-8");
+  assert.match(
+    implement,
+    /\[job\.params\.pull_requests\][\s\S]*?default = \[\]/,
+  );
+});
+
+test("factory prompts place every declared param themselves", () => {
+  for (const role of factoryRoles) {
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+    const prompt = readFileSync(`agents/${role}/prompt.md`, "utf-8");
+    const params = [...manifest.matchAll(/^\[job\.params\.([^\]]+)\]$/gm)]
+      .flatMap((match) => match[1] ? [match[1]] : []);
+
+    for (const param of params) {
+      assert.match(
+        prompt,
+        new RegExp(`\\{\\{${param}\\}\\}`),
+        `${role} prompt must interpolate ${param}`,
+      );
+    }
+  }
+});
+
+test("factory review and verification require all-PR aggregate verdicts", () => {
+  const review = readFileSync("agents/factory-review/prompt.md", "utf-8");
+  const verify = readFileSync("agents/factory-verify/prompt.md", "utf-8");
+
+  assert.match(review, /Return `approved` only when every PR passes/);
+  assert.match(verify, /Return `passed` only after every PR/);
+});
+
+test("factory review and verification post to GitHub before their verdict", () => {
+  const review = readFileSync("agents/factory-review/prompt.md", "utf-8");
+  const verify = readFileSync("agents/factory-verify/prompt.md", "utf-8");
+
+  assert.match(review, /gh pr review <pr-url> --comment/);
+  assert.match(verify, /gh pr comment <pr-url>/);
+
+  for (const role of factoryRoles) {
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+    const prompt = readFileSync(`agents/${role}/prompt.md`, "utf-8");
+
+    assert.doesNotMatch(
+      `${manifest}\n${prompt}`,
+      /--(add|remove)-label/,
+      `${role} must not drive islo-loop labels; the line owns orchestration`,
+    );
+  }
+});
+
+test("factory sandboxes survive rounds and expire after two days", () => {
+  for (const role of factoryRoles) {
+    const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");
+
+    assert.match(manifest, /teardown_on_complete = false/, `${role} must not delete its sandbox`);
+    assert.match(
+      manifest,
+      new RegExp(`mode = "ensure"\\nname = "${role}-\\{\\{issue_id\\}\\}"`),
+      `${role} must key its sandbox on the issue so rounds share one`,
+    );
+    assert.match(
+      manifest,
+      /delete_after = 172800/,
+      `${role} must delete its sandbox after two days`,
+    );
+    assert.match(
+      manifest,
+      /name = "pause-sandbox"\npause = true/,
+      `${role} must pause rather than leave the sandbox running`,
+    );
+  }
+});
+
+test("every stage that needs the issue gets it routed in", () => {
+  const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
+  const needsIssue = factoryRoles.filter((role) =>
+    readFileSync(`agents/${role}/job.toml`, "utf-8").includes("[job.params.issue_id]"),
+  );
+
+  assert.deepEqual(needsIssue, factoryRoles);
+  // Sandbox names interpolate issue_id, so an unmapped transition would name a
+  // sandbox after a blank and collapse separate issues into one.
+  assert.equal(
+    (line.match(/issue_id = \{ source = "inputs\.issue_id" \}/g) ?? []).length,
+    4,
+  );
+});
+
+test("feature-delivery maps implement PRs through both feedback loops", () => {
+  const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
+  assert.doesNotThrow(() => parse(line));
+  assert.equal(
+    (
+      line.match(
+        /pull_requests = \{ source = "outputs\.implement\.pull_requests" \}/g,
+      ) ?? []
+    ).length,
+    4,
+  );
+  assert.match(line, /issue_id = \{ source = "inputs\.issue_id" \}/);
+});
+
+test("feature-delivery has a deployable manager and blocked-stage decisions", () => {
+  const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
+  const manager = readFileSync(
+    "managers/factory-operator/manager.toml",
+    "utf-8",
+  );
+
+  assert.doesNotThrow(() => parse(manager));
+  assert.match(manager, /name = "factory-operator"/);
+  for (const stage of ["implement", "review", "verify"]) {
+    assert.match(
+      line,
+      new RegExp(
+        `after_stage = "${stage}"[\\s\\S]*?when = "true"[\\s\\S]*?allowed_actions = \\["retry-stage", "cancel"\\]`,
+      ),
+    );
+  }
+});
+
+test("factory deployment orders managers, jobs, then lines", () => {
+  const workflow = readFileSync(".github/workflows/deploy.yml", "utf-8");
+  const managerStep = workflow.indexOf("Deploy modified managers");
+  const jobStep = workflow.indexOf("Deploy modified jobs");
+  const lineStep = workflow.indexOf("Deploy modified lines");
+
+  assert.ok(managerStep >= 0);
+  assert.ok(managerStep < jobStep);
+  assert.ok(jobStep < lineStep);
+  assert.match(workflow, /managers\/\*\*\/manager\.toml/);
+  assert.match(workflow, /lines\/\*\*\/line\.toml/);
+});
