@@ -27,11 +27,13 @@ The harness (`src/agent.ts`) requires `ISLO_API_KEY` to be set (automatic in Isl
 
 Factory Manager is one Islo-owned runtime per tenant, not one manager per line.
 Eligible tenant members enable it behind the `factory-manager-v1` feature flag.
-Its implementation and bundled runtime template live in `islo-web-api`.
-The runtime uses one stable `factory-manager` sandbox and one named Claude
-session. Each trigger starts another turn in that session. The fixed platform
-template uses `claude-sonnet-5`; tenants cannot replace its prompt, model,
-tools, integrations, or trigger rules in V1.
+Its implementation, fixed configuration, and prompt live in `islo-web-api`.
+The runtime uses one stable `factory-manager` sandbox with separate named Claude
+sessions for actionable decisions and observer events such as failures or
+provider requests. Each session retains context without carrying untrusted
+observer content into decision-making turns. The fixed configuration uses
+`claude-sonnet-5`; tenants cannot replace its prompt, model, tools,
+integrations, or trigger rules in V1.
 
 The backend owns the trigger policy:
 

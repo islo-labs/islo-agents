@@ -9,12 +9,12 @@ lines.
 The `factory-manager-v1` feature flag controls tenant eligibility. An eligible
 tenant member can enable, disable, or reset the runtime.
 
-Enabling the runtime ensures one sandbox named `factory-manager` and one named
-Claude session. The runtime uses the Claude harness and
-`claude-sonnet-5`. Every accepted trigger creates an invocation record and a
-new turn in the same session. Turns retain useful Factory context from earlier
-invocations. They do not create a Manager per line or a session per webhook
-thread.
+Enabling the runtime ensures one sandbox named `factory-manager`. The runtime
+uses the Claude harness and `claude-sonnet-5`, with one named session for
+actionable line decisions and another for observer events such as failures and
+provider requests. Turns retain useful context within their trust boundary
+without carrying untrusted observer content into decision-making turns. They
+do not create a Manager per line or a session per webhook thread.
 
 Disabling blocks new invocations and pauses the sandbox without deleting the
 session or invocation history. Re-enabling resumes it when possible. Resetting
@@ -90,12 +90,11 @@ data.
 
 ## Runtime ownership
 
-The Manager implementation and its sole runtime template live in
-`islo-web-api`. That service bundles the template into its image, loads the
-fixed prompt and runtime configuration, and creates or resumes each tenant's
-Manager session.
+The Manager implementation, typed runtime configuration, and fixed prompt live
+in `islo-web-api`. That service bundles the prompt into its image and creates or
+resumes each tenant's Manager sessions.
 
 This repository owns deployable lines and their optional
 `[decision_policy].instructions`; it does not package or deploy the platform
-Manager template. The frontend reads fixed runtime values from the backend and
-must not turn them into a customer editor.
+Manager configuration. The frontend reads fixed runtime values from the backend
+and must not turn them into a customer editor.
