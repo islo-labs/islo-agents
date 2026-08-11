@@ -30,8 +30,9 @@ issue_id = "trigger.raw.data.identifier"
 max_iterations = 20
 timeout = "24h"
 
-[decision_policy]
-instructions = """
+[manager.instructions]
+type = "literal"
+value = """
 Preserve completed work and inspect the Linear issue, every linked pull
 request, the failed stage result, and recent line events before deciding.
 Retry the current stage only when the blocker is transient or external state

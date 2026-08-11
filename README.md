@@ -28,12 +28,10 @@ The harness (`src/agent.ts`) requires `ISLO_API_KEY` to be set (automatic in Isl
 Factory Manager is one Islo-owned runtime per tenant, not one manager per line.
 Eligible tenant members enable it behind the `factory-manager-v1` feature flag.
 Its implementation, fixed configuration, and prompt live in `islo-web-api`.
-The runtime uses one stable `factory-manager` sandbox with separate named Claude
-sessions for actionable decisions and observer events such as failures or
-provider requests. Each session retains context without carrying untrusted
-observer content into decision-making turns. The fixed configuration uses
-`claude-sonnet-5`; tenants cannot replace its prompt, model, tools,
-integrations, or trigger rules in V1.
+The runtime uses one stable `factory-manager` sandbox and one named Claude
+session shared across decisions, failures, and provider requests. The fixed
+configuration uses `claude-sonnet-5`; tenants cannot replace its prompt, model,
+tools, integrations, or trigger rules in V1.
 
 The backend owns the trigger policy:
 
@@ -50,16 +48,25 @@ integration triggers on lines, such as the Linear trigger on
 Lines do not need `[manager].ref`. They may add line-specific guidance:
 
 ```toml
-[decision_policy]
-instructions = """
+[manager.instructions]
+type = "literal"
+value = """
 Retry only after the blocker has changed. Cancel when required input is
 unavailable or another attempt could damage customer work.
 """
 ```
 
+Instructions may instead reference an active knowledge item:
+
+```toml
+[manager.instructions]
+type = "knowledge"
+slug = "feature-delivery-manager-rules"
+```
+
 The Manager inspects current Factory and provider state with the existing
 Islo CLI and provider access in its sandbox. At a pending decision,
-`decision_policy.instructions` guides the choice while the decision's
+`manager.instructions` guides the choice while the decision's
 `allowed_actions` remains the hard server-enforced limit. For a Slack or
 GitHub mention, the Manager answers in the originating thread and does not
 treat the mention alone as permission to mutate Factory state.

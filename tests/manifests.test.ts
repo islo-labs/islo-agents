@@ -255,14 +255,14 @@ test("feature-delivery maps implement PRs through both feedback loops", () => {
   assert.match(line, /issue_id = \{ source = "inputs\.issue_id" \}/);
 });
 
-test("feature-delivery uses tenant manager decision policy", () => {
+test("feature-delivery uses typed tenant Manager instructions", () => {
   const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
 
   assert.doesNotThrow(() => parse(line));
   assert.doesNotMatch(line, /^\[manager\]$/m);
   assert.match(
     line,
-    /\[decision_policy\][\s\S]*Retry the current stage only when the blocker is transient/,
+    /\[manager\.instructions\][\s\S]*type = "literal"[\s\S]*value = """[\s\S]*Retry the current stage only when the blocker is transient/,
   );
   for (const stage of ["implement", "review", "verify"]) {
     assert.match(
