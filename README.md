@@ -1,6 +1,6 @@
 # islo-agents
 
-Shared agent templates for Islo jobs: prompts, durable job manifests, and webhook trigger-rule fragments. Deploy jobs and assemble webhooks from this checkout.
+Shared agent templates for Islo jobs, Factory lines, and webhook trigger-rule fragments.
 
 **Role vs source:** roles (`review`, `implementer`, …) are source-agnostic. Source systems only appear under `trigger-rules/<source>.toml` and assembled `webhooks/`. Workspace-specific values that cannot be generalized (e.g. a Linear label UUID) ship as placeholders.
 
@@ -14,6 +14,7 @@ agents/                             — one directory per role
     prompt.md                       — agent behavior
     job.toml                        — durable job (sandbox + steps); job name = role name
     trigger-rules/<source>.toml     — webhook rule fragments for that source
+lines/                              — deployable Factory line manifests
 webhooks/                           — assembled receivers
   github-events.toml
   linear-issues.toml
@@ -21,6 +22,57 @@ scripts/assemble-webhooks.js        — merge agents/*/trigger-rules/<source>.to
 ```
 
 The harness (`src/agent.ts`) requires `ISLO_API_KEY` to be set (automatic in Islo sandboxes via phantom env vars, or any valid API key). Optional `--knowledge-*` flags use the `@islo-labs/sdk` to fetch knowledge items and inject their Markdown bodies into the prompt; on failure they warn and continue.
+
+## Factory Manager V1
+
+Factory Manager is one Islo-owned runtime per tenant, not one manager per line.
+Eligible tenant members enable it behind the `factory-manager-v1` feature flag.
+Its implementation, fixed configuration, and prompt live in `islo-web-api`.
+The runtime uses one stable `factory-manager` sandbox and one named Claude
+session shared across decisions, failures, and provider requests. The fixed
+configuration uses `claude-sonnet-5`; tenants cannot replace its prompt, model,
+tools, integrations, or trigger rules in V1.
+
+The backend owns the trigger policy:
+
+- Slack `app_mention` events.
+- Newly created GitHub issue and pull-request comments, plus pull-request
+  review comments, containing the exact `@islo-agent` mention.
+- Factory `decision_pending` events and terminal line or job failures.
+
+Connecting the corresponding provider is enough. Do not assemble Manager
+triggers into the legacy incoming webhook files in this repository. Direct
+integration triggers on lines, such as the Linear trigger on
+`feature-delivery`, continue to work independently.
+
+Lines do not need `[manager].ref`. They may add line-specific guidance:
+
+```toml
+[manager.instructions]
+type = "literal"
+value = """
+Retry only after the blocker has changed. Cancel when required input is
+unavailable or another attempt could damage customer work.
+"""
+```
+
+Instructions may instead reference an active knowledge item:
+
+```toml
+[manager.instructions]
+type = "knowledge"
+slug = "feature-delivery-manager-rules"
+```
+
+The Manager inspects current Factory and provider state with the existing
+Islo CLI and provider access in its sandbox. At a pending decision,
+`manager.instructions` guides the choice while the decision's
+`allowed_actions` remains the hard server-enforced limit. For a Slack or
+GitHub mention, the Manager answers in the originating thread and does not
+treat the mention alone as permission to mutate Factory state.
+
+See [Factory Manager V1](docs/factory-manager.md) for enablement, runtime,
+trigger, recovery, and packaging details.
 
 ## Harnesses
 

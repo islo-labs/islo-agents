@@ -244,6 +244,7 @@ test("every stage that needs the issue gets it routed in", () => {
 test("feature-delivery maps implement PRs through both feedback loops", () => {
   const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
   assert.doesNotThrow(() => parse(line));
+  assert.doesNotMatch(line, /job_version_id/);
   assert.equal(
     (
       line.match(
@@ -255,15 +256,15 @@ test("feature-delivery maps implement PRs through both feedback loops", () => {
   assert.match(line, /issue_id = \{ source = "inputs\.issue_id" \}/);
 });
 
-test("feature-delivery has a deployable manager and blocked-stage decisions", () => {
+test("feature-delivery uses typed tenant Manager instructions", () => {
   const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
-  const manager = readFileSync(
-    "managers/factory-operator/manager.toml",
-    "utf-8",
-  );
 
-  assert.doesNotThrow(() => parse(manager));
-  assert.match(manager, /name = "factory-operator"/);
+  assert.doesNotThrow(() => parse(line));
+  assert.doesNotMatch(line, /^\[manager\]$/m);
+  assert.match(
+    line,
+    /\[manager\.instructions\][\s\S]*type = "literal"[\s\S]*value = """[\s\S]*Retry the current stage only when the blocker is transient/,
+  );
   for (const stage of ["implement", "review", "verify"]) {
     assert.match(
       line,
@@ -274,15 +275,18 @@ test("feature-delivery has a deployable manager and blocked-stage decisions", ()
   }
 });
 
-test("factory deployment orders managers, jobs, then lines", () => {
+test("factory deployment does not own the platform manager template", () => {
   const workflow = readFileSync(".github/workflows/deploy.yml", "utf-8");
-  const managerStep = workflow.indexOf("Deploy modified managers");
   const jobStep = workflow.indexOf("Deploy modified jobs");
   const lineStep = workflow.indexOf("Deploy modified lines");
 
-  assert.ok(managerStep >= 0);
-  assert.ok(managerStep < jobStep);
   assert.ok(jobStep < lineStep);
-  assert.match(workflow, /managers\/\*\*\/manager\.toml/);
+  assert.doesNotMatch(workflow, /Deploy modified managers/);
+  assert.doesNotMatch(workflow, /Validate modified manager templates/);
+  assert.doesNotMatch(
+    workflow,
+    /deploy_factory_manifest\.py\s+\\?\s*manager/,
+  );
+  assert.doesNotMatch(workflow, /managers\/\*\*\/manager\.toml/);
   assert.match(workflow, /lines\/\*\*\/line\.toml/);
 });

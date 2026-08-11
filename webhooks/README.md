@@ -4,6 +4,11 @@ Assembled Islo incoming receivers. One file per external source (GitHub, Linear,
 
 Files under `webhooks/` are assembled create/update bodies built from this pack's trigger fragments. Edit `agents/*/trigger-rules/*.toml` (e.g. Linear label UUID), reassemble, then deploy to your tenant.
 
+Factory Manager does not use these receivers. Its Slack app mentions, exact
+GitHub `@islo-agent` comments, and Factory state triggers are matched by the
+control plane when the tenant runtime is enabled. Do not add Manager rules to
+`agents/*/trigger-rules`; these files remain the direct webhook-to-job path.
+
 **Trigger rule fragments live with the agent** that should wake up:
 
 ```text
