@@ -289,4 +289,10 @@ test("factory deployment does not own the platform manager template", () => {
   );
   assert.doesNotMatch(workflow, /managers\/\*\*\/manager\.toml/);
   assert.match(workflow, /lines\/\*\*\/line\.toml/);
+  assert.match(
+    workflow,
+    /Install Islo CLI[\s\S]*?outputs\.lines != '\[\]'[\s\S]*?Deploy modified jobs/,
+  );
+  assert.match(workflow, /islo factory line deploy/);
+  assert.doesNotMatch(workflow, /deploy_factory_manifest\.py/);
 });
