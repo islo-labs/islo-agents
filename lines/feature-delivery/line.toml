@@ -45,17 +45,14 @@ the choice and do not retry merely to exhaust the iteration limit.
 [[stages]]
 id = "implement"
 job = "factory-implement"
-job_version_id = "019faeb0-f08b-7511-8061-00960e255a32"
 
 [[stages]]
 id = "review"
 job = "factory-review"
-job_version_id = "019faea2-e0bc-743c-b836-6cab44e62d6b"
 
 [[stages]]
 id = "verify"
 job = "factory-verify"
-job_version_id = "019faea2-e480-75f9-865f-27fd2fdcff49"
 
 [[transitions]]
 id = "implementation-ready"

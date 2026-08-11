@@ -244,6 +244,7 @@ test("every stage that needs the issue gets it routed in", () => {
 test("feature-delivery maps implement PRs through both feedback loops", () => {
   const line = readFileSync("lines/feature-delivery/line.toml", "utf-8");
   assert.doesNotThrow(() => parse(line));
+  assert.doesNotMatch(line, /job_version_id/);
   assert.equal(
     (
       line.match(
