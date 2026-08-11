@@ -52,6 +52,12 @@ test("only review creation excludes pull requests from the Islo app", () => {
   }
 });
 
+test("GitHub webhook does not trigger the delegator", () => {
+  const webhook = readFileSync("webhooks/github-events.toml", "utf-8");
+
+  assert.doesNotMatch(webhook, /job_name = "delegator"/);
+});
+
 test("reused PR sandboxes handle force-pushed branches by role", () => {
   const review = readFileSync("agents/review/job.toml", "utf-8");
   const babysit = readFileSync("agents/babysit/job.toml", "utf-8");

@@ -2,21 +2,21 @@
 
 Route human mentions like `@islo-agent please update this PR` to the right worker.
 
-The delegator is an ephemeral job: each webhook delivery provisions a small sandbox, routes the mention, then tears the sandbox down. It never does the underlying work itself.
+The delegator is currently available for manual runs, but is disconnected from
+the GitHub webhook. When run, it provisions a small sandbox, routes the mention,
+then tears the sandbox down. It never does the underlying work itself.
 
 ## Architecture
 
 ```
-GitHub @islo-agent comment
-  → github-events webhook
+Manual delegator run
   → delegator job (fresh tiny sandbox)
   → resume existing worker session
      or islo job run / create worker sandbox
 ```
 
-Deterministic events stay on their own triggers (issue label → `implementer`, PR open → `review`, etc.). Mentions go through the delegator because a human message needs interpretation.
-
-GitHub mention routing is defined in `trigger-rules/github.json` and assembled into `webhooks/github-events.json`.
+Deterministic events stay on their own triggers (issue label → `implementer`, PR
+open → `review`, etc.). GitHub mentions do not currently trigger the delegator.
 
 ## Sandbox
 
@@ -42,5 +42,3 @@ cp agents/delegator/job.toml jobs/delegator/job.toml
 islo job deploy delegator
 islo job get delegator
 ```
-
-Wire mentions through `webhooks/github-events.json` (job name `delegator`).
