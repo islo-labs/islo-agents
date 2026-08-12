@@ -60,7 +60,7 @@ jobs:
           echo "Webhooks changed: $(echo "$CHANGED" | grep -c '^agents/.*/trigger-rules/' || true)"
 
       - name: Install Islo CLI
-        if: steps.changes.outputs.agents != '[]' || steps.changes.outputs.webhooks == 'true'
+        if: steps.changes.outputs.agents != '[]' || steps.changes.outputs.lines != '[]' || steps.changes.outputs.webhooks == 'true'
         run: curl -fsSL https://islo.dev/install.sh | bash
 
       - name: Deploy modified jobs
@@ -83,7 +83,7 @@ jobs:
         run: |
           for line in $(echo '${{ steps.changes.outputs.lines }}' | jq -r '.[]'); do
             echo "::group::Deploying line: ${line}"
-            python scripts/deploy_factory_manifest.py line "lines/${line}/line.toml"
+            islo factory line deploy "lines/${line}/line.toml"
             echo "::endgroup::"
           done
 

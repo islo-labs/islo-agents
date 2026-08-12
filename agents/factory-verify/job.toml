@@ -51,9 +51,12 @@ timeout = 10800
 mode = "session"
 harness = "claude"
 model = "claude-opus-4-6"
-prompt_ref = "factory-verify-prompt"
-resume_prompt = "The pull requests have been updated after verification failure. Re-fetch PR heads, re-run checks, and verify the integrated feature again."
-knowledge = ["islo-integrations", "fullstack-env"]
+prompt = { type = "knowledge", slug = "factory-verify-prompt" }
+resume_prompt = { type = "literal", value = "The pull requests have been updated after verification failure. Re-fetch PR heads, re-run checks, and verify the integrated feature again." }
+knowledge = [
+  { type = "knowledge", slug = "islo-integrations" },
+  { type = "knowledge", slug = "fullstack-env" },
+]
 session = "factory-verify-{{issue_id}}"
 
 [[run.tasks.steps]]
