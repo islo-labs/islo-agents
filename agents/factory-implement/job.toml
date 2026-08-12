@@ -56,9 +56,9 @@ timeout = 10800
 mode = "session"
 harness = "claude"
 model = "claude-opus-4-6"
-prompt_ref = "factory-implement-prompt"
-resume_prompt = "Feedback arrived on the pull requests. Address all review and verification comments, update the branches, and re-run checks."
-knowledge = ["islo-integrations"]
+prompt = { type = "knowledge", slug = "factory-implement-prompt" }
+resume_prompt = { type = "literal", value = "Feedback arrived on the pull requests. Address all review and verification comments, update the branches, and re-run checks." }
+knowledge = [{ type = "knowledge", slug = "islo-integrations" }]
 session = "factory-impl-{{issue_id}}"
 
 [[run.tasks.steps]]

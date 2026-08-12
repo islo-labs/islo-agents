@@ -51,9 +51,9 @@ timeout = 7200
 mode = "session"
 harness = "claude"
 model = "claude-opus-4-6"
-prompt_ref = "factory-review-prompt"
-resume_prompt = "The pull requests have been updated. Review the latest changes across all PRs."
-knowledge = ["islo-integrations"]
+prompt = { type = "knowledge", slug = "factory-review-prompt" }
+resume_prompt = { type = "literal", value = "The pull requests have been updated. Review the latest changes across all PRs." }
+knowledge = [{ type = "knowledge", slug = "islo-integrations" }]
 session = "factory-review-{{issue_id}}"
 
 [[run.tasks.steps]]

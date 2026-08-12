@@ -24,7 +24,7 @@ path = "$.updatedFrom.labelIds"
 op = "exists"
 
 [trigger.outputs]
-issue_id = "trigger.raw.data.identifier"
+issue_id = { type = "trigger_path", path = "trigger.raw.data.identifier" }
 
 [limits]
 max_iterations = 20
@@ -55,14 +55,24 @@ id = "verify"
 job = "factory-verify"
 
 [[transitions]]
+id = "trigger-to-implement"
+from = "trigger"
+to = "implement"
+when = "true"
+
+[transitions.params]
+issue_id = { type = "input", name = "issue_id" }
+pull_requests = { type = "input", name = "pull_requests" }
+
+[[transitions]]
 id = "implementation-ready"
 from = "implement"
 to = "review"
 when = "result.outputs.implementation_result == 'ready'"
 
 [transitions.params]
-issue_id = { source = "inputs.issue_id" }
-pull_requests = { source = "outputs.implement.pull_requests" }
+issue_id = { type = "input", name = "issue_id" }
+pull_requests = { type = "output", stage = "implement", name = "pull_requests" }
 
 [[transitions]]
 id = "review-approved"
@@ -71,8 +81,8 @@ to = "verify"
 when = "result.outputs.review_result == 'approved'"
 
 [transitions.params]
-issue_id = { source = "inputs.issue_id" }
-pull_requests = { source = "outputs.implement.pull_requests" }
+issue_id = { type = "input", name = "issue_id" }
+pull_requests = { type = "output", stage = "implement", name = "pull_requests" }
 
 [[transitions]]
 id = "review-needs-changes"
@@ -82,8 +92,8 @@ when = "result.outputs.review_result == 'needs_changes'"
 max_iterations = 3
 
 [transitions.params]
-issue_id = { source = "inputs.issue_id" }
-pull_requests = { source = "outputs.implement.pull_requests" }
+issue_id = { type = "input", name = "issue_id" }
+pull_requests = { type = "output", stage = "implement", name = "pull_requests" }
 
 [[decisions]]
 id = "implementation-blocked"
@@ -117,5 +127,5 @@ when = "result.outputs.verification_result == 'failed'"
 max_iterations = 2
 
 [transitions.params]
-issue_id = { source = "inputs.issue_id" }
-pull_requests = { source = "outputs.implement.pull_requests" }
+issue_id = { type = "input", name = "issue_id" }
+pull_requests = { type = "output", stage = "implement", name = "pull_requests" }

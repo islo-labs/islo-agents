@@ -242,8 +242,16 @@ test("every stage that needs the issue gets it routed in", () => {
   // Sandbox names interpolate issue_id, so an unmapped transition would name a
   // sandbox after a blank and collapse separate issues into one.
   assert.equal(
-    (line.match(/issue_id = \{ source = "inputs\.issue_id" \}/g) ?? []).length,
-    4,
+    (
+      line.match(
+        /issue_id = \{ type = "input", name = "issue_id" \}/g,
+      ) ?? []
+    ).length,
+    5,
+  );
+  assert.match(
+    line,
+    /from = "trigger"\nto = "implement"\nwhen = "true"/,
   );
 });
 
@@ -254,12 +262,15 @@ test("feature-delivery maps implement PRs through both feedback loops", () => {
   assert.equal(
     (
       line.match(
-        /pull_requests = \{ source = "outputs\.implement\.pull_requests" \}/g,
+        /pull_requests = \{ type = "output", stage = "implement", name = "pull_requests" \}/g,
       ) ?? []
     ).length,
     4,
   );
-  assert.match(line, /issue_id = \{ source = "inputs\.issue_id" \}/);
+  assert.match(
+    line,
+    /issue_id = \{ type = "input", name = "issue_id" \}/,
+  );
 });
 
 test("feature-delivery uses typed tenant Manager instructions", () => {
