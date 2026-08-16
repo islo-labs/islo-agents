@@ -1,0 +1,124 @@
+[job]
+name = "islo-qa"
+version = "0.3.0"
+description = "Three parallel QA agents against the local islo-fullstack environment; stages findings to knowledge"
+
+[run]
+fail_fast = false
+fanout = true
+concurrency = 3
+timeout = 7200
+
+[run.sandbox]
+mode = "provision"
+image = "docker.io/library/islo-runner:latest"
+snapshot_name = "islo-qa-fullstack"
+gateway_profile = "default"
+environment = "islo-qa-fullstack"
+vcpus = 4
+memory_mb = 8192
+disk_gb = 30
+internet_enabled = true
+
+[run.sandbox.env]
+ISLO_BASE_URL = "http://localhost:5173"
+QA_RUN_ID = "{{run_id}}"
+ANTHROPIC_BASE_URL = "https://gateway.islo.dev/inference/anthropic"
+ANTHROPIC_MODEL = "ship-like/claude-sonnet-5"
+ANTHROPIC_DEFAULT_HAIKU_MODEL = "ship-like/claude-sonnet-5"
+ANTHROPIC_SMALL_FAST_MODEL = "ship-like/claude-sonnet-5"
+CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"
+
+[[run.tasks]]
+name = "qa-agent-web-core"
+
+[[run.tasks.steps]]
+name = "check-snapshot"
+exec = ["bash", "-lc", "set -euo pipefail\nif [ ! -f /opt/islo-qa/agent/cleanup.py ]; then\n  echo \"ERROR: islo-qa-fullstack snapshot is missing /opt/islo-qa — see lines/islo-qa-line/README.md\" >&2\n  exit 1\nfi\nif [ ! -f /workspace/islo-qa/package.json ]; then\n  echo \"ERROR: islo-qa-fullstack snapshot is missing /workspace/islo-qa Playwright harness\" >&2\n  exit 1\nfi\n"]
+[[run.tasks.steps]]
+name = "start-stack"
+exec = ["bash", "-lc", "set -euo pipefail\n/opt/islo-qa/scripts/start-qa-stack.sh\n"]
+[[run.tasks.steps]]
+name = "explore"
+workdir = "/workspace/islo-qa"
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "ship-like/claude-sonnet-5"
+
+[run.tasks.steps.run_agent.prompt]
+type = "literal"
+value = """
+Read and follow `/opt/islo-qa/prompts/full/agent-web-core.md` exactly.
+Write `/workspace/findings.json` per that contract.
+"""
+
+[[run.tasks.steps]]
+name = "cleanup"
+exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-web-core\"\nexport QA_RUN_ID=\"${ISLO_RUN_ID:-${QA_RUN_ID:-manual}}\"\npython3 /opt/islo-qa/agent/cleanup.py || true\nexit 0\n"]
+[[run.tasks.steps]]
+name = "stage-findings"
+exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-web-core\"\nexport QA_BRIEF_LABEL=\"Web core: login, navigation, sandbox lifecycle, terminal/share\"\npython3 /opt/islo-qa/agent/stage_findings.py\nexit 0\n"]
+[[run.tasks]]
+name = "qa-agent-web-platform"
+
+[[run.tasks.steps]]
+name = "check-snapshot"
+exec = ["bash", "-lc", "set -euo pipefail\nif [ ! -f /opt/islo-qa/agent/cleanup.py ]; then\n  echo \"ERROR: islo-qa-fullstack snapshot is missing /opt/islo-qa — see lines/islo-qa-line/README.md\" >&2\n  exit 1\nfi\nif [ ! -f /workspace/islo-qa/package.json ]; then\n  echo \"ERROR: islo-qa-fullstack snapshot is missing /workspace/islo-qa Playwright harness\" >&2\n  exit 1\nfi\n"]
+[[run.tasks.steps]]
+name = "start-stack"
+exec = ["bash", "-lc", "set -euo pipefail\n/opt/islo-qa/scripts/start-qa-stack.sh\n"]
+[[run.tasks.steps]]
+name = "explore"
+workdir = "/workspace/islo-qa"
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "ship-like/claude-sonnet-5"
+
+[run.tasks.steps.run_agent.prompt]
+type = "literal"
+value = """
+Read and follow `/opt/islo-qa/prompts/full/agent-web-platform.md` exactly.
+Write `/workspace/findings.json` per that contract.
+"""
+
+[[run.tasks.steps]]
+name = "cleanup"
+exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-web-platform\"\nexport QA_RUN_ID=\"${ISLO_RUN_ID:-${QA_RUN_ID:-manual}}\"\npython3 /opt/islo-qa/agent/cleanup.py || true\nexit 0\n"]
+[[run.tasks.steps]]
+name = "stage-findings"
+exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-web-platform\"\nexport QA_BRIEF_LABEL=\"Web platform: settings, deep links, Factory, environments, integrations\"\npython3 /opt/islo-qa/agent/stage_findings.py\nexit 0\n"]
+[[run.tasks]]
+name = "qa-agent-cli-cross"
+
+[[run.tasks.steps]]
+name = "check-snapshot"
+exec = ["bash", "-lc", "set -euo pipefail\nif [ ! -f /opt/islo-qa/agent/cleanup.py ]; then\n  echo \"ERROR: islo-qa-fullstack snapshot is missing /opt/islo-qa — see lines/islo-qa-line/README.md\" >&2\n  exit 1\nfi\nif [ ! -f /workspace/islo-qa/package.json ]; then\n  echo \"ERROR: islo-qa-fullstack snapshot is missing /workspace/islo-qa Playwright harness\" >&2\n  exit 1\nfi\n"]
+[[run.tasks.steps]]
+name = "start-stack"
+exec = ["bash", "-lc", "set -euo pipefail\n/opt/islo-qa/scripts/start-qa-stack.sh\n"]
+[[run.tasks.steps]]
+name = "explore"
+workdir = "/workspace/islo-qa"
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "ship-like/claude-sonnet-5"
+
+[run.tasks.steps.run_agent.prompt]
+type = "literal"
+value = """
+Read and follow `/opt/islo-qa/prompts/full/agent-cli-cross.md` exactly.
+Write `/workspace/findings.json` per that contract.
+"""
+
+[[run.tasks.steps]]
+name = "cleanup"
+exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-cli-cross\"\nexport QA_RUN_ID=\"${ISLO_RUN_ID:-${QA_RUN_ID:-manual}}\"\npython3 /opt/islo-qa/agent/cleanup.py || true\nexit 0\n"]
+[[run.tasks.steps]]
+name = "stage-findings"
+exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-cli-cross\"\nexport QA_BRIEF_LABEL=\"CLI and cross-surface: doctor, status, sandbox ops, web consistency\"\npython3 /opt/islo-qa/agent/stage_findings.py\nexit 0\n"]

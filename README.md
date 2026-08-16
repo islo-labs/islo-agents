@@ -15,6 +15,8 @@ agents/                             — one directory per role
     job.toml                        — durable job (sandbox + steps); job name = role name
     trigger-rules/<source>.toml     — webhook rule fragments for that source
 lines/                              — deployable Factory line manifests
+snapshots/                          — VM snapshot source trees (build with setup-snapshot.sh)
+factory/                            — runbooks, prompts, and tests for internal lines
 webhooks/                           — assembled receivers
   github-events.toml
   linear-issues.toml
@@ -150,6 +152,27 @@ Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; de
 |------|---------|----------|
 | **Role** | What the agent does | `agents/<role>/` + job name |
 | **Source** | Which system fires the event | `trigger-rules/<source>.toml` → `webhooks/` |
+
+## Factory line templates
+
+Besides PR review / implement / verify (`feature-delivery`), this repo ships **example Factory lines** you can fork and adapt. Each line has a manifest under `lines/<name>/line.toml` and per-line setup notes in `lines/<name>/README.md`. Stage jobs live under `agents/<job>/job.toml`.
+
+Snapshot **contracts** (what to bake into your VM, not runnable source) live under `snapshots/<name>/README.md`.
+
+| Line | Schedule (UTC) | Stages | Purpose |
+|------|----------------|--------|---------|
+| [`islo-qa-line`](lines/islo-qa-line/README.md) | Daily 07:00 | `islo-qa` → `islo-qa-collector` | Parallel black-box QA; publish deduped findings to Linear |
+| [`red-team-cli`](lines/red-team-cli/README.md) | Mon 08:00 | trust-boundaries → input-abuse → black-box → report → slack | White-box + black-box CLI security review |
+| [`weekly-skills-refresh`](lines/weekly-skills-refresh/README.md) | Mon 07:00 | `weekly-skills-refresh` | Refresh agent skills when stack changes would mislead agents |
+
+Deploy all stage jobs, then the line (see each line README for prerequisites and placeholders):
+
+```bash
+islo job deploy islo-qa --dry-run && islo job deploy islo-qa
+islo job deploy islo-qa-collector --dry-run && islo job deploy islo-qa-collector
+islo factory line deploy lines/islo-qa-line/line.toml --dry-run
+islo factory line deploy lines/islo-qa-line/line.toml
+```
 
 ## Quick start
 

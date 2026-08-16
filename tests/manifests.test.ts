@@ -313,3 +313,51 @@ test("factory deployment does not own the platform manager template", () => {
   assert.match(workflow, /islo factory line deploy/);
   assert.doesNotMatch(workflow, /deploy_factory_manifest\.py/);
 });
+
+const templateJobs = [
+  "islo-qa",
+  "islo-qa-collector",
+  "red-team-cli-trust-boundaries",
+  "red-team-cli-input-abuse",
+  "red-team-cli-black-box",
+  "red-team-cli-report",
+  "red-team-cli-slack-notify",
+  "weekly-skills-refresh",
+];
+
+const templateLines = ["islo-qa-line", "red-team-cli", "weekly-skills-refresh"];
+
+const forbiddenWorkspaceIds =
+  /02cad9f0-86c4-4cb5-8cbc-24265895608c|C0B0H5Z3V7X|P397XkCwssNLDTHXJifN0SaFJYSZ/;
+
+test("template job and line manifests parse", () => {
+  for (const job of templateJobs) {
+    const manifest = readFileSync(`agents/${job}/job.toml`, "utf-8");
+    assert.doesNotThrow(() => parse(manifest), `${job} must parse`);
+    assert.doesNotMatch(manifest, forbiddenWorkspaceIds, `${job} must not embed workspace IDs`);
+    assert.match(
+      manifest,
+      /image = "docker\.io\/library\/islo-runner:latest"/,
+      `${job} must use the public runner image`,
+    );
+  }
+  for (const line of templateLines) {
+    const manifest = readFileSync(`lines/${line}/line.toml`, "utf-8");
+    assert.doesNotThrow(() => parse(manifest), `${line} must parse`);
+    assert.doesNotMatch(manifest, forbiddenWorkspaceIds, `${line} must not embed workspace IDs`);
+  }
+});
+
+test("template jobs do not interpolate params inside shell exec strings", () => {
+  for (const job of templateJobs) {
+    const manifest = readFileSync(`agents/${job}/job.toml`, "utf-8");
+    const execBlocks = manifest.match(/exec = \[[\s\S]*?\]/g) ?? [];
+    for (const block of execBlocks) {
+      assert.doesNotMatch(
+        block,
+        /\{\{[^}]+\}\}/,
+        `${job} must pass job params through sandbox env, not shell exec`,
+      );
+    }
+  }
+});

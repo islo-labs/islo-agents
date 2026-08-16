@@ -1,0 +1,45 @@
+[line]
+name = "islo-qa-line"
+description = "Daily black-box QA: parallel agents against your local full-stack environment, then Linear issue publishing"
+
+[trigger]
+type = "schedule"
+cron = "0 7 * * *"
+timezone = "UTC"
+
+[[stages]]
+id = "qa"
+job = "islo-qa"
+description = "Run 3 parallel Islo QA agents; stage findings and evidence to knowledge"
+
+[[stages]]
+id = "collect"
+job = "islo-qa-collector"
+description = "Dedupe, rank, and publish validated findings to Linear"
+
+[[transitions]]
+id = "trigger-to-qa"
+from = "trigger"
+to = "qa"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[[transitions]]
+id = "qa-to-collect"
+from = "qa"
+to = "collect"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[[transitions]]
+id = "collect-to-done"
+from = "collect"
+to = "done"
+type = "conditional"
+
+[transitions.when]
+op = "always"

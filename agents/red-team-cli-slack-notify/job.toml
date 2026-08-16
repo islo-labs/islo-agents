@@ -1,0 +1,107 @@
+[job]
+name = "red-team-cli-slack-notify"
+version = "0.1.0"
+description = "Post red-team-cli line completion summary to Slack"
+
+[job.params.slack_channel_id]
+type = "string"
+required = true
+description = "Slack channel ID for chat.postMessage"
+
+[job.params.summary]
+type = "string"
+required = true
+description = "Human-readable run summary from validate-and-report"
+
+[job.params.linear_issue_urls]
+type = "string"
+required = false
+default = "[]"
+description = "JSON array string of Linear issue URLs created"
+
+[job.params.line_status]
+type = "string"
+required = false
+default = "succeeded"
+description = "Line outcome label for the message header"
+
+[run]
+fail_fast = true
+fanout = false
+timeout = 300
+workdir = "/workspace"
+
+[run.sandbox]
+mode = "provision"
+image = "docker.io/library/islo-runner:latest"
+vcpus = 1
+memory_mb = 1024
+disk_gb = 5
+gateway_profile = "default"
+internet_enabled = true
+
+[run.sandbox.env]
+SLACK_NOTIFY_CHANNEL_ID = "{{slack_channel_id}}"
+SLACK_NOTIFY_SUMMARY = "{{summary}}"
+SLACK_NOTIFY_LINEAR_ISSUE_URLS = "{{linear_issue_urls}}"
+SLACK_NOTIFY_LINE_STATUS = "{{line_status}}"
+
+[[run.tasks]]
+name = "notify"
+
+[[run.tasks.steps]]
+name = "post-slack"
+exec = [
+  "bash",
+  "-lc",
+  '''set -euo pipefail
+mkdir -p /workspace/notify
+printf '%s' "$SLACK_NOTIFY_CHANNEL_ID" > /workspace/notify/channel.txt
+printf '%s' "$SLACK_NOTIFY_SUMMARY" > /workspace/notify/summary.txt
+printf '%s' "$SLACK_NOTIFY_LINEAR_ISSUE_URLS" > /workspace/notify/linear_issue_urls.json
+printf '%s' "$SLACK_NOTIFY_LINE_STATUS" > /workspace/notify/line_status.txt
+python3 - <<'PY'
+import json, os, sys, urllib.error, urllib.request
+
+channel = open("/workspace/notify/channel.txt").read().strip()
+summary = open("/workspace/notify/summary.txt").read()
+status = open("/workspace/notify/line_status.txt").read().strip() or "succeeded"
+try:
+    issues = json.load(open("/workspace/notify/linear_issue_urls.json"))
+except json.JSONDecodeError:
+    issues = []
+
+token = (os.environ.get("SLACK_TOKEN") or os.environ.get("SLACK_BOT_TOKEN") or "").strip()
+if not token:
+    print("ERROR: SLACK_TOKEN not set in sandbox (connect Slack via islo login --tool slack)", file=sys.stderr)
+    sys.exit(1)
+
+emoji = ":white_check_mark:" if status == "succeeded" else ":x:"
+lines = [f"{emoji} *red-team-cli* ({status})", "", summary.strip()]
+if issues:
+    lines.append("")
+    lines.append("*Linear issues filed:*")
+    lines.extend(f"• {url}" for url in issues)
+
+payload = {"channel": channel, "text": "\n".join(lines)}
+req = urllib.request.Request(
+    "https://slack.com/api/chat.postMessage",
+    data=json.dumps(payload).encode(),
+    headers={
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    },
+    method="POST",
+)
+try:
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        body = json.load(resp)
+except urllib.error.HTTPError as exc:
+    body = json.loads(exc.read().decode() or "{}")
+if not body.get("ok"):
+    print(json.dumps(body), file=sys.stderr)
+    sys.exit(1)
+print(f"Posted to {channel} (ts={body.get('ts')})")
+PY
+''',
+]
