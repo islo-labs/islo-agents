@@ -209,6 +209,32 @@ test("factory review and verification post to GitHub before their verdict", () =
   }
 });
 
+test("implement jobs install sandbox-only Cargo config outside git trees", () => {
+  const script = readFileSync(
+    "scripts/install-cargo-sandbox-config.sh",
+    "utf-8",
+  );
+  const implementer = readFileSync("agents/implementer/job.toml", "utf-8");
+  const factoryImplement = readFileSync(
+    "agents/factory-implement/job.toml",
+    "utf-8",
+  );
+
+  for (const source of [script, factoryImplement]) {
+    assert.match(source, /\/workspace\/\.cargo\/config\.toml/);
+    assert.match(source, /\[profile\.dev\]/);
+    assert.match(source, /incremental = false/);
+    assert.match(source, /\[profile\.dev\.package\."\*"\]/);
+    assert.match(source, /\[profile\.test\]/);
+  }
+  assert.match(
+    implementer,
+    /bash \/workspace\/\.islo-pack\/scripts\/install-cargo-sandbox-config\.sh/,
+  );
+  assert.match(implementer, /name = "cargo-sandbox-config"/);
+  assert.match(factoryImplement, /name = "cargo-sandbox-config"/);
+});
+
 test("factory sandboxes survive rounds and expire after two days", () => {
   for (const role of factoryRoles) {
     const manifest = readFileSync(`agents/${role}/job.toml`, "utf-8");

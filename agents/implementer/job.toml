@@ -1,6 +1,6 @@
 [job]
 name = "implementer"
-version = "0.7.1"
+version = "0.7.2"
 description = "Implement a tracked issue: enrich context from the source system, change code, open PR(s), report back."
 
 [job.params.issue_id]
@@ -122,6 +122,18 @@ exec = [
 set -euo pipefail
 cd /workspace/.islo-pack
 npm ci
+''',
+]
+
+[[run.tasks.steps]]
+name = "cargo-sandbox-config"
+timeout = 10
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+bash /workspace/.islo-pack/scripts/install-cargo-sandbox-config.sh
 ''',
 ]
 
