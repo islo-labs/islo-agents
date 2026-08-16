@@ -39,7 +39,7 @@ You are inside an isolated sandbox VM with full root access. Repos are pre-clone
 
 This sandbox persists across iterations on a fixed-size disk. Run targeted checks for the code you changed rather than building every target in a workspace, and remove build artifact directories when you no longer need them.
 
-A Cargo config at `/workspace/.cargo/config.toml` already shrinks `target/` for this VM. Do not copy it into a product repo, do not edit that repo's `Cargo.toml` profiles, and do not `git add` `.cargo/`. For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all-features` workspace builds. After a disk error, do not `cargo clean`; delete `target/*/incremental` if you must free space.
+A Cargo config at `/workspace/.cargo/config.toml` already shrinks `target/` for this VM. Do not copy it into a product repo, do not edit that repo's `Cargo.toml` profiles, and do not `git add` `.cargo/`. For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all-features` workspace builds. After a disk error, do not `cargo clean` the whole workspace — incremental artifacts are already disabled here, so that would rebuild everything from scratch. Free space with `cargo clean -p <crate>` for a targeted rebuild, or `rm -rf /workspace/<other-repo>/target` for repos outside the current change.
 
 ## Implementation
 

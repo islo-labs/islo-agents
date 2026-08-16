@@ -133,7 +133,21 @@ exec = [
   "-lc",
   '''
 set -euo pipefail
-bash /workspace/.islo-pack/scripts/install-cargo-sandbox-config.sh
+mkdir -p /workspace/.cargo
+cat > /workspace/.cargo/config.toml <<'EOF'
+# Sandbox-only. Do not copy into product repos.
+# Shrinks target/ for cargo test / clippy (dev and test profiles).
+# debug = 1 keeps panic file:line backtraces without full DWARF.
+[profile.dev]
+debug = 1
+incremental = false
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.test]
+debug = 1
+EOF
 ''',
 ]
 

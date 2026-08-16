@@ -209,6 +209,14 @@ test("factory review and verification post to GitHub before their verdict", () =
   }
 });
 
+function cargoSandboxConfigBody(source: string, label: string): string {
+  const match = source.match(
+    /cat > \/workspace\/\.cargo\/config\.toml <<'EOF'\n([\s\S]*?)\nEOF/,
+  );
+  assert.ok(match?.[1], `${label} must inline the cargo sandbox config heredoc`);
+  return match[1];
+}
+
 test("implement jobs install sandbox-only Cargo config outside git trees", () => {
   const script = readFileSync(
     "scripts/install-cargo-sandbox-config.sh",
@@ -219,20 +227,23 @@ test("implement jobs install sandbox-only Cargo config outside git trees", () =>
     "agents/factory-implement/job.toml",
     "utf-8",
   );
+  const expected = cargoSandboxConfigBody(script, "install script");
 
-  for (const source of [script, factoryImplement]) {
-    assert.match(source, /\/workspace\/\.cargo\/config\.toml/);
-    assert.match(source, /\[profile\.dev\]/);
-    assert.match(source, /incremental = false/);
-    assert.match(source, /\[profile\.dev\.package\."\*"\]/);
-    assert.match(source, /\[profile\.test\]/);
-  }
-  assert.match(
-    implementer,
-    /bash \/workspace\/\.islo-pack\/scripts\/install-cargo-sandbox-config\.sh/,
+  assert.equal(
+    cargoSandboxConfigBody(factoryImplement, "factory-implement"),
+    expected,
+  );
+  assert.equal(
+    cargoSandboxConfigBody(implementer, "implementer"),
+    expected,
   );
   assert.match(implementer, /name = "cargo-sandbox-config"/);
   assert.match(factoryImplement, /name = "cargo-sandbox-config"/);
+  assert.doesNotMatch(
+    implementer,
+    /install-cargo-sandbox-config\.sh/,
+    "implementer must inline the config so a pinned pre-merge pack ref cannot fail the step",
+  );
 });
 
 test("factory sandboxes survive rounds and expire after two days", () => {

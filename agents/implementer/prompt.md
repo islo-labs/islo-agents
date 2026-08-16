@@ -30,7 +30,7 @@ Use the tools and credentials available in this sandbox (CLI, `curl`, gateway to
 
 You are inside an isolated sandbox VM with full root access. Repos are pre-cloned under `/workspace/`. The change may span one repo or several — explore what's there and decide scope from the issue.
 
-This sandbox has a fixed-size disk. A Cargo config at `/workspace/.cargo/config.toml` already shrinks `target/` for this VM. Do not copy it into a product repo, do not edit that repo's `Cargo.toml` profiles, and do not `git add` `.cargo/`. For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all-features` workspace builds. After a disk error, do not `cargo clean`; delete `target/*/incremental` if you must free space.
+This sandbox has a fixed-size disk. A Cargo config at `/workspace/.cargo/config.toml` already shrinks `target/` for this VM. Do not copy it into a product repo, do not edit that repo's `Cargo.toml` profiles, and do not `git add` `.cargo/`. For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all-features` workspace builds. After a disk error, do not `cargo clean` the whole workspace — incremental artifacts are already disabled here, so that would rebuild everything from scratch. Free space with `cargo clean -p <crate>` for a targeted rebuild, or `rm -rf /workspace/<other-repo>/target` for repos outside the current change.
 
 ## Implementation
 
