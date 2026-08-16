@@ -1,4 +1,4 @@
-# `islo-qa-line` template
+# `fullstack-qa-line` template
 
 Scheduled Factory line that runs **three parallel QA agents** against a local full-stack environment, then **deduplicates and publishes** findings to Linear.
 
@@ -6,8 +6,8 @@ Scheduled Factory line that runs **three parallel QA agents** against a local fu
 
 | Stage | Job | Snapshot |
 |-------|-----|----------|
-| `qa` | `islo-qa` | `islo-qa-fullstack` |
-| `collect` | `islo-qa-collector` | `islo-qa-baseline` |
+| `qa` | `fullstack-qa` | `fullstack-qa` |
+| `collect` | `fullstack-qa-collector` | `qa-collector` |
 
 ## Before you deploy
 
@@ -15,12 +15,12 @@ Scheduled Factory line that runs **three parallel QA agents** against a local fu
 
 Jobs expect harness files baked into VM snapshots — **not** embedded in `job.toml`. See:
 
-- [`snapshots/islo-qa-fullstack/README.md`](../../snapshots/islo-qa-fullstack/README.md)
-- [`snapshots/islo-qa-baseline/README.md`](../../snapshots/islo-qa-baseline/README.md)
+- [`snapshots/fullstack-qa/README.md`](../../snapshots/fullstack-qa/README.md)
+- [`snapshots/qa-collector/README.md`](../../snapshots/qa-collector/README.md)
 
-You supply your own agent scripts, prompts, Playwright harness, and stack bootstrap under `/opt/islo-qa/` and `/workspace/islo-qa/` in the snapshot.
+You supply your own agent scripts, prompts, Playwright harness, and stack bootstrap under `/opt/qa-harness/` and `/workspace/qa-harness/` in the snapshot.
 
-### 2. Factory environment: `islo-qa-fullstack`
+### 2. Factory environment: `fullstack-qa`
 
 Create a Factory environment with secrets your QA harness needs, for example:
 
@@ -28,7 +28,7 @@ Create a Factory environment with secrets your QA harness needs, for example:
 |----------|---------|
 | `LINEAR_TEAM_ID` | Linear team UUID for the collector (required) |
 | `DESCOPE_PROJECT_ID` | Auth provider project ID (if your app uses Descope) |
-| `ISLO_QA_EMAIL` / `ISLO_QA_OTP` | Test user credentials for browser login |
+| `QA_TEST_EMAIL` / `QA_TEST_OTP` | Test user credentials for browser login |
 | `SLACK_CHANNEL` | Optional Slack channel for collector notifications |
 
 The collector ships with `DRY_RUN=1` so the first deploy validates without filing issues. Set `DRY_RUN=0` in the job manifest when ready.
@@ -36,10 +36,10 @@ The collector ships with `DRY_RUN=1` so the first deploy validates without filin
 ### 3. Deploy jobs and line
 
 ```bash
-islo job deploy islo-qa --dry-run && islo job deploy islo-qa
-islo job deploy islo-qa-collector --dry-run && islo job deploy islo-qa-collector
-islo factory line deploy lines/islo-qa-line/line.toml --dry-run
-islo factory line deploy lines/islo-qa-line/line.toml
+islo job deploy fullstack-qa --dry-run && islo job deploy fullstack-qa
+islo job deploy fullstack-qa-collector --dry-run && islo job deploy fullstack-qa-collector
+islo factory line deploy lines/fullstack-qa-line/line.toml --dry-run
+islo factory line deploy lines/fullstack-qa-line/line.toml
 ```
 
 Adjust the schedule in `line.toml` (`cron`) for your timezone and cadence.

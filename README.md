@@ -161,17 +161,17 @@ Snapshot **contracts** (what to bake into your VM, not runnable source) live und
 
 | Line | Schedule (UTC) | Stages | Purpose |
 |------|----------------|--------|---------|
-| [`islo-qa-line`](lines/islo-qa-line/README.md) | Daily 07:00 | `islo-qa` → `islo-qa-collector` | Parallel black-box QA; publish deduped findings to Linear |
+| [`fullstack-qa-line`](lines/fullstack-qa-line/README.md) | Daily 07:00 | `fullstack-qa` → `fullstack-qa-collector` | Parallel black-box QA; publish deduped findings to Linear |
 | [`red-team-cli`](lines/red-team-cli/README.md) | Mon 08:00 | trust-boundaries → input-abuse → black-box → report → slack | White-box + black-box CLI security review |
 | [`weekly-skills-refresh`](lines/weekly-skills-refresh/README.md) | Mon 07:00 | `weekly-skills-refresh` | Refresh agent skills when stack changes would mislead agents |
 
 Deploy all stage jobs, then the line (see each line README for prerequisites and placeholders):
 
 ```bash
-islo job deploy islo-qa --dry-run && islo job deploy islo-qa
-islo job deploy islo-qa-collector --dry-run && islo job deploy islo-qa-collector
-islo factory line deploy lines/islo-qa-line/line.toml --dry-run
-islo factory line deploy lines/islo-qa-line/line.toml
+islo job deploy fullstack-qa --dry-run && islo job deploy fullstack-qa
+islo job deploy fullstack-qa-collector --dry-run && islo job deploy fullstack-qa-collector
+islo factory line deploy lines/fullstack-qa-line/line.toml --dry-run
+islo factory line deploy lines/fullstack-qa-line/line.toml
 ```
 
 ## Quick start

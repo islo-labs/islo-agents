@@ -315,8 +315,8 @@ test("factory deployment does not own the platform manager template", () => {
 });
 
 const templateJobs = [
-  "islo-qa",
-  "islo-qa-collector",
+  "fullstack-qa",
+  "fullstack-qa-collector",
   "red-team-cli-trust-boundaries",
   "red-team-cli-input-abuse",
   "red-team-cli-black-box",
@@ -325,7 +325,7 @@ const templateJobs = [
   "weekly-skills-refresh",
 ];
 
-const templateLines = ["islo-qa-line", "red-team-cli", "weekly-skills-refresh"];
+const templateLines = ["fullstack-qa-line", "red-team-cli", "weekly-skills-refresh"];
 
 const forbiddenWorkspaceIds =
   /02cad9f0-86c4-4cb5-8cbc-24265895608c|C0B0H5Z3V7X|P397XkCwssNLDTHXJifN0SaFJYSZ/;

@@ -1,5 +1,5 @@
 [line]
-name = "islo-qa-line"
+name = "fullstack-qa-line"
 description = "Daily black-box QA: parallel agents against your local full-stack environment, then Linear issue publishing"
 
 [trigger]
@@ -9,12 +9,12 @@ timezone = "UTC"
 
 [[stages]]
 id = "qa"
-job = "islo-qa"
-description = "Run 3 parallel Islo QA agents; stage findings and evidence to knowledge"
+job = "fullstack-qa"
+description = "Run 3 parallel QA agents; stage findings and evidence to knowledge"
 
 [[stages]]
 id = "collect"
-job = "islo-qa-collector"
+job = "fullstack-qa-collector"
 description = "Dedupe, rank, and publish validated findings to Linear"
 
 [[transitions]]
