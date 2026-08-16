@@ -49,3 +49,22 @@ jobs:
             echo "::endgroup::"
           done
           exit $failed
+
+      - name: Validate line manifests
+        env:
+          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
+        run: |
+          failed=0
+          for manifest in lines/*/line.toml; do
+            [ -f "$manifest" ] || continue
+            name="$(basename "$(dirname "$manifest")")"
+            echo "::group::Validating ${name}"
+            if islo factory line deploy "$manifest" --dry-run; then
+              echo "OK"
+            else
+              echo "::error::${name} manifest validation failed"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $failed
