@@ -30,11 +30,13 @@ Use the tools and credentials available in this sandbox (CLI, `curl`, gateway to
 
 You are inside an isolated sandbox VM with full root access. Repos are pre-cloned under `/workspace/`. The change may span one repo or several — explore what's there and decide scope from the issue.
 
+This sandbox has a fixed-size disk. For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all-features` workspace builds. After a disk error, do not `cargo clean` the whole workspace. Free space with `cargo clean -p <crate>` for a targeted rebuild, or `rm -rf /workspace/<other-repo>/target` for repos outside the current change.
+
 ## Implementation
 
 1. **Understand the change.** Read the issue and the extra context you fetched. Explore the relevant codebase(s).
 2. **Implement.** Clean, focused, matching each project's patterns.
-3. **Verify locally.** Before pushing, run the repo's test suite, linters, and type checks. Fix any failures. For Python repos: `uv run pytest`, `uv run ruff check`, `uv run pre-commit run --all-files`. For Rust repos: `cargo test`, `cargo clippy`. For frontend repos: `npm test`, `npx tsc --noEmit`. Check the repo's CI workflow (`.github/workflows/`) to see exactly what CI runs and replicate it locally.
+3. **Verify locally.** Before pushing, run the repo's test suite, linters, and type checks. Fix any failures. For Python repos: `uv run pytest`, `uv run ruff check`, `uv run pre-commit run --all-files`. For Rust repos: `cargo test -p <crate>`, `cargo clippy -p <crate>` — not a workspace `--all-features` build. For frontend repos: `npm test`, `npx tsc --noEmit`. Check the repo's CI workflow (`.github/workflows/`) to see exactly what CI runs and replicate it locally.
 4. **Open PR(s).** One PR per repo:
    ```bash
    cd /workspace/<repo>
