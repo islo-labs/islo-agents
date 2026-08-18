@@ -348,6 +348,17 @@ test("template job and line manifests parse", () => {
   }
 });
 
+test("template job params declare a type", () => {
+  for (const job of templateJobs) {
+    const manifest = readFileSync(`agents/${job}/job.toml`, "utf-8");
+    const paramBlocks = manifest.match(/\[job\.params\.[^\]]+\][\s\S]*?(?=\n\[|$)/g) ?? [];
+    for (const block of paramBlocks) {
+      const name = block.match(/\[job\.params\.([^\]]+)\]/)?.[1] ?? job;
+      assert.match(block, /type = /, `${job} param ${name} must declare type`);
+    }
+  }
+});
+
 test("template jobs do not interpolate params inside shell exec strings", () => {
   for (const job of templateJobs) {
     const manifest = readFileSync(`agents/${job}/job.toml`, "utf-8");

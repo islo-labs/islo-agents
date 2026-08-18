@@ -1,9 +1,11 @@
 [job]
 name = "fullstack-qa"
-version = "0.7.2"
+version = "0.7.3"
 description = "Three parallel black-box QA agents against a deployed app URL; stages findings to knowledge"
 
 [job.params.qa_base_url]
+type = "string"
+required = false
 default = "https://app.islo.dev"
 description = "Deployed web app URL to test (browser and CLI target)"
 
