@@ -1,6 +1,6 @@
 [job]
 name = "weekly-skills-refresh"
-version = "0.3.0"
+version = "0.3.1"
 description = "Weekly stack change review and refresh of your agent skills repository"
 
 [job.params.branch_prefix]
@@ -56,17 +56,18 @@ ANTHROPIC_DEFAULT_HAIKU_MODEL = "ship-like/claude-sonnet-5"
 ANTHROPIC_MODEL = "ship-like/claude-sonnet-5"
 ANTHROPIC_SMALL_FAST_MODEL = "ship-like/claude-sonnet-5"
 CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"
+PYTHONPATH = "/opt/skills-refresh-harness"
 
 [[run.tasks]]
 name = "refresh"
 
 [[run.tasks.steps]]
 name = "checkout-skills"
-exec = ["bash", "/opt/skills-refresh-harness/scripts/checkout_skills.sh"]
+exec = ["python3", "-m", "harness", "checkout"]
 
 [[run.tasks.steps]]
 name = "collect-changes"
-exec = ["bash", "/opt/skills-refresh-harness/scripts/collect_changes.sh"]
+exec = ["python3", "-m", "harness", "collect"]
 
 [[run.tasks.steps]]
 name = "analyze-and-update"
@@ -82,7 +83,7 @@ value = "Read `/opt/skills-refresh-harness/prompts/analyze-and-update.md` and fo
 
 [[run.tasks.steps]]
 name = "publish"
-exec = ["bash", "/opt/skills-refresh-harness/scripts/publish_skills.sh"]
+exec = ["python3", "-m", "harness", "publish"]
 
 [[run.tasks.steps]]
 name = "report"

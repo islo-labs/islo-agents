@@ -1,6 +1,6 @@
 [job]
 name = "red-team-cli-slack-notify"
-version = "0.2.0"
+version = "0.2.1"
 description = "Post red-team-cli line completion summary to Slack"
 
 [job.params.slack_channel_id]
@@ -46,10 +46,11 @@ SLACK_NOTIFY_CHANNEL_ID = "{{slack_channel_id}}"
 SLACK_NOTIFY_SUMMARY = "{{summary}}"
 SLACK_NOTIFY_LINEAR_ISSUE_URLS = "{{linear_issue_urls}}"
 SLACK_NOTIFY_LINE_STATUS = "{{line_status}}"
+PYTHONPATH = "/opt/red-team-harness"
 
 [[run.tasks]]
 name = "notify"
 
 [[run.tasks.steps]]
 name = "post-slack"
-exec = ["python3", "/opt/red-team-harness/scripts/post_slack.py"]
+exec = ["python3", "-m", "harness", "notify-slack"]

@@ -1,6 +1,6 @@
 [job]
 name = "red-team-cli-black-box"
-version = "0.2.0"
+version = "0.2.1"
 description = "Black-box adversarial testing of islo CLI against app.islo.dev (no source access)"
 
 [outputs.report_json]
@@ -33,13 +33,14 @@ ANTHROPIC_DEFAULT_HAIKU_MODEL = "ship-like/claude-sonnet-5"
 ANTHROPIC_MODEL = "ship-like/claude-sonnet-5"
 ANTHROPIC_SMALL_FAST_MODEL = "ship-like/claude-sonnet-5"
 CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"
+PYTHONPATH = "/opt/red-team-harness"
 
 [[run.tasks]]
 name = "black-box"
 
 [[run.tasks.steps]]
 name = "prepare"
-exec = ["bash", "/opt/red-team-harness/scripts/prepare_black_box.sh"]
+exec = ["python3", "-m", "harness", "prepare-black-box"]
 
 [[run.tasks.steps]]
 name = "black-box-attack"
@@ -55,4 +56,4 @@ value = "Read `/opt/red-team-harness/prompts/black-box-cli.md` and `/workspace/r
 
 [[run.tasks.steps]]
 name = "cleanup-check"
-exec = ["bash", "/opt/red-team-harness/scripts/cleanup_check.sh"]
+exec = ["python3", "-m", "harness", "cleanup-check"]

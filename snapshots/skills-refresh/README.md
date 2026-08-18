@@ -6,7 +6,7 @@ Bake a VM snapshot named `skills-refresh` with the weekly skills refresh harness
 
 | Path in snapshot | Contents |
 |------------------|----------|
-| `/opt/skills-refresh-harness/scripts/` | Checkout, change collection, publish helpers |
+| `/opt/skills-refresh-harness/harness/` | Python harness (`python3 -m harness <command>`) |
 | `/opt/skills-refresh-harness/prompts/` | Agent brief for analyze-and-update |
 
 ## What you bake separately

@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Collect stack repo changes since SINCE into /workspace/changes.json."""
+"""Collect stack repo changes since SINCE_ISO into /workspace/changes.json."""
 
 from __future__ import annotations
 
@@ -101,7 +100,3 @@ def main() -> int:
     )
     print(f"Collected {len(repos)} repos into /workspace/changes.json")
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

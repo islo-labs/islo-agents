@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Post red-team-cli line completion summary to Slack."""
+"""Slack notification for red-team-cli line completion."""
 
 from __future__ import annotations
 
@@ -10,7 +9,7 @@ import urllib.error
 import urllib.request
 
 
-def main() -> int:
+def post_slack() -> int:
     channel = (os.environ.get("SLACK_NOTIFY_CHANNEL_ID") or "").strip()
     summary = os.environ.get("SLACK_NOTIFY_SUMMARY") or ""
     status = (os.environ.get("SLACK_NOTIFY_LINE_STATUS") or "succeeded").strip()
@@ -23,7 +22,7 @@ def main() -> int:
     token = (os.environ.get("SLACK_TOKEN") or os.environ.get("SLACK_BOT_TOKEN") or "").strip()
     if not token:
         print(
-            "ERROR: SLACK_TOKEN not set in sandbox (connect Slack via islo login --tool slack)",
+            "ERROR: SLACK_TOKEN not set (connect Slack via islo login --tool slack)",
             file=sys.stderr,
         )
         return 1
@@ -34,9 +33,7 @@ def main() -> int:
     emoji = ":white_check_mark:" if status == "succeeded" else ":x:"
     lines = [f"{emoji} *red-team-cli* ({status})", "", summary.strip()]
     if issues:
-        lines.append("")
-        lines.append("*Linear issues filed:*")
-        lines.extend(f"• {url}" for url in issues)
+        lines.extend(["", "*Linear issues filed:*", *(f"• {url}" for url in issues)])
 
     payload = {"channel": channel, "text": "\n".join(lines)}
     req = urllib.request.Request(
@@ -60,7 +57,3 @@ def main() -> int:
 
     print(f"Posted to {channel} (ts={body.get('ts')})")
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

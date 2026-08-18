@@ -6,7 +6,7 @@ Bake a VM snapshot named `red-team-cli` with the red-team harness from this dire
 
 | Path in snapshot | Contents |
 |------------------|----------|
-| `/opt/red-team-harness/scripts/` | Prepare, auth check, cleanup, Slack notify helpers |
+| `/opt/red-team-harness/harness/` | Python harness (`python3 -m harness <command>`) |
 | `/opt/red-team-harness/prompts/` | Agent briefs and shared output contract |
 
 ## What you bake separately (white-box stages only)

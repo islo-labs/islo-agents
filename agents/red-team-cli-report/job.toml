@@ -1,6 +1,6 @@
 [job]
 name = "red-team-cli-report"
-version = "0.3.0"
+version = "0.3.1"
 description = "Validate red-team findings and file deduplicated high-severity Linear issues"
 
 [job.params.trust_boundaries_report_json]
@@ -67,17 +67,14 @@ INPUT_ABUSE_REPORT_JSON = "{{input_abuse_report_json}}"
 BLACK_BOX_REPORT_JSON = "{{black_box_report_json}}"
 LINEAR_TEAM_NAME = "REPLACE_WITH_YOUR_LINEAR_TEAM_NAME"
 LINEAR_LABEL_NAME = "security-review"
+PYTHONPATH = "/opt/red-team-harness"
 
 [[run.tasks]]
 name = "report"
 
 [[run.tasks.steps]]
-name = "prepare-islo-cli"
-exec = ["bash", "/opt/red-team-harness/scripts/prepare_report.sh"]
-
-[[run.tasks.steps]]
-name = "install-contract"
-exec = ["bash", "/opt/red-team-harness/scripts/install_contract.sh"]
+name = "prepare"
+exec = ["python3", "-m", "harness", "prepare-report"]
 
 [[run.tasks.steps]]
 name = "validate-and-report"
