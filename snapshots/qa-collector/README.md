@@ -9,10 +9,13 @@
 | `/opt/qa-harness/agent/collect_and_post.py` | Aggregates staged findings from knowledge, dedupes, files Linear issues |
 | `/opt/qa-harness/agent/` | Supporting modules the collector imports |
 
-The `fullstack-qa-collector` job is lightweight — no browser stack, no parallel fanout. It reads findings staged by the `fullstack-qa` stage and publishes to Linear.
+The `fullstack-qa-collector` job is lightweight — no browser stack, no parallel fanout. Harness source is in `snapshot-src/`; build with `setup-snapshot.sh`.
 
-## Environment
+## Building
 
-`LINEAR_TEAM_ID` (and optional `SLACK_CHANNEL`) must be set in Factory environment **`fullstack-qa`**. The job defaults to `DRY_RUN=1` until you opt in.
+```bash
+./snapshots/qa-collector/setup-snapshot.sh
+islo snapshot save qa-collector
+```
 
 See [`lines/fullstack-qa-line/README.md`](../../lines/fullstack-qa-line/README.md) for deploy steps.

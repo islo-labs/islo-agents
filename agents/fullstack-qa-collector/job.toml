@@ -1,6 +1,6 @@
 [job]
 name = "fullstack-qa-collector"
-version = "0.3.0"
+version = "0.4.0"
 description = "Aggregate QA findings and publish to Linear with deduplication"
 
 [run]
@@ -30,8 +30,8 @@ name = "collect"
 
 [[run.tasks.steps]]
 name = "check-snapshot"
-exec = ["bash", "-lc", "set -euo pipefail\nif [ ! -f /opt/qa-harness/agent/collect_and_post.py ]; then\n  echo \"ERROR: qa-collector snapshot is missing /opt/qa-harness/agent — see lines/fullstack-qa-line/README.md\" >&2\n  exit 1\nfi\nif [ -z \"${LINEAR_TEAM_ID:-}\" ]; then\n  echo \"ERROR: LINEAR_TEAM_ID must be set in the Factory environment (fullstack-qa)\" >&2\n  exit 1\nfi\n"]
+exec = ["bash", "-lc", "test -f /opt/qa-harness/agent/collect_and_post.py"]
 
 [[run.tasks.steps]]
 name = "collect-and-post"
-exec = ["bash", "-lc", "set -uo pipefail\npython3 /opt/qa-harness/agent/collect_and_post.py\nrc=$?\necho \"collector exit: $rc\"\nexit $rc\n"]
+exec = ["python3", "/opt/qa-harness/agent/collect_and_post.py"]

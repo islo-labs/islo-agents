@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { parse } from "smol-toml";
@@ -359,5 +359,36 @@ test("template jobs do not interpolate params inside shell exec strings", () => 
         `${job} must pass job params through sandbox env, not shell exec`,
       );
     }
+  }
+});
+
+test("template jobs do not embed harness scripts in job.toml", () => {
+  for (const job of templateJobs) {
+    const manifest = readFileSync(`agents/${job}/job.toml`, "utf-8");
+    assert.doesNotMatch(manifest, /<<'?EOF'?/, `${job} must not use heredoc bootstrap`);
+    assert.doesNotMatch(manifest, /<<'?PY'?/, `${job} must not embed inline Python`);
+    assert.doesNotMatch(manifest, /python3 -/, `${job} must call snapshot scripts by path`);
+    for (const block of manifest.match(/exec = \[[\s\S]*?\]/g) ?? []) {
+      assert.ok(
+        block.length < 400,
+        `${job} exec step is too large — move harness to snapshot-src`,
+      );
+    }
+  }
+});
+
+test("template jobs reference shipped snapshot contracts", () => {
+  for (const job of templateJobs) {
+    const manifest = readFileSync(`agents/${job}/job.toml`, "utf-8");
+    const snapshot = manifest.match(/snapshot_name = "([^"]+)"/)?.[1];
+    assert.ok(snapshot, `${job} must set snapshot_name`);
+    assert.ok(
+      existsSync(`snapshots/${snapshot}/README.md`),
+      `${job} snapshot ${snapshot} must have snapshots/${snapshot}/README.md`,
+    );
+    assert.ok(
+      existsSync(`snapshots/${snapshot}/setup-snapshot.sh`),
+      `${job} snapshot ${snapshot} must have setup-snapshot.sh`,
+    );
   }
 });

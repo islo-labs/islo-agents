@@ -1,0 +1,13 @@
+{
+  "name": "islo-qa",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "test": "playwright test",
+    "auth": "playwright test tests/auth.setup.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "typescript": "^5.6.0"
+  }
+}

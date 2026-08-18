@@ -1,6 +1,6 @@
 [job]
 name = "red-team-cli-input-abuse"
-version = "0.1.1"
+version = "0.2.0"
 description = "Red-team input-abuse review of islo-cli (transport, paths, shell, manifests)"
 
 [outputs.report_json]
@@ -36,55 +36,11 @@ name = "review"
 
 [[run.tasks.steps]]
 name = "prepare-islo-cli"
-exec = [
-  "bash",
-  "-lc",
-  '''set -euo pipefail
-cd /workspace
-CLI_DIR=""
-for gitdir in $(find /workspace -maxdepth 5 -type d -name .git 2>/dev/null | sort); do
-  root=$(dirname "$gitdir")
-  if [ "$(basename "$root")" = "islo-cli" ]; then
-    CLI_DIR="$root"
-    break
-  fi
-done
-if [ -z "$CLI_DIR" ]; then
-  echo "ERROR: islo-cli not found in islo-stack snapshot" >&2
-  exit 1
-fi
-cd "$CLI_DIR"
-git fetch --quiet origin
-BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
-git checkout -q "$BRANCH" 2>/dev/null || git checkout -q main || git checkout -q master
-git pull --ff-only origin "$BRANCH" 2>/dev/null || true
-echo "$CLI_DIR" > /workspace/islo-cli-path.txt
-git rev-parse HEAD > /workspace/islo-cli-commit.txt
-echo "Prepared islo-cli at $CLI_DIR ($(cat /workspace/islo-cli-commit.txt))"
-''',
-]
+exec = ["bash", "/opt/red-team-harness/scripts/prepare_islo_cli.sh"]
 
 [[run.tasks.steps]]
 name = "install-contract"
-exec = [
-  "bash",
-  "-lc",
-  '''set -euo pipefail
-cat > /workspace/red-team-contract.md <<'EOF'
-# Shared red-team output contract
-
-Return valid JSON in the report_json job output (minified string).
-
-Top-level: agent, target ("islo-cli"), commit, generated_at, findings[], summary.
-
-Each finding: id, title, severity (high|medium|low|info), status (confirmed|hypothesis|rejected), trust_boundary, paths[], lines[], prerequisites, impact, reproduction, evidence, fingerprint ("red-team-cli:<id>:<primary-path>").
-
-High severity only when reproducible in default config with local tests, crosses a trust boundary, and is confirmed — not speculative.
-
-Never run ISLO_E2E=1, islo login, production APIs, or probe other repos.
-EOF
-''',
-]
+exec = ["bash", "/opt/red-team-harness/scripts/install_contract.sh"]
 
 [[run.tasks.steps]]
 name = "input-abuse-review"
@@ -96,30 +52,4 @@ model = "ship-like/claude-sonnet-5"
 
 [run.tasks.steps.run_agent.prompt]
 type = "literal"
-value = '''
-You are the input-abuse reviewer in the red-team-cli Factory line.
-
-Read /workspace/red-team-contract.md and follow it exactly.
-
-Mission: audit how islo-cli handles untrusted input across transport, filesystem bridges, shell invocation, and manifest parsing.
-
-islo-cli path: read /workspace/islo-cli-path.txt. Work only inside that repository.
-
-In-scope: crates/web-api-client/** (HTTP/WS, retries, path encoding), crates/sandbox/** and crates/files/** (path traversal, symlinks, copy bridges), crates/terminal/** and port-forward paths, region routing, crates/cli/src/commands/** and manifest parsing.
-
-Method:
-1. Record the islo-cli commit SHA.
-2. Review in-scope code for input validation gaps.
-3. For each candidate, prove or disprove with cargo test, temp directories, HOME=$(mktemp -d), wiremock only.
-4. Mark findings confirmed, hypothesis, or rejected with evidence.
-5. Apply the narrow high-severity definition from the contract.
-
-Out of scope: OAuth/token storage (trust-boundaries stage), production APIs, ISLO_E2E=1, islo login, other repos.
-
-Deliverable:
-1. Write /workspace/input-abuse-report.json following the contract (agent = input-abuse).
-2. Also write /workspace/input-abuse-report.min.json as a single-line minified copy.
-3. Put narrative only in report.summary — do not print a long chat summary before finishing.
-
-Finalization turn (automatic): when prompted for structured output only, respond IMMEDIATELY with {"report_json": "<exact contents of input-abuse-report.min.json>"}. No commands, prose, or markdown — only that JSON object.
-'''
+value = "Read `/opt/red-team-harness/prompts/input-abuse.md` and `/workspace/red-team-contract.md`. Follow them exactly."

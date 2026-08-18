@@ -1,6 +1,6 @@
 [job]
 name = "red-team-cli-black-box"
-version = "0.1.4"
+version = "0.2.0"
 description = "Black-box adversarial testing of islo CLI against app.islo.dev (no source access)"
 
 [outputs.report_json]
@@ -39,46 +39,7 @@ name = "black-box"
 
 [[run.tasks.steps]]
 name = "prepare"
-exec = [
-  "bash",
-  "-lc",
-  '''set -euo pipefail
-mkdir -p /workspace/black-box/transcripts
-cat > /workspace/red-team-contract.md <<'EOF'
-# Shared red-team output contract
-
-Return valid JSON in report_json (minified string).
-Top-level: agent, target, commit (use "n/a" for black-box), generated_at, findings[], summary.
-Each finding: id, title, severity, status, trust_boundary, paths[], lines[] (use "cli:command" when no source), prerequisites, impact, reproduction, evidence, fingerprint ("red-team-cli:<id>:<primary-surface>").
-High severity: reproducible on production via CLI, crosses trust boundary, material impact, confirmed.
-Never print ISLO_API_KEY or tokens.
-EOF
-cat > /workspace/black-box-run.txt <<EOF
-run_id=${RED_TEAM_RUN_ID}
-prefix=redteam-${RED_TEAM_RUN_ID}-
-target=${ISLO_BASE_URL:-https://app.islo.dev}
-EOF
-if [ -z "${ISLO_API_KEY:-}" ]; then
-  echo "ERROR: ISLO_API_KEY missing in sandbox env — add ISLO_API_KEY as a sandbox secret in red-team-cli-prod" >&2
-  exit 1
-fi
-islo status -o json > /tmp/islo-status.json 2>/dev/null || true
-python3 - <<'PY'
-import json, sys
-try:
-    d = json.load(open("/tmp/islo-status.json"))
-except Exception:
-    print("ERROR: islo status failed", file=sys.stderr)
-    sys.exit(1)
-auth = d.get("auth") if isinstance(d.get("auth"), dict) else d
-if not auth.get("authenticated"):
-    print("ERROR: islo CLI is not authenticated — ISLO_API_KEY must use sandbox_env placement (not gateway_injected only)", file=sys.stderr)
-    sys.exit(1)
-print(f"Authenticated ({auth.get('method', 'unknown')}, region={d.get('region', '?')})")
-PY
-echo "Black-box prep ok (prefix=redteam-${RED_TEAM_RUN_ID}-)"
-''',
-]
+exec = ["bash", "/opt/red-team-harness/scripts/prepare_black_box.sh"]
 
 [[run.tasks.steps]]
 name = "black-box-attack"
@@ -90,49 +51,8 @@ model = "ship-like/claude-sonnet-5"
 
 [run.tasks.steps.run_agent.prompt]
 type = "literal"
-value = '''
-You are the black-box adversary in the red-team-cli Factory line.
-
-Read /workspace/red-team-contract.md and /workspace/black-box-run.txt.
-
-Mission: attack the installed islo CLI against production (ISLO_BASE_URL, default https://app.islo.dev) without reading islo-cli source code.
-
-Auth: ISLO_API_KEY is already configured. Do not run islo login. Never print secrets.
-
-Resource prefix (mandatory): redteam-{{run_id}}-* only. Clean up all created resources before finishing.
-
-Black-box rules:
-- Do not read islo-cli source (crates/**, install.sh, etc.)
-- Do not touch resources outside your prefix
-- No billing, impersonation, or org-wide settings changes
-
-Attack surface (CLI only): auth/identity confusion, sandbox lifecycle abuse, islo cp path tricks, exec/shell injection, port-forward/share ACLs, region routing, malformed CLI/manifest inputs.
-
-Method:
-1. Confirm islo status works.
-2. Run targeted adversarial tests; save transcripts to /workspace/black-box/transcripts/.
-3. Reproduce candidates twice when possible; mark confirmed/hypothesis/rejected.
-4. Delete all redteam-{{run_id}}-* resources.
-
-Deliverable:
-1. Write /workspace/black-box-report.json (agent=black-box-cli, target=ISLO_BASE_URL or https://app.islo.dev, commit="n/a").
-2. Also write /workspace/black-box-report.min.json as a single-line minified copy.
-3. Put narrative only in report.summary — do not print a long chat summary before finishing.
-
-Finalization turn (automatic): when prompted for structured output only, respond IMMEDIATELY with {"report_json": "<exact contents of black-box-report.min.json>"}. No commands, prose, or markdown — only that JSON object.
-'''
+value = "Read `/opt/red-team-harness/prompts/black-box-cli.md` and `/workspace/red-team-contract.md`. Follow them exactly. Run id is {{run_id}}."
 
 [[run.tasks.steps]]
 name = "cleanup-check"
-exec = [
-  "bash",
-  "-lc",
-  '''set -euo pipefail
-PREFIX="redteam-${RED_TEAM_RUN_ID}-"
-LEFT=$(islo ls -o json 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(sum(1 for s in d if str(s.get('name','')).startswith('${PREFIX}')))" 2>/dev/null || echo 0)
-if [ "$LEFT" != "0" ]; then
-  echo "WARNING: $LEFT sandbox(es) still match $PREFIX — agent should have cleaned up" >&2
-fi
-echo "cleanup-check done (remaining=$LEFT)"
-''',
-]
+exec = ["bash", "/opt/red-team-harness/scripts/cleanup_check.sh"]

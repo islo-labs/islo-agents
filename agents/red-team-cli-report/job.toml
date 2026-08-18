@@ -1,6 +1,6 @@
 [job]
 name = "red-team-cli-report"
-version = "0.2.1"
+version = "0.3.0"
 description = "Validate red-team findings and file deduplicated high-severity Linear issues"
 
 [job.params.trust_boundaries_report_json]
@@ -73,54 +73,11 @@ name = "report"
 
 [[run.tasks.steps]]
 name = "prepare-islo-cli"
-exec = [
-  "bash",
-  "-lc",
-  '''set -euo pipefail
-cd /workspace
-CLI_DIR=""
-for gitdir in $(find /workspace -maxdepth 5 -type d -name .git 2>/dev/null | sort); do
-  root=$(dirname "$gitdir")
-  if [ "$(basename "$root")" = "islo-cli" ]; then
-    CLI_DIR="$root"
-    break
-  fi
-done
-if [ -z "$CLI_DIR" ]; then
-  echo "ERROR: islo-cli not found in islo-stack snapshot" >&2
-  exit 1
-fi
-cd "$CLI_DIR"
-git fetch --quiet origin
-BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
-git checkout -q "$BRANCH" 2>/dev/null || git checkout -q main || git checkout -q master
-git pull --ff-only origin "$BRANCH" 2>/dev/null || true
-echo "$CLI_DIR" > /workspace/islo-cli-path.txt
-git rev-parse HEAD > /workspace/islo-cli-commit.txt
-mkdir -p /workspace/upstream
-printf '%s' "$TRUST_BOUNDARIES_REPORT_JSON" > /workspace/upstream/trust-boundaries.json
-printf '%s' "$INPUT_ABUSE_REPORT_JSON" > /workspace/upstream/input-abuse.json
-printf '%s' "$BLACK_BOX_REPORT_JSON" > /workspace/upstream/black-box.json
-echo "Prepared islo-cli at $CLI_DIR with upstream reports (linear_mode=$LINEAR_MODE)"
-''',
-]
+exec = ["bash", "/opt/red-team-harness/scripts/prepare_report.sh"]
 
 [[run.tasks.steps]]
 name = "install-contract"
-exec = [
-  "bash",
-  "-lc",
-  '''set -euo pipefail
-cat > /workspace/red-team-contract.md <<'EOF'
-# Shared red-team output contract
-
-High severity only when reproducible in default config with local tests, crosses a trust boundary, and is confirmed.
-
-Fingerprint format: red-team-cli:<id>:<primary-path>
-Linear marker in issue body: <!-- red-team-fingerprint:{fingerprint} -->
-EOF
-''',
-]
+exec = ["bash", "/opt/red-team-harness/scripts/install_contract.sh"]
 
 [[run.tasks.steps]]
 name = "validate-and-report"
@@ -132,38 +89,4 @@ model = "ship-like/claude-sonnet-5"
 
 [run.tasks.steps.run_agent.prompt]
 type = "literal"
-value = '''
-You are the validate-and-report stage in the red-team-cli Factory line.
-
-linear_mode={{linear_mode}}
-
-Upstream reports (also on disk):
-- /workspace/upstream/trust-boundaries.json
-- /workspace/upstream/input-abuse.json
-- /workspace/upstream/black-box.json
-
-islo-cli path: /workspace/islo-cli-path.txt (for white-box re-validation only)
-
-Tasks:
-1. Parse all three upstream JSON strings. Fail with a clear summary if any is invalid.
-2. Re-verify each high or confirmed finding:
-   - white-box findings: re-read paths/lines in islo-cli checkout, rerun safe local tests
-   - black-box findings: re-run the CLI reproduction against app.islo.dev (use redteam-{{run_id}}-* prefix); do not require source access
-3. Reject unsupported, duplicate, low/medium-only, defense-in-depth, or speculative items.
-4. Deduplicate by fingerprint across all upstream reports.
-5. Write /workspace/red-team-run-report.json with agent=validate-and-report, upstream copies (including black_box), validated_findings, rejected_findings, linear_mode, linear_issues[], summary.
-
-Job outputs:
-- summary: 2-6 sentence run summary (validated high, filed, skipped, rejected counts)
-- report_json: minified combined report JSON string
-- linear_issue_urls: JSON array string of created issue URLs (use "[]" when linear_mode=report or nothing filed)
-
-Finalization turn (automatic): when prompted for structured output only, respond IMMEDIATELY with {"summary":"...","report_json":"<minified combined report>","linear_issue_urls":"[]"} using values from /workspace/red-team-run-report.json. No commands, prose, or markdown — only that JSON object.
-
-Linear filing (only when linear_mode=create):
-- Use phantom LINEAR_API_KEY; gateway injects on api.linear.app GraphQL requests. Never log the key.
-- Resolve team from LINEAR_TEAM_NAME and label from LINEAR_LABEL_NAME (sandbox env); fail clearly if either is missing.
-- For each validated high finding: search for fingerprint marker, skip if exists, else create one issue with priority High (2), label red-team, title "[red-team] {title}", body with impact/paths/reproduction/remediation/marker <!-- red-team-fingerprint:{fingerprint} -->.
-
-When linear_mode=report: validate and write files only; do not call Linear mutations.
-'''
+value = "Read `/opt/red-team-harness/prompts/validate-and-report.md` and `/workspace/red-team-contract.md`. linear_mode={{linear_mode}}. Upstream JSON is on disk under /workspace/upstream/. Follow the prompt exactly."

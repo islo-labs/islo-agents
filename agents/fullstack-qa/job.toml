@@ -1,6 +1,6 @@
 [job]
 name = "fullstack-qa"
-version = "0.3.0"
+version = "0.4.0"
 description = "Three parallel QA agents against your local full-stack environment; stages findings to knowledge"
 
 [run]
@@ -34,10 +34,12 @@ name = "qa-agent-web-core"
 
 [[run.tasks.steps]]
 name = "check-snapshot"
-exec = ["bash", "-lc", "set -euo pipefail\nif [ ! -f /opt/qa-harness/agent/cleanup.py ]; then\n  echo \"ERROR: fullstack-qa snapshot is missing /opt/qa-harness — see lines/fullstack-qa-line/README.md\" >&2\n  exit 1\nfi\nif [ ! -f /workspace/qa-harness/package.json ]; then\n  echo \"ERROR: fullstack-qa snapshot is missing /workspace/qa-harness Playwright harness\" >&2\n  exit 1\nfi\n"]
+exec = ["bash", "/opt/qa-harness/scripts/check_harness.sh"]
+
 [[run.tasks.steps]]
 name = "start-stack"
-exec = ["bash", "-lc", "set -euo pipefail\n/opt/qa-harness/scripts/start-qa-stack.sh\n"]
+exec = ["bash", "/opt/qa-harness/scripts/start-qa-stack.sh"]
+
 [[run.tasks.steps]]
 name = "explore"
 workdir = "/workspace/qa-harness"
@@ -49,26 +51,27 @@ model = "ship-like/claude-sonnet-5"
 
 [run.tasks.steps.run_agent.prompt]
 type = "literal"
-value = """
-Read and follow `/opt/qa-harness/prompts/full/agent-web-core.md` exactly.
-Write `/workspace/findings.json` per that contract.
-"""
+value = "Read and follow `/opt/qa-harness/prompts/full/agent-web-core.md` exactly. Write `/workspace/findings.json` per that contract."
 
 [[run.tasks.steps]]
 name = "cleanup"
-exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-web-core\"\nexport QA_RUN_ID=\"${ISLO_RUN_ID:-${QA_RUN_ID:-manual}}\"\npython3 /opt/qa-harness/agent/cleanup.py || true\nexit 0\n"]
+exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-web-core python3 /opt/qa-harness/agent/cleanup.py || true"]
+
 [[run.tasks.steps]]
 name = "stage-findings"
-exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-web-core\"\nexport QA_BRIEF_LABEL=\"Web core: login, navigation, sandbox lifecycle, terminal/share\"\npython3 /opt/qa-harness/agent/stage_findings.py\nexit 0\n"]
+exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-web-core QA_BRIEF_LABEL='Web core: login, navigation, sandbox lifecycle, terminal/share' python3 /opt/qa-harness/agent/stage_findings.py || true"]
+
 [[run.tasks]]
 name = "qa-agent-web-platform"
 
 [[run.tasks.steps]]
 name = "check-snapshot"
-exec = ["bash", "-lc", "set -euo pipefail\nif [ ! -f /opt/qa-harness/agent/cleanup.py ]; then\n  echo \"ERROR: fullstack-qa snapshot is missing /opt/qa-harness — see lines/fullstack-qa-line/README.md\" >&2\n  exit 1\nfi\nif [ ! -f /workspace/qa-harness/package.json ]; then\n  echo \"ERROR: fullstack-qa snapshot is missing /workspace/qa-harness Playwright harness\" >&2\n  exit 1\nfi\n"]
+exec = ["bash", "/opt/qa-harness/scripts/check_harness.sh"]
+
 [[run.tasks.steps]]
 name = "start-stack"
-exec = ["bash", "-lc", "set -euo pipefail\n/opt/qa-harness/scripts/start-qa-stack.sh\n"]
+exec = ["bash", "/opt/qa-harness/scripts/start-qa-stack.sh"]
+
 [[run.tasks.steps]]
 name = "explore"
 workdir = "/workspace/qa-harness"
@@ -80,26 +83,27 @@ model = "ship-like/claude-sonnet-5"
 
 [run.tasks.steps.run_agent.prompt]
 type = "literal"
-value = """
-Read and follow `/opt/qa-harness/prompts/full/agent-web-platform.md` exactly.
-Write `/workspace/findings.json` per that contract.
-"""
+value = "Read and follow `/opt/qa-harness/prompts/full/agent-web-platform.md` exactly. Write `/workspace/findings.json` per that contract."
 
 [[run.tasks.steps]]
 name = "cleanup"
-exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-web-platform\"\nexport QA_RUN_ID=\"${ISLO_RUN_ID:-${QA_RUN_ID:-manual}}\"\npython3 /opt/qa-harness/agent/cleanup.py || true\nexit 0\n"]
+exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-web-platform python3 /opt/qa-harness/agent/cleanup.py || true"]
+
 [[run.tasks.steps]]
 name = "stage-findings"
-exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-web-platform\"\nexport QA_BRIEF_LABEL=\"Web platform: settings, deep links, Factory, environments, integrations\"\npython3 /opt/qa-harness/agent/stage_findings.py\nexit 0\n"]
+exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-web-platform QA_BRIEF_LABEL='Web platform: settings, deep links, Factory, environments, integrations' python3 /opt/qa-harness/agent/stage_findings.py || true"]
+
 [[run.tasks]]
 name = "qa-agent-cli-cross"
 
 [[run.tasks.steps]]
 name = "check-snapshot"
-exec = ["bash", "-lc", "set -euo pipefail\nif [ ! -f /opt/qa-harness/agent/cleanup.py ]; then\n  echo \"ERROR: fullstack-qa snapshot is missing /opt/qa-harness — see lines/fullstack-qa-line/README.md\" >&2\n  exit 1\nfi\nif [ ! -f /workspace/qa-harness/package.json ]; then\n  echo \"ERROR: fullstack-qa snapshot is missing /workspace/qa-harness Playwright harness\" >&2\n  exit 1\nfi\n"]
+exec = ["bash", "/opt/qa-harness/scripts/check_harness.sh"]
+
 [[run.tasks.steps]]
 name = "start-stack"
-exec = ["bash", "-lc", "set -euo pipefail\n/opt/qa-harness/scripts/start-qa-stack.sh\n"]
+exec = ["bash", "/opt/qa-harness/scripts/start-qa-stack.sh"]
+
 [[run.tasks.steps]]
 name = "explore"
 workdir = "/workspace/qa-harness"
@@ -111,14 +115,12 @@ model = "ship-like/claude-sonnet-5"
 
 [run.tasks.steps.run_agent.prompt]
 type = "literal"
-value = """
-Read and follow `/opt/qa-harness/prompts/full/agent-cli-cross.md` exactly.
-Write `/workspace/findings.json` per that contract.
-"""
+value = "Read and follow `/opt/qa-harness/prompts/full/agent-cli-cross.md` exactly. Write `/workspace/findings.json` per that contract."
 
 [[run.tasks.steps]]
 name = "cleanup"
-exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-cli-cross\"\nexport QA_RUN_ID=\"${ISLO_RUN_ID:-${QA_RUN_ID:-manual}}\"\npython3 /opt/qa-harness/agent/cleanup.py || true\nexit 0\n"]
+exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-cli-cross python3 /opt/qa-harness/agent/cleanup.py || true"]
+
 [[run.tasks.steps]]
 name = "stage-findings"
-exec = ["bash", "-lc", "set -uo pipefail\nexport QA_AGENT_ID=\"qa-agent-cli-cross\"\nexport QA_BRIEF_LABEL=\"CLI and cross-surface: doctor, status, sandbox ops, web consistency\"\npython3 /opt/qa-harness/agent/stage_findings.py\nexit 0\n"]
+exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-cli-cross QA_BRIEF_LABEL='CLI and cross-surface: doctor, status, sandbox ops, web consistency' python3 /opt/qa-harness/agent/stage_findings.py || true"]
