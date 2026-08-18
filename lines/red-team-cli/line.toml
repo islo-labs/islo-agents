@@ -44,10 +44,6 @@ type = "conditional"
 [transitions.when]
 op = "always"
 
-[transitions.params.linear_mode]
-type = "literal"
-value = "report"
-
 [[transitions]]
 id = "trust-boundaries-to-input-abuse"
 from = "trust-boundaries"
@@ -91,8 +87,8 @@ stage = "black-box-cli"
 name = "report_json"
 
 [transitions.params.linear_mode]
-type = "input"
-name = "linear_mode"
+type = "literal"
+value = "report"
 
 [[transitions]]
 id = "report-to-slack"
