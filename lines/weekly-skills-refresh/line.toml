@@ -10,7 +10,7 @@ timezone = "UTC"
 [[stages]]
 id = "refresh"
 job = "weekly-skills-refresh"
-description = "Restore islo-stack, collect weekly changes, update skills repo, and open a PR"
+description = "Collect weekly stack changes, update skills repo, and open a PR"
 
 [[transitions]]
 id = "trigger-to-refresh"

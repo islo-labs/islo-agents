@@ -11,7 +11,7 @@ for gitdir in $(find /workspace -maxdepth 5 -type d -name .git 2>/dev/null | sor
   fi
 done
 if [ -z "$CLI_DIR" ]; then
-  echo "ERROR: islo-cli not found in islo-stack snapshot" >&2
+  echo "ERROR: islo-cli not found — bake /workspace/islo-cli/ into the red-team-cli snapshot for white-box stages" >&2
   exit 1
 fi
 cd "$CLI_DIR"

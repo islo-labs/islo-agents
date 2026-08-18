@@ -6,13 +6,13 @@ Scheduled Factory line that scans **stack repos in a snapshot**, decides whether
 
 | Stage | Job | Snapshot |
 |-------|-----|----------|
-| `refresh` | `weekly-skills-refresh` | `islo-stack` |
+| `refresh` | `weekly-skills-refresh` | `skills-refresh` |
 
 ## Before you deploy
 
-### 1. Snapshot `islo-stack`
+### 1. Snapshot `skills-refresh`
 
-Bake a snapshot with your product repositories under `/workspace/` (each with a `.git` directory). The job walks repos and builds `/workspace/changes.json` for the lookback window.
+Bake a snapshot with your product repositories under `/workspace/` (each with a `.git` directory) plus the harness from `snapshots/skills-refresh/`.
 
 ### 2. Configure the job
 

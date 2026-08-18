@@ -48,7 +48,7 @@ workdir = "/workspace"
 [run.sandbox]
 mode = "provision"
 image = "docker.io/library/islo-runner:latest"
-snapshot_name = "islo-stack"
+snapshot_name = "red-team-cli"
 vcpus = 2
 memory_mb = 4096
 disk_gb = 20

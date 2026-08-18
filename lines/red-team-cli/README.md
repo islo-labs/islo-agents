@@ -12,13 +12,13 @@ Weekly Factory line for **white-box source review** + **black-box CLI adversaria
 | `validate-and-report` | `red-team-cli-report` | Re-verify, dedupe, summarize |
 | `slack-notify` | `red-team-cli-slack-notify` | Post summary to Slack |
 
-All white-box stages use snapshot **`islo-stack`** (your monorepo checkout with the CLI under test).
+All stages use snapshot **`red-team-cli`**. White-box stages also need `/workspace/islo-cli/` baked into that snapshot.
 
 ## Before you deploy
 
-### 1. Snapshot `islo-stack`
+### 1. Snapshot `red-team-cli`
 
-Bake a snapshot that includes your CLI repository (convention: a top-level `islo-cli/` git checkout). White-box jobs locate it automatically.
+Bake a snapshot with the harness from `snapshots/red-team-cli/`. For white-box review, include your CLI repository at `/workspace/islo-cli/`.
 
 ### 2. Factory environment: `red-team-cli-prod` (black-box only)
 

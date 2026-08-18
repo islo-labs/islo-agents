@@ -9,7 +9,7 @@ Only update skill docs when a stack change would cause an agent to **work differ
 ## Context
 
 - Target repo: `/workspace/skills`
-- Stack activity: `/workspace/changes.json` (commits/files from islo-stack repos over the lookback window)
+- Stack activity: `/workspace/changes.json` (commits/files from repos under `/workspace/` over the lookback window)
 - Parameters: skills_repo=$SKILLS_REPO, since=$SINCE, publish_mode=$PUBLISH_MODE, branch_prefix=$BRANCH_PREFIX
 
 ## Decision rules
