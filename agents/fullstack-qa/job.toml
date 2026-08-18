@@ -1,6 +1,6 @@
 [job]
 name = "fullstack-qa"
-version = "0.7.0"
+version = "0.7.2"
 description = "Three parallel black-box QA agents against a deployed app URL; stages findings to knowledge"
 
 [job.params.qa_base_url]
@@ -44,14 +44,17 @@ workdir = "/workspace/qa-harness"
 mode = "session"
 harness = "claude"
 model = "ship-like/claude-sonnet-5"
-
-[run.tasks.steps.run_agent.prompt]
-type = "literal"
-value = "# Web core QA agent\n\nYou are a **black-box** QA agent testing a deployed web application.\nAct like an IT engineer trying the product for the first time. Find real bugs and friction,\nnot pass/fail checklists.\n\n## Environment\n\n- **Target:** `ISLO_BASE_URL` from the sandbox environment (deployed app URL, not localhost).\n- **Harness:** `/workspace/qa-harness` — Playwright + TypeScript (pre-installed in the snapshot).\n- **Auth:** `ISLO_QA_EMAIL` and `ISLO_QA_OTP` from the Factory environment. Never print secrets.\n- Run tests: `cd /workspace/qa-harness && npx playwright test <file>`\n- **Do not** set `SKIP_AUTH=1`. Run the `setup` project / `auth.setup.ts` for a fresh sign-in.\n- Read `README.md` in the harness first.\n- The sandbox `islo` CLI is available for sandbox lifecycle checks when your brief requires it.\n  Use the same deployed API the web app uses — do not boot a local stack.\n\n## Your brief\n\nFocus on **web core** workflows:\n\n- Login and session persistence\n- Primary navigation (sidebar, top-level routes)\n- Sandbox creation, detail view, lifecycle (start/stop/delete where safe)\n- Terminal and share links behaviour on a sandbox you created\n\nStay inside your brief. Other areas are covered by parallel agents.\n\n## Safety rule\n\nUse `qa-$QA_RUN_ID-$QA_AGENT_ID-*` prefixes for any sandboxes or resources you create (from env `QA_RUN_ID`).\nNo billing, impersonation, or destructive org-wide changes.\n\n## Output\n\nWrite `/workspace/findings.json` only. Set `surface: \"web\"` on every finding. Include Playwright video evidence.\n\n# Shared output contract for all QA agents\n\nEvery agent writes `/workspace/findings.json` as **raw JSON only** (no markdown fence).\n\n## Required top-level fields\n\n| Field | Type | Notes |\n|-------|------|-------|\n| `run_ok` | boolean | `false` only when your own tooling failed |\n| `agent` | string | Must match the task id (e.g. `qa-agent-web-core`) |\n| `target` | string | Base URL or CLI target you actually tested |\n| `coverage` | string | What you exercised and what you could not reach |\n| `findings` | array | May be empty |\n\n## Required fields per finding\n\n| Field | Type | Notes |\n|-------|------|-------|\n| `title` | string | Short defect summary |\n| `severity` | string | `critical`, `high`, `medium-high`, `medium`, `medium-low`, `low` |\n| `confidence` | string | `high`, `medium`, `low` |\n| `surface` | string | `web` or `cli` |\n| `steps` | string[] | Numbered reproduction steps |\n| `expected` | string | What should happen |\n| `actual` | string | What happened instead |\n| `reproduced` | integer | Times you reproduced (must be ≥ 2 to report) |\n| `video` | string | **Web findings:** path under `/workspace/qa-harness/` to a Playwright `.webm` clip |\n| `transcript` | string | **CLI findings:** path to a saved command transcript `.txt` |\n\nProvide **either** `video` (web) or `transcript` (cli), not both.\n\n## Evidence rules\n\n### Web (Playwright)\n\n1. Write `tests/bug-<slug>.spec.ts` with `test.use({ video: 'on' });` at the top.\n2. Assert the **buggy** behaviour so the test fails for the right reason.\n3. Run at least twice; confirm it fails consistently.\n4. After the second successful reproduction, copy the newest `.webm` from `test-results/` to `findings/videos/bug-<slug>.webm` (> 2 KB).\n\n### CLI\n\n1. Save a transcript to `findings/transcripts/bug-<slug>.txt` showing both reproductions.\n2. Include commands, relevant stdout/stderr, and exit codes.\n\n## Exclusions — never report as product bugs\n\n- Billing purchases or payment flows\n- Support impersonation flows\n- Expected authorization failures (403 on resources you should not access)\n- Setup failures (missing env, auth, Playwright install)\n- Unverified network flakiness (single timeout with no second attempt)\n- Your own harness/tooling errors\n\n## Safety\n\n- Read-only on production: no invites, key rotation, policy writes, org settings, uploads\n- Changing your own user-level preferences is allowed when your brief requires it\n\n## Example\n\n```json\n{\n  \"run_ok\": true,\n  \"agent\": \"qa-agent-web-core\",\n  \"target\": \"https://app.islo.dev\",\n  \"coverage\": \"Login, sidebar navigation, sandbox list and detail.\",\n  \"findings\": []\n}\n```\n"
+prompt = { type = "knowledge", slug = "fullstack-qa-web-core-prompt" }
 
 [[run.tasks.steps]]
 name = "stage-findings"
-exec = [ "env", "QA_AGENT_ID=qa-agent-web-core", "QA_BRIEF_LABEL=Web core: login, navigation, sandbox lifecycle, terminal/share", "python3", "/opt/qa-harness/harness/stage.py" ]
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-web-core",
+  "QA_BRIEF_LABEL=Web core: login, navigation, sandbox lifecycle, terminal/share",
+  "python3",
+  "/opt/qa-harness/harness/stage.py",
+]
 
 [[run.tasks]]
 name = "qa-agent-web-platform"
@@ -64,14 +67,17 @@ workdir = "/workspace/qa-harness"
 mode = "session"
 harness = "claude"
 model = "ship-like/claude-sonnet-5"
-
-[run.tasks.steps.run_agent.prompt]
-type = "literal"
-value = "# Web platform QA agent\n\nYou are a **black-box** QA agent testing a deployed web application.\nAct like an IT engineer trying the product for the first time. Find real bugs and friction.\n\n## Environment\n\n- **Target:** `ISLO_BASE_URL` from the sandbox environment (deployed app URL).\n- **Harness:** `/workspace/qa-harness` — Playwright + TypeScript.\n- **Auth:** `ISLO_QA_EMAIL` / `ISLO_QA_OTP` from the Factory environment. Never print secrets.\n- Fresh auth via Playwright setup — never `SKIP_AUTH=1`.\n- Read `README.md` in the harness first.\n\n## Your brief\n\nFocus on **web platform** surfaces:\n\n- Settings pages and preference persistence (refresh and confirm values stick)\n- Deep links and URL robustness (refresh, back/forward, invalid ids)\n- Factory lines, jobs, and run history UI\n- Environments, gateway profiles, webhooks, and integrations pages\n\n## Safety rule\n\nUse `qa-$QA_RUN_ID-$QA_AGENT_ID-*` prefixes for anything you create.\nNo billing, impersonation, or destructive org-wide changes.\n\n## Output\n\nWrite `/workspace/findings.json` only. Set `surface: \"web\"` on every finding.\n\n# Shared output contract for all QA agents\n\nEvery agent writes `/workspace/findings.json` as **raw JSON only** (no markdown fence).\n\n## Required top-level fields\n\n| Field | Type | Notes |\n|-------|------|-------|\n| `run_ok` | boolean | `false` only when your own tooling failed |\n| `agent` | string | Must match the task id (e.g. `qa-agent-web-platform`) |\n| `target` | string | Base URL or CLI target you actually tested |\n| `coverage` | string | What you exercised and what you could not reach |\n| `findings` | array | May be empty |\n\n## Required fields per finding\n\n| Field | Type | Notes |\n|-------|------|-------|\n| `title` | string | Short defect summary |\n| `severity` | string | `critical`, `high`, `medium-high`, `medium`, `medium-low`, `low` |\n| `confidence` | string | `high`, `medium`, `low` |\n| `surface` | string | `web` or `cli` |\n| `steps` | string[] | Numbered reproduction steps |\n| `expected` | string | What should happen |\n| `actual` | string | What happened instead |\n| `reproduced` | integer | Times you reproduced (must be ≥ 2 to report) |\n| `video` | string | **Web findings:** path under `/workspace/qa-harness/` to a Playwright `.webm` clip |\n| `transcript` | string | **CLI findings:** path to a saved command transcript `.txt` |\n\nProvide **either** `video` (web) or `transcript` (cli), not both.\n\n## Evidence rules\n\n### Web (Playwright)\n\n1. Write `tests/bug-<slug>.spec.ts` with `test.use({ video: 'on' });` at the top.\n2. Assert the **buggy** behaviour so the test fails for the right reason.\n3. Run at least twice; confirm it fails consistently.\n4. After the second successful reproduction, copy the newest `.webm` from `test-results/` to `findings/videos/bug-<slug>.webm` (> 2 KB).\n\n### CLI\n\n1. Save a transcript to `findings/transcripts/bug-<slug>.txt` showing both reproductions.\n2. Include commands, relevant stdout/stderr, and exit codes.\n\n## Exclusions — never report as product bugs\n\n- Billing purchases or payment flows\n- Support impersonation flows\n- Expected authorization failures (403 on resources you should not access)\n- Setup failures (missing env, auth, Playwright install)\n- Unverified network flakiness (single timeout with no second attempt)\n- Your own harness/tooling errors\n\n## Safety\n\n- Read-only on production: no invites, key rotation, policy writes, org settings, uploads\n- Changing your own user-level preferences is allowed when your brief requires it\n"
+prompt = { type = "knowledge", slug = "fullstack-qa-web-platform-prompt" }
 
 [[run.tasks.steps]]
 name = "stage-findings"
-exec = [ "env", "QA_AGENT_ID=qa-agent-web-platform", "QA_BRIEF_LABEL=Web platform: settings, deep links, Factory, environments, integrations", "python3", "/opt/qa-harness/harness/stage.py" ]
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-web-platform",
+  "QA_BRIEF_LABEL=Web platform: settings, deep links, Factory, environments, integrations",
+  "python3",
+  "/opt/qa-harness/harness/stage.py",
+]
 
 [[run.tasks]]
 name = "qa-agent-cli-cross"
@@ -84,11 +90,14 @@ workdir = "/workspace/qa-harness"
 mode = "session"
 harness = "claude"
 model = "ship-like/claude-sonnet-5"
-
-[run.tasks.steps.run_agent.prompt]
-type = "literal"
-value = "# CLI and cross-surface QA agent\n\nYou are a **black-box** QA agent testing the **CLI** against the same deployed environment\nas the web app, and checking consistency between surfaces where relevant.\n\n## Environment\n\n- **Web target:** `ISLO_BASE_URL` from the sandbox environment.\n- **CLI:** use the sandbox `islo` binary with credentials injected by the platform (`ISLO_API_KEY`).\n  Do not boot a local stack or source any `.fullstack-env` file.\n- **Harness:** `/workspace/qa-harness` (optional Playwright for cross-checks only).\n- Never print secrets.\n\n## Your brief\n\nFocus on **CLI and cross-surface** workflows:\n\n- `islo doctor`, `islo status`\n- Sandbox lifecycle: create, exec, copy, share (use `qa-$QA_RUN_ID-$QA_AGENT_ID-*` names)\n- File sync / exec error handling\n- Consistency: entity created via CLI appears in web (or vice versa) when safe\n\n## Safety rule\n\nOnly mutate resources you created with the `qa-` prefix. Clean up before finishing.\nNo billing, impersonation, or destructive org-wide changes.\n\n## Output\n\nWrite `/workspace/findings.json` only. CLI findings use `surface: \"cli\"` and transcript evidence.\n\n# Shared output contract for all QA agents\n\nEvery agent writes `/workspace/findings.json` as **raw JSON only** (no markdown fence).\n\n## Required top-level fields\n\n| Field | Type | Notes |\n|-------|------|-------|\n| `run_ok` | boolean | `false` only when your own tooling failed |\n| `agent` | string | Must match the task id (e.g. `qa-agent-cli-cross`) |\n| `target` | string | Base URL or CLI target you actually tested |\n| `coverage` | string | What you exercised and what you could not reach |\n| `findings` | array | May be empty |\n\n## Required fields per finding\n\n| Field | Type | Notes |\n|-------|------|-------|\n| `title` | string | Short defect summary |\n| `severity` | string | `critical`, `high`, `medium-high`, `medium`, `medium-low`, `low` |\n| `confidence` | string | `high`, `medium`, `low` |\n| `surface` | string | `web` or `cli` |\n| `steps` | string[] | Numbered reproduction steps |\n| `expected` | string | What should happen |\n| `actual` | string | What happened instead |\n| `reproduced` | integer | Times you reproduced (must be ≥ 2 to report) |\n| `video` | string | **Web findings:** path under `/workspace/qa-harness/` to a Playwright `.webm` clip |\n| `transcript` | string | **CLI findings:** path to a saved command transcript `.txt` |\n\nProvide **either** `video` (web) or `transcript` (cli), not both.\n\n## Evidence rules\n\n### Web (Playwright)\n\n1. Write `tests/bug-<slug>.spec.ts` with `test.use({ video: 'on' });` at the top.\n2. Assert the **buggy** behaviour so the test fails for the right reason.\n3. Run at least twice; confirm it fails consistently.\n4. After the second successful reproduction, copy the newest `.webm` from `test-results/` to `findings/videos/bug-<slug>.webm` (> 2 KB).\n\n### CLI\n\n1. Save a transcript to `findings/transcripts/bug-<slug>.txt` showing both reproductions.\n2. Include commands, relevant stdout/stderr, and exit codes.\n\n## Exclusions — never report as product bugs\n\n- Billing purchases or payment flows\n- Support impersonation flows\n- Expected authorization failures (403 on resources you should not access)\n- Setup failures (missing env, auth, Playwright install)\n- Unverified network flakiness (single timeout with no second attempt)\n- Your own harness/tooling errors\n\n## Safety\n\n- Read-only on production: no invites, key rotation, policy writes, org settings, uploads\n- Changing your own user-level preferences is allowed when your brief requires it\n"
+prompt = { type = "knowledge", slug = "fullstack-qa-cli-cross-prompt" }
 
 [[run.tasks.steps]]
 name = "stage-findings"
-exec = [ "env", "QA_AGENT_ID=qa-agent-cli-cross", "QA_BRIEF_LABEL=CLI and cross-surface: doctor, status, sandbox ops, web consistency", "python3", "/opt/qa-harness/harness/stage.py" ]
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-cli-cross",
+  "QA_BRIEF_LABEL=CLI and cross-surface: doctor, status, sandbox ops, web consistency",
+  "python3",
+  "/opt/qa-harness/harness/stage.py",
+]

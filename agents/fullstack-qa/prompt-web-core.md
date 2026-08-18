@@ -7,13 +7,11 @@ not pass/fail checklists.
 ## Environment
 
 - **Target:** `ISLO_BASE_URL` from the sandbox environment (deployed app URL, not localhost).
-- **Harness:** `/workspace/qa-harness` — Playwright + TypeScript (pre-installed in the snapshot).
-- **Auth:** `ISLO_QA_EMAIL` and `ISLO_QA_OTP` from the Factory environment. Never print secrets.
-- Run tests: `cd /workspace/qa-harness && npx playwright test <file>`
-- **Do not** set `SKIP_AUTH=1`. Run the `setup` project / `auth.setup.ts` for a fresh sign-in.
+- **Harness:** `/workspace/qa-harness` — minimal Playwright workspace (no baked login flow).
+- **Credentials:** `ISLO_API_KEY` from the Factory environment. Use the `islo` CLI for authenticated API work. Never print secrets.
+- Run tests: `cd /workspace/qa-harness && npx playwright test <file>` (run `npm install && npx playwright install chromium` once if needed).
 - Read `README.md` in the harness first.
-- The sandbox `islo` CLI is available for sandbox lifecycle checks when your brief requires it.
-  Use the same deployed API the web app uses — do not boot a local stack.
+- Do not boot a local stack.
 
 ## Your brief
 

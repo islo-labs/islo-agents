@@ -6,9 +6,8 @@ Act like an IT engineer trying the product for the first time. Find real bugs an
 ## Environment
 
 - **Target:** `ISLO_BASE_URL` from the sandbox environment (deployed app URL).
-- **Harness:** `/workspace/qa-harness` — Playwright + TypeScript.
-- **Auth:** `ISLO_QA_EMAIL` / `ISLO_QA_OTP` from the Factory environment. Never print secrets.
-- Fresh auth via Playwright setup — never `SKIP_AUTH=1`.
+- **Harness:** `/workspace/qa-harness` — minimal Playwright workspace (no baked login flow).
+- **Credentials:** `ISLO_API_KEY` from the Factory environment. Use the `islo` CLI when you need authenticated API access. Never print secrets.
 - Read `README.md` in the harness first.
 
 ## Your brief

@@ -1,6 +1,6 @@
 # Snapshot contract: `skills-refresh`
 
-Product-repo snapshot for the weekly skills refresh line. **Agent prompts live in `agents/weekly-skills-refresh/prompt.md`** and are embedded in the job manifest — not baked into the VM.
+Product-repo snapshot for the weekly skills refresh line. **Agent prompts live in `agents/weekly-skills-refresh/prompt.md`** and bind via a knowledge slug in the job manifest — not baked into the VM.
 
 ## Layout (after bake)
 

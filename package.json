@@ -6,8 +6,7 @@
   "scripts": {
     "agent": "tsx src/agent.ts",
     "assemble-webhooks": "node scripts/assemble-webhooks.js",
-    "sync-template-prompts": "node scripts/sync-template-prompts.mjs",
-    "test": "node scripts/sync-template-prompts.mjs && node --import tsx --test tests/*.test.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

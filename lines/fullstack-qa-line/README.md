@@ -23,12 +23,11 @@ documented VM paths, save with the exact manifest name, deploy jobs, then the li
 
 ### 2. Factory environment: `fullstack-qa`
 
-Create a Factory environment with secrets your QA harness needs:
+Create a Factory environment named `fullstack-qa` with secrets the line needs:
 
 | Variable | Purpose |
 |----------|---------|
-| `ISLO_QA_EMAIL` | Test user email for browser login |
-| `ISLO_QA_OTP` | Fixed OTP for that test user |
+| `ISLO_API_KEY` | CLI auth for QA agents (injected at sandbox create) |
 | `LINEAR_TEAM_ID` | Linear team UUID for the collector (required) |
 | `SLACK_CHANNEL` | Optional Slack channel for collector notifications |
 

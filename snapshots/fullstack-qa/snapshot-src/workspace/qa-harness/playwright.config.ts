@@ -13,10 +13,8 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
     video: 'retain-on-failure',
-    storageState: process.env.PLAYWRIGHT_STORAGE_STATE || '/workspace/qa-harness/.auth/user.json',
   },
   projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {
       name: 'chromium',
       use: {
@@ -25,7 +23,6 @@ export default defineConfig({
           args: ['--disable-http2'],
         },
       },
-      dependencies: ['setup'],
     },
   ],
 });

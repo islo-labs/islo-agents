@@ -393,35 +393,75 @@ test("template jobs reference shipped snapshot contracts", () => {
   }
 });
 
-const templatePromptSources: Record<string, string | string[]> = {
-  "weekly-skills-refresh": "agents/weekly-skills-refresh/prompt.md",
-  "red-team-cli-trust-boundaries": "agents/red-team-cli-trust-boundaries/prompt.md",
-  "red-team-cli-input-abuse": "agents/red-team-cli-input-abuse/prompt.md",
-  "red-team-cli-black-box": "agents/red-team-cli-black-box/prompt.md",
-  "red-team-cli-report": "agents/red-team-cli-report/prompt.md",
+const templatePromptBindings: Record<
+  string,
+  { slug: string; source: string } | Array<{ slug: string; source: string }>
+> = {
+  "weekly-skills-refresh": {
+    slug: "weekly-skills-refresh-prompt",
+    source: "agents/weekly-skills-refresh/prompt.md",
+  },
+  "red-team-cli-trust-boundaries": {
+    slug: "red-team-cli-trust-boundaries-prompt",
+    source: "agents/red-team-cli-trust-boundaries/prompt.md",
+  },
+  "red-team-cli-input-abuse": {
+    slug: "red-team-cli-input-abuse-prompt",
+    source: "agents/red-team-cli-input-abuse/prompt.md",
+  },
+  "red-team-cli-black-box": {
+    slug: "red-team-cli-black-box-prompt",
+    source: "agents/red-team-cli-black-box/prompt.md",
+  },
+  "red-team-cli-report": {
+    slug: "red-team-cli-report-prompt",
+    source: "agents/red-team-cli-report/prompt.md",
+  },
   "fullstack-qa": [
-    "agents/fullstack-qa/prompt-web-core.md",
-    "agents/fullstack-qa/prompt-web-platform.md",
-    "agents/fullstack-qa/prompt-cli-cross.md",
+    {
+      slug: "fullstack-qa-web-core-prompt",
+      source: "agents/fullstack-qa/prompt-web-core.md",
+    },
+    {
+      slug: "fullstack-qa-web-platform-prompt",
+      source: "agents/fullstack-qa/prompt-web-platform.md",
+    },
+    {
+      slug: "fullstack-qa-cli-cross-prompt",
+      source: "agents/fullstack-qa/prompt-cli-cross.md",
+    },
   ],
 };
 
-test("template run_agent prompts are embedded from agents/ sources", () => {
-  for (const [job, sources] of Object.entries(templatePromptSources)) {
+test("template run_agent prompts use knowledge slugs with agents/ sources", () => {
+  for (const [job, bindings] of Object.entries(templatePromptBindings)) {
     const manifest = readFileSync(`agents/${job}/job.toml`, "utf-8");
     const doc = parse(manifest) as {
-      run: { tasks: Array<{ steps: Array<{ run_agent?: { prompt?: { value?: string } } }> }> };
+      run: {
+        tasks: Array<{
+          steps: Array<{ run_agent?: { prompt?: { type?: string; slug?: string } } }>;
+        }>;
+      };
     };
-    const literals = doc.run.tasks
+    const slugs = doc.run.tasks
       .flatMap((task) => task.steps)
-      .map((step) => step.run_agent?.prompt?.value)
-      .filter((value): value is string => typeof value === "string");
+      .map((step) => step.run_agent?.prompt)
+      .filter(
+        (prompt): prompt is { type: string; slug: string } =>
+          prompt?.type === "knowledge" && typeof prompt.slug === "string",
+      )
+      .map((prompt) => prompt.slug);
 
-    for (const source of [sources].flat()) {
-      const expected = readFileSync(source, "utf-8").replace(/\r\n/g, "\n").trimEnd() + "\n";
+    const bindingList = Array.isArray(bindings) ? bindings : [bindings];
+
+    for (const binding of bindingList) {
       assert.ok(
-        literals.includes(expected),
-        `${job} job.toml must embed prompt from ${source}`,
+        existsSync(binding.source),
+        `${job} must keep prompt source at ${binding.source}`,
+      );
+      assert.ok(
+        slugs.includes(binding.slug),
+        `${job} job.toml must bind run_agent.prompt to knowledge slug ${binding.slug}`,
       );
     }
 
@@ -431,5 +471,10 @@ test("template run_agent prompts are embedded from agents/ sources", () => {
       `${job} must not point run_agent at snapshot prompt paths`,
     );
     assert.doesNotMatch(manifest, /prepare\.py/, `${job} must not call prepare.py`);
+    assert.doesNotMatch(
+      manifest,
+      /\[run\.tasks\.steps\.run_agent\.prompt\][\s\S]*?type = "literal"/,
+      `${job} must not embed prompt literals in job.toml`,
+    );
   }
 });
