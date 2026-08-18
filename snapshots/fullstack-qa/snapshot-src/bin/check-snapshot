@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+for path in \
+  /opt/qa-harness/agent/cleanup.py \
+  /opt/qa-harness/agent/stage_findings.py \
+  /opt/qa-harness/scripts/start-qa-stack.sh \
+  /workspace/qa-harness/package.json
+do
+  if [[ ! -f "${path}" ]]; then
+    echo "ERROR: fullstack-qa snapshot is missing ${path}" >&2
+    exit 1
+  fi
+done

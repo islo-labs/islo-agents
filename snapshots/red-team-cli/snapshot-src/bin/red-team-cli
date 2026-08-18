@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PYTHONPATH="/opt/red-team-cli${PYTHONPATH:+:${PYTHONPATH}}"
+exec python3 -m harness "$@"

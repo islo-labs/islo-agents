@@ -1,6 +1,6 @@
 # `fullstack-qa-line` template
 
-Scheduled Factory line that runs **three parallel QA agents** against a local full-stack environment, then **deduplicates and publishes** findings to Linear.
+Scheduled Factory line that runs **three parallel black-box QA agents** against a deployed app URL, then **deduplicates and publishes** findings to Linear.
 
 ## Stages
 
@@ -18,18 +18,18 @@ Jobs expect harness files baked into VM snapshots — **not** embedded in `job.t
 - [`snapshots/fullstack-qa/README.md`](../../snapshots/fullstack-qa/README.md)
 - [`snapshots/qa-collector/README.md`](../../snapshots/qa-collector/README.md)
 
-You supply your own agent scripts, prompts, Playwright harness, and stack bootstrap under `/opt/qa-harness/` and `/workspace/qa-harness/` in the snapshot.
-
 ### 2. Factory environment: `fullstack-qa`
 
-Create a Factory environment with secrets your QA harness needs, for example:
+Create a Factory environment with secrets your QA harness needs:
 
 | Variable | Purpose |
 |----------|---------|
+| `ISLO_QA_EMAIL` | Test user email for browser login |
+| `ISLO_QA_OTP` | Fixed OTP for that test user |
 | `LINEAR_TEAM_ID` | Linear team UUID for the collector (required) |
-| `DESCOPE_PROJECT_ID` | Auth provider project ID (if your app uses Descope) |
-| `QA_TEST_EMAIL` / `QA_TEST_OTP` | Test user credentials for browser login |
 | `SLACK_CHANNEL` | Optional Slack channel for collector notifications |
+
+Set the deployed URL via the job parameter `qa_base_url` (default `https://app.islo.dev`) or override `ISLO_BASE_URL` in the line manifest.
 
 The collector ships with `DRY_RUN=1` so the first deploy validates without filing issues. Set `DRY_RUN=0` in the job manifest when ready.
 

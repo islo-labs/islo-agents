@@ -1,18 +1,22 @@
 # Snapshot contract: `fullstack-qa`
 
-<!-- PLACEHOLDER: build a VM snapshot named `fullstack-qa` with the paths below.
-     Do not embed harness assets in job.toml — bake them into the snapshot. -->
+Black-box QA snapshot: Playwright harness, agent prompts, and one staging script.
 
-## Required paths
+## What belongs in the snapshot
 
-| Path in snapshot | Contents |
-|------------------|----------|
-| `/opt/qa-harness/agent/` | Python helpers: `cleanup.py`, `stage_findings.py`, etc. |
-| `/opt/qa-harness/prompts/full/` | Composed agent briefs (`agent-web-core.md`, `agent-web-platform.md`, `agent-cli-cross.md`) |
-| `/opt/qa-harness/scripts/` | `start-qa-stack.sh` — boots your local app stack |
-| `/workspace/qa-harness/` | Browser test harness (e.g. Playwright `package.json`, tests, config) |
+| Path | Contents |
+|------|----------|
+| `/opt/qa-harness/harness/stage.py` | Validates findings and writes a knowledge handoff |
+| `/opt/qa-harness/prompts/full/` | Agent briefs |
+| `/workspace/qa-harness/` | Playwright tests (`npm install` + `playwright install` at bake time) |
 
-The `fullstack-qa` job runs snapshot check scripts, `start-stack`, three parallel `run_agent` tasks, then cleanup/staging scripts. Harness source lives in `snapshot-src/` — build with `setup-snapshot.sh`, not in `job.toml`.
+## What does **not** belong
+
+- Cleanup or prepare scripts — provision-mode job sandboxes are deleted when the run completes (`teardown_on_complete` defaults to true).
+- Snapshot self-check steps — a missing snapshot fails the job naturally.
+- Harness embedded in `job.toml`.
+
+Each fanout task is: `run_agent` → `stage.py`. The collector job reads staged knowledge.
 
 ## Building
 
@@ -20,5 +24,3 @@ The `fullstack-qa` job runs snapshot check scripts, `start-stack`, three paralle
 ./snapshots/fullstack-qa/setup-snapshot.sh
 islo snapshot save fullstack-qa
 ```
-
-See [`lines/fullstack-qa-line/README.md`](../../lines/fullstack-qa-line/README.md) for deploy steps.

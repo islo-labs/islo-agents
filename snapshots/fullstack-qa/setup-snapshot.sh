@@ -5,14 +5,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 SRC="${ROOT}/snapshot-src"
 
-sudo mkdir -p /opt/qa-harness /workspace/qa-harness
-sudo rsync -a "${SRC}/agent/" /opt/qa-harness/agent/
+sudo mkdir -p /opt/qa-harness/harness /opt/qa-harness/prompts /workspace/qa-harness
+sudo rsync -a "${SRC}/harness/" /opt/qa-harness/harness/
 sudo rsync -a "${SRC}/prompts/" /opt/qa-harness/prompts/
-sudo rsync -a "${SRC}/scripts/" /opt/qa-harness/scripts/
 sudo rsync -a "${SRC}/workspace/islo-qa/" /workspace/qa-harness/
 sudo mkdir -p /workspace/qa-harness/findings/videos /workspace/qa-harness/findings/transcripts /workspace/qa-harness/.auth
-
-sudo chmod +x /opt/qa-harness/scripts/*.sh 2>/dev/null || true
 
 cd /workspace/qa-harness
 npm install

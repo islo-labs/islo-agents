@@ -1,7 +1,11 @@
 [job]
 name = "fullstack-qa"
-version = "0.4.0"
-description = "Three parallel QA agents against your local full-stack environment; stages findings to knowledge"
+version = "0.6.0"
+description = "Three parallel black-box QA agents against a deployed app URL; stages findings to knowledge"
+
+[job.params.qa_base_url]
+default = "https://app.islo.dev"
+description = "Deployed web app URL to test (browser and CLI target)"
 
 [run]
 fail_fast = false
@@ -15,13 +19,13 @@ image = "docker.io/library/islo-runner:latest"
 snapshot_name = "fullstack-qa"
 gateway_profile = "default"
 environment = "fullstack-qa"
-vcpus = 4
-memory_mb = 8192
-disk_gb = 30
+vcpus = 2
+memory_mb = 4096
+disk_gb = 20
 internet_enabled = true
 
 [run.sandbox.env]
-ISLO_BASE_URL = "http://localhost:5173"
+ISLO_BASE_URL = "{{qa_base_url}}"
 QA_RUN_ID = "{{run_id}}"
 ANTHROPIC_BASE_URL = "https://gateway.islo.dev/inference/anthropic"
 ANTHROPIC_MODEL = "ship-like/claude-sonnet-5"
@@ -31,14 +35,6 @@ CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"
 
 [[run.tasks]]
 name = "qa-agent-web-core"
-
-[[run.tasks.steps]]
-name = "check-snapshot"
-exec = ["bash", "-lc", "test -f /opt/qa-harness/agent/cleanup.py && test -f /workspace/qa-harness/package.json"]
-
-[[run.tasks.steps]]
-name = "start-stack"
-exec = ["bash", "/opt/qa-harness/scripts/start-qa-stack.sh"]
 
 [[run.tasks.steps]]
 name = "explore"
@@ -54,23 +50,17 @@ type = "literal"
 value = "Read and follow `/opt/qa-harness/prompts/full/agent-web-core.md` exactly. Write `/workspace/findings.json` per that contract."
 
 [[run.tasks.steps]]
-name = "cleanup"
-exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-web-core python3 /opt/qa-harness/agent/cleanup.py || true"]
-
-[[run.tasks.steps]]
 name = "stage-findings"
-exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-web-core QA_BRIEF_LABEL='Web core: login, navigation, sandbox lifecycle, terminal/share' python3 /opt/qa-harness/agent/stage_findings.py || true"]
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-web-core",
+  "QA_BRIEF_LABEL=Web core: login, navigation, sandbox lifecycle, terminal/share",
+  "python3",
+  "/opt/qa-harness/harness/stage.py",
+]
 
 [[run.tasks]]
 name = "qa-agent-web-platform"
-
-[[run.tasks.steps]]
-name = "check-snapshot"
-exec = ["bash", "-lc", "test -f /opt/qa-harness/agent/cleanup.py && test -f /workspace/qa-harness/package.json"]
-
-[[run.tasks.steps]]
-name = "start-stack"
-exec = ["bash", "/opt/qa-harness/scripts/start-qa-stack.sh"]
 
 [[run.tasks.steps]]
 name = "explore"
@@ -86,23 +76,17 @@ type = "literal"
 value = "Read and follow `/opt/qa-harness/prompts/full/agent-web-platform.md` exactly. Write `/workspace/findings.json` per that contract."
 
 [[run.tasks.steps]]
-name = "cleanup"
-exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-web-platform python3 /opt/qa-harness/agent/cleanup.py || true"]
-
-[[run.tasks.steps]]
 name = "stage-findings"
-exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-web-platform QA_BRIEF_LABEL='Web platform: settings, deep links, Factory, environments, integrations' python3 /opt/qa-harness/agent/stage_findings.py || true"]
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-web-platform",
+  "QA_BRIEF_LABEL=Web platform: settings, deep links, Factory, environments, integrations",
+  "python3",
+  "/opt/qa-harness/harness/stage.py",
+]
 
 [[run.tasks]]
 name = "qa-agent-cli-cross"
-
-[[run.tasks.steps]]
-name = "check-snapshot"
-exec = ["bash", "-lc", "test -f /opt/qa-harness/agent/cleanup.py && test -f /workspace/qa-harness/package.json"]
-
-[[run.tasks.steps]]
-name = "start-stack"
-exec = ["bash", "/opt/qa-harness/scripts/start-qa-stack.sh"]
 
 [[run.tasks.steps]]
 name = "explore"
@@ -118,9 +102,11 @@ type = "literal"
 value = "Read and follow `/opt/qa-harness/prompts/full/agent-cli-cross.md` exactly. Write `/workspace/findings.json` per that contract."
 
 [[run.tasks.steps]]
-name = "cleanup"
-exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-cli-cross python3 /opt/qa-harness/agent/cleanup.py || true"]
-
-[[run.tasks.steps]]
 name = "stage-findings"
-exec = ["bash", "-lc", "QA_AGENT_ID=qa-agent-cli-cross QA_BRIEF_LABEL='CLI and cross-surface: doctor, status, sandbox ops, web consistency' python3 /opt/qa-harness/agent/stage_findings.py || true"]
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-cli-cross",
+  "QA_BRIEF_LABEL=CLI and cross-surface: doctor, status, sandbox ops, web consistency",
+  "python3",
+  "/opt/qa-harness/harness/stage.py",
+]

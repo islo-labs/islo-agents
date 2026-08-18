@@ -12,8 +12,12 @@ def publish_skills() -> int:
     skills = Path("/workspace/skills")
     repo = os.environ.get("SKILLS_REPO", "").strip()
     publish_mode = os.environ.get("PUBLISH_MODE", "pr").strip()
-    branch_prefix = os.environ.get("BRANCH_PREFIX", "factory/weekly-skills-refresh").strip()
+    branch_prefix = os.environ.get("BRANCH_PREFIX", "factory/skills-refresh").strip()
     since = os.environ.get("SINCE", "7 days ago").strip()
+    commit_message = os.environ.get(
+        "COMMIT_MESSAGE",
+        "chore: refresh agent skills from product changes",
+    ).strip()
     result_path = Path("/workspace/publish-result.txt")
 
     subprocess.run(["gh", "auth", "setup-git"], check=True)
@@ -37,13 +41,9 @@ def publish_skills() -> int:
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
     branch = f"{branch_prefix}/{stamp}"
     subprocess.run(["git", "-C", str(skills), "checkout", "-b", branch], check=True)
+    subprocess.run(["git", "-C", str(skills), "add", "-A"], check=True)
     subprocess.run(
-        ["git", "-C", str(skills), "add", "plugins/", "README.md"],
-        check=False,
-    )
-    subprocess.run(["git", "-C", str(skills), "add", "-A"], check=False)
-    subprocess.run(
-        ["git", "-C", str(skills), "commit", "-m", "chore: weekly skills refresh from stack changes"],
+        ["git", "-C", str(skills), "commit", "-m", commit_message],
         check=True,
     )
 
@@ -63,9 +63,9 @@ def publish_skills() -> int:
                 "--repo",
                 repo,
                 "--title",
-                f"Weekly skills refresh {datetime.now(timezone.utc):%Y-%m-%d}",
+                f"Agent skills refresh {datetime.now(timezone.utc):%Y-%m-%d}",
                 "--body",
-                f"Automated refresh from stack changes over {since}.",
+                f"Automated skills refresh from product changes over {since}.",
                 "--head",
                 branch,
             ],

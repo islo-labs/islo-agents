@@ -1,10 +1,10 @@
-"""Weekly skills refresh harness entrypoints."""
+"""Skills refresh harness entrypoints."""
 
 from __future__ import annotations
 
 import sys
 
-from . import checkout, collect, publish
+from . import checkout, collect_repo_changes, publish
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -18,7 +18,7 @@ def main(argv: list[str] | None = None) -> int:
 
     commands = {
         "checkout": checkout.checkout_skills,
-        "collect": collect.collect_changes,
+        "collect": collect_repo_changes.collect_changes,
         "publish": publish.publish_skills,
     }
     handler = commands.get(argv[0])

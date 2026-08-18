@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.ISLO_BASE_URL || 'http://localhost:5173';
+const baseURL = process.env.ISLO_BASE_URL || 'https://app.islo.dev';
 
 export default defineConfig({
   testDir: './tests',
@@ -13,7 +13,7 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
     video: 'retain-on-failure',
-    storageState: process.env.PLAYWRIGHT_STORAGE_STATE || '/workspace/islo-qa/.auth/user.json',
+    storageState: process.env.PLAYWRIGHT_STORAGE_STATE || '/workspace/qa-harness/.auth/user.json',
   },
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },

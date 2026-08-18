@@ -1,6 +1,6 @@
 # `weekly-skills-refresh` template
 
-Scheduled Factory line that scans **stack repos in a snapshot**, decides whether agent-facing skill docs are stale, and opens a PR (or commits) to your skills repository.
+Scheduled Factory line that scans **product repos in a snapshot**, decides whether agent-facing skill docs are stale, and opens a PR (or commits) to your skills repository.
 
 ## Stage
 
@@ -23,7 +23,9 @@ Edit `agents/weekly-skills-refresh/job.toml`:
 | `skills_repo` | `your-org/agent-skills` | GitHub `owner/repo` to update |
 | `since` | `7 days ago` | Commit lookback window |
 | `publish_mode` | `pr` | `pr`, `commit`, or `report` |
-| `branch_prefix` | `factory/weekly-skills-refresh` | PR branch prefix |
+| `branch_prefix` | `factory/skills-refresh` | PR branch prefix |
+| `skills_globs` | `**` | Globs the agent may edit under the skills repo |
+| `commit_message` | `chore: refresh agent skills from product changes` | Git commit message |
 | `GIT_COMMITTER_*` | placeholder noreply email | Git author for commits |
 
 Ensure the sandbox has `gh` authenticated (`gh auth login` in snapshot or gateway-injected token).

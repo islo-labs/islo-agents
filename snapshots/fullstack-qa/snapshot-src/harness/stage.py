@@ -1,29 +1,66 @@
 #!/usr/bin/env python3
-"""QA-stage tail: validate one agent's findings and publish a knowledge item."""
+"""Validate agent findings and stage a knowledge handoff for the collector."""
 
 from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 import traceback
 from datetime import datetime, timezone
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import infra_classify as ic  # noqa: E402
-import islo_env  # noqa: E402
-import slack_upload  # noqa: E402
+import re
 
-AGENT = os.environ.get("QA_AGENT_ID", "qa-agent")
-BRIEF = os.environ.get("QA_BRIEF_LABEL", "")
-REPO = "/workspace/qa-harness"
-FINDINGS_JSON = "/workspace/findings.json"
+INFRA_PATTERNS = [
+    r"credential injection",
+    r"api error:\s*4\d\d",
+    r"api error:\s*5\d\d",
+    r"failed to authenticate",
+    r"anthropic",
+    r"invalid request parameters",
+    r"model is not allowed",
+    r"playwright.*not installed",
+    r"cannot find module",
+    r"err_cert",
+    r"self.signed certificate",
+    r"net::err_failed",
+    r"storage state.*(missing|expired)",
+    r"\bSKIP_AUTH\b",
+    r"rate limit",
+    r"ENOTFOUND",
+    r"ECONNREFUSED",
+]
+INFRA_RE = re.compile("|".join(INFRA_PATTERNS), re.I)
+SEVERITIES = {"critical", "high", "medium-high", "medium", "medium-low", "low"}
+SURFACES = {"web", "cli"}
+CONFIDENCE_LEVELS = {"high", "medium", "low"}
+EXPECTED_AGENTS = frozenset(
+    {
+        "qa-agent-web-core",
+        "qa-agent-web-platform",
+        "qa-agent-cli-cross",
+    }
+)
+
+
+def finding_blob(finding: dict) -> str:
+    parts = [
+        str(finding.get(k) or "")
+        for k in ("title", "expected", "actual", "notes", "surface")
+    ]
+    parts.append(" ".join(str(s) for s in (finding.get("steps") or [])))
+    return " ".join(parts)
+
+
+def is_infrastructure_text(text: str) -> re.Match[str] | None:
+    return INFRA_RE.search(text or "")
+
+
+FINDINGS = "/workspace/findings.json"
 AGENT_LOG = "/workspace/agent.log"
 TAG = "islo-qa-findings"
-TARGET = os.environ.get("ISLO_BASE_URL", "http://localhost:5173")
-MIN_EVIDENCE_BYTES = 64
+MIN_EVIDENCE_BYTES = 2048
 
 
 def log(msg: str) -> None:
@@ -31,45 +68,27 @@ def log(msg: str) -> None:
 
 
 def load_findings():
-    errors = []
-    if not os.path.exists(FINDINGS_JSON):
-        return None, [f"{FINDINGS_JSON} was never written"]
+    errors: list[str] = []
+    if not os.path.isfile(FINDINGS):
+        return None, [f"{FINDINGS} missing"]
     try:
-        with open(FINDINGS_JSON) as fh:
-            raw = fh.read()
-    except OSError as exc:
-        return None, [f"could not read {FINDINGS_JSON}: {exc}"]
-
-    if not raw.strip():
-        return None, [f"{FINDINGS_JSON} is empty"]
-
-    text = raw.strip()
-    fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.S)
-    if fence:
-        text = fence.group(1)
-        errors.append("findings.json was fenced; unwrapped it")
-
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError as exc:
-        return None, [f"findings.json is not valid JSON: {exc}"]
-
+        with open(FINDINGS, encoding="utf-8") as fh:
+            payload = json.load(fh)
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, [f"could not parse {FINDINGS}: {exc}"]
     if not isinstance(payload, dict):
-        return None, ["findings.json is not a JSON object"]
-    if not isinstance(payload.get("findings"), list):
-        return None, ["findings.json has no 'findings' array"]
+        return None, [f"{FINDINGS} is not an object"]
     return payload, errors
 
 
-def evidence_path(finding: dict) -> tuple[str | None, str]:
-    """Return (absolute path, kind) where kind is video|transcript."""
-    for key, kind in (("video", "video"), ("transcript", "transcript")):
-        rel = str(finding.get(key) or "").strip()
-        if not rel:
-            continue
-        path = rel if os.path.isabs(rel) else os.path.join(REPO, rel)
-        return path, kind
-    return None, ""
+def evidence_path(finding: dict) -> tuple[str | None, str | None]:
+    video = str(finding.get("video") or "").strip()
+    transcript = str(finding.get("transcript") or "").strip()
+    if video:
+        return video, "video"
+    if transcript:
+        return transcript, "transcript"
+    return None, None
 
 
 def clean_findings(payload: dict):
@@ -88,24 +107,24 @@ def clean_findings(payload: dict):
             rejected.append((label, "missing title or actual"))
             continue
 
-        blob = ic.finding_blob(f)
-        hit = ic.is_infrastructure_text(blob)
+        blob = finding_blob(f)
+        hit = is_infrastructure_text(blob)
         if hit:
             rejected.append((label, f"infrastructure error, not a product bug (matched {hit.group(0)!r})"))
             continue
 
         sev = str(f.get("severity") or "").strip().lower()
-        if sev not in ic.SEVERITIES:
-            rejected.append((label, f"severity {sev!r} is not one of {sorted(ic.SEVERITIES)}"))
+        if sev not in SEVERITIES:
+            rejected.append((label, f"severity {sev!r} is not one of {sorted(SEVERITIES)}"))
             continue
 
         surface = str(f.get("surface") or "").strip().lower()
-        if surface not in ic.SURFACES:
+        if surface not in SURFACES:
             rejected.append((label, f"surface {surface!r} must be web or cli"))
             continue
 
         confidence = str(f.get("confidence") or "medium").strip().lower()
-        if confidence not in ic.CONFIDENCE_LEVELS:
+        if confidence not in CONFIDENCE_LEVELS:
             rejected.append((label, f"confidence {confidence!r} is invalid"))
             continue
 
@@ -156,46 +175,22 @@ def evidence_excerpt(path: str, kind: str) -> str:
         return ""
 
 
-
-def upload_evidence_to_slack(findings: list[dict], _agent: str) -> list[str]:
-    """Register screen recordings in Slack while the sandbox still has them on disk."""
-    errors: list[str] = []
-    if not (os.environ.get("SLACK_TOKEN") or "").strip():
-        log("SLACK_TOKEN is not set — skipping evidence upload")
-        return errors
-    if not findings:
-        return errors
-
-    for f in findings:
-        path = f.get("_evidence_path")
-        kind = f.get("_evidence_kind")
-        if not path or kind != "video":
-            continue
-        title = str(f.get("title") or os.path.basename(path))
-        try:
-            uploaded = slack_upload.upload_file(
-                path,
-                title=title,
-            )
-            f["_slack_file_id"] = uploaded.get("id")
-            f["_slack_permalink"] = uploaded.get("permalink")
-            log(f"registered evidence {os.path.basename(path)} -> {uploaded.get('id')}")
-        except (OSError, slack_upload.SlackError) as exc:
-            msg = f"could not upload {os.path.basename(path)}: {exc}"
-            log(msg)
-            errors.append(msg)
-    return errors
-
-
 def main() -> int:
-    log(f"agent={AGENT} brief={BRIEF!r} target={os.environ.get('ISLO_BASE_URL', TARGET)}")
+    agent = (os.environ.get("QA_AGENT_ID") or "").strip()
+    brief = (os.environ.get("QA_BRIEF_LABEL") or "").strip()
+    target = (os.environ.get("ISLO_BASE_URL") or "").rstrip("/")
 
-    agent_rc_path = "/workspace/agent.rc"
+    if agent not in EXPECTED_AGENTS:
+        log(f"unexpected QA_AGENT_ID={agent!r}")
+        return 0
+
+    log(f"agent={agent} brief={brief!r} target={target}")
+
     agent_rc = None
-    if os.path.exists(agent_rc_path):
+    agent_rc_path = "/workspace/agent.rc"
+    if os.path.isfile(agent_rc_path):
         try:
-            with open(agent_rc_path) as fh:
-                agent_rc = int(fh.read().strip() or "1")
+            agent_rc = int(open(agent_rc_path).read().strip())
         except (OSError, ValueError):
             agent_rc = None
 
@@ -207,7 +202,7 @@ def main() -> int:
         detail = "; ".join(load_errors)
         log(f"no usable findings.json: {detail}")
         tail = tail_agent_log()
-        if agent_rc not in (0, None) or ic.INFRA_RE.search(tail):
+        if agent_rc not in (0, None) or INFRA_RE.search(tail):
             infra_errors.append(f"agent produced no findings.json (exit={agent_rc}): {detail}")
         else:
             infra_errors.append(f"findings.json unusable: {detail}")
@@ -223,18 +218,14 @@ def main() -> int:
         if payload.get("run_ok") is False:
             infra_errors.append("agent set run_ok:false")
 
-    reportable = keep
-    for err in upload_evidence_to_slack(reportable, AGENT):
-        log(f"evidence upload warning: {err}")
-
     run_ok = bool(payload.get("run_ok", True)) and not infra_errors and agent_rc in (0, None)
 
     item = {
         "schema": 1,
-        "agent": AGENT,
-        "brief": BRIEF or payload.get("brief", ""),
+        "agent": agent,
+        "brief": brief or payload.get("brief", ""),
         "run_ok": run_ok,
-        "target": payload.get("target") or TARGET,
+        "target": payload.get("target") or target,
         "coverage": str(payload.get("coverage") or "").strip(),
         "infra_errors": infra_errors,
         "rejected": [{"finding": lbl, "reason": r} for lbl, r in rejected],
@@ -251,16 +242,14 @@ def main() -> int:
                 "evidence_kind": f["_evidence_kind"],
                 "evidence": os.path.basename(f["_evidence_path"]),
                 "evidence_text": evidence_excerpt(f["_evidence_path"], f["_evidence_kind"]),
-                "slack_file_id": f.get("_slack_file_id"),
-                "slack_permalink": f.get("_slack_permalink"),
             }
-            for f in reportable
+            for f in keep
         ],
     }
 
     body = "\n".join(
         [
-            f"# Islo QA — {AGENT}",
+            f"# QA — {agent}",
             "",
             f"- run_ok: {run_ok}",
             f"- target: {item['target']}",
@@ -277,14 +266,14 @@ def main() -> int:
     )
 
     stamp = os.environ.get("QA_RUN_STAMP") or datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    identifier = f"islo-qa-{AGENT}-{stamp}"
+    identifier = f"islo-qa-{agent}-{stamp}"
     body_path = "/workspace/knowledge-body.md"
-    with open(body_path, "w") as fh:
+    with open(body_path, "w", encoding="utf-8") as fh:
         fh.write(body)
 
     proc = subprocess.run(
         [
-            islo_env.CONTROL_PLANE_ISLO,
+            "islo",
             "knowledge",
             "create",
             identifier,
@@ -297,7 +286,6 @@ def main() -> int:
         ],
         capture_output=True,
         text=True,
-        env=islo_env.control_plane_env(),
     )
     log(f"knowledge create {identifier}: rc={proc.returncode}")
     if proc.returncode != 0:

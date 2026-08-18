@@ -1,28 +1,15 @@
 # Snapshot contract: `red-team-cli`
 
-Bake a VM snapshot named `red-team-cli` with the red-team harness from this directory.
+| Path | Contents |
+|------|----------|
+| `/opt/red-team-harness/harness/` | `prepare-cli`, `prepare-report`, `notify-slack` only |
+| `/opt/red-team-harness/prompts/` | Agent briefs |
+| `/workspace/red-team-contract.md` | Baked from shared output contract |
+| `/workspace/black-box/transcripts/` | Empty dir for black-box evidence |
 
-## What this repo ships
-
-| Path in snapshot | Contents |
-|------------------|----------|
-| `/opt/red-team-harness/harness/` | Python harness (`python3 -m harness <command>`) |
-| `/opt/red-team-harness/prompts/` | Agent briefs and shared output contract |
-
-## What you bake separately (white-box stages only)
-
-| Path in snapshot | Contents |
-|------------------|----------|
-| `/workspace/islo-cli/` | Git checkout of the CLI under test |
-
-Black-box and Slack notify stages need only the harness — no source checkout.
-
-## Building
+White-box stages need `/workspace/islo-cli/` baked separately. Black-box needs only the harness — no prepare/cleanup steps; the job sandbox is ephemeral.
 
 ```bash
-# Optional for white-box: clone islo-cli under /workspace/ on the build VM
 ./snapshots/red-team-cli/setup-snapshot.sh
 islo snapshot save red-team-cli
 ```
-
-Used by: all `red-team-cli-*` jobs.

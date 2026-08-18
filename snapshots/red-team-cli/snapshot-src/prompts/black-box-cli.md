@@ -34,7 +34,7 @@ redteam-{{run_id}}-*
 
 Examples: `redteam-{{run_id}}-sandbox`, `redteam-{{run_id}}-probe`.
 
-Before finishing, delete every resource you created with this prefix (`islo rm`, etc.). A post-run cleanup step also force-deletes any leftovers.
+The job sandbox is ephemeral — provision-mode sandboxes are deleted when the run completes. Still delete resources you create during the run before finishing.
 
 ## Attack surface (CLI only)
 
@@ -59,12 +59,12 @@ Focus adversarial testing on:
    - save command transcripts to `/workspace/black-box/transcripts/`
    - classify severity using the shared contract (high = reproducible boundary cross on prod with material impact)
 4. Mark findings `confirmed`, `hypothesis`, or `rejected` with evidence.
-5. Run cleanup for all `redteam-{{run_id}}-*` resources.
+5. Delete any `redteam-{{run_id}}-*` resources you created (`islo rm`, etc.).
 
 ## Deliverable
 
 1. Write `/workspace/black-box-report.json` following the shared contract (`agent` = `black-box-cli`, `target` = `https://app.islo.dev`).
 2. Set job output **`report_json`** to the minified JSON string (no markdown fences).
-3. Summarize attack coverage and cleanup status in `summary`.
+3. Summarize attack coverage in `summary`.
 
 If no issues are found, return `findings: []` and document what you attempted.

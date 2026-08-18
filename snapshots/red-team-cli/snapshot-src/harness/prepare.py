@@ -2,23 +2,15 @@
 
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-PROMPTS = Path("/opt/red-team-harness/prompts")
 WORKSPACE = Path("/workspace")
 
 
-def install_contract() -> None:
-    dest = WORKSPACE / "red-team-contract.md"
-    dest.write_text((PROMPTS / "shared-output-contract.md").read_text(encoding="utf-8"))
-
-
 def prepare_cli() -> int:
-    install_contract()
     cli_dir = _find_islo_cli()
     if cli_dir is None:
         print(
@@ -46,47 +38,6 @@ def prepare_cli() -> int:
     ).strip()
     (WORKSPACE / "islo-cli-commit.txt").write_text(commit + "\n")
     print(f"Prepared islo-cli at {cli_dir} ({commit})")
-    return 0
-
-
-def prepare_black_box() -> int:
-    install_contract()
-    (WORKSPACE / "black-box" / "transcripts").mkdir(parents=True, exist_ok=True)
-    run_id = os.environ.get("RED_TEAM_RUN_ID", "")
-    target = os.environ.get("ISLO_BASE_URL", "https://app.islo.dev")
-    (WORKSPACE / "black-box-run.txt").write_text(
-        f"run_id={run_id}\nprefix=redteam-{run_id}-\ntarget={target}\n"
-    )
-    if not os.environ.get("ISLO_API_KEY", "").strip():
-        print(
-            "ERROR: ISLO_API_KEY missing — add it as a sandbox secret in your Factory environment",
-            file=sys.stderr,
-        )
-        return 1
-
-    proc = subprocess.run(
-        ["islo", "status", "-o", "json"],
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0:
-        print("ERROR: islo status failed", file=sys.stderr)
-        return 1
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        print("ERROR: islo status returned invalid JSON", file=sys.stderr)
-        return 1
-
-    auth = payload.get("auth") if isinstance(payload.get("auth"), dict) else payload
-    if not auth.get("authenticated"):
-        print("ERROR: islo CLI is not authenticated", file=sys.stderr)
-        return 1
-
-    print(
-        f"Authenticated ({auth.get('method', 'unknown')}, region={payload.get('region', '?')})"
-    )
-    print(f"Black-box prep ok (prefix=redteam-{run_id}-)")
     return 0
 
 

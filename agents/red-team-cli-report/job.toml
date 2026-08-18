@@ -67,14 +67,12 @@ INPUT_ABUSE_REPORT_JSON = "{{input_abuse_report_json}}"
 BLACK_BOX_REPORT_JSON = "{{black_box_report_json}}"
 LINEAR_TEAM_NAME = "REPLACE_WITH_YOUR_LINEAR_TEAM_NAME"
 LINEAR_LABEL_NAME = "security-review"
-PYTHONPATH = "/opt/red-team-harness"
-
 [[run.tasks]]
 name = "report"
 
 [[run.tasks.steps]]
 name = "prepare"
-exec = ["python3", "-m", "harness", "prepare-report"]
+exec = ["/opt/red-team-cli/bin/red-team-cli", "prepare-report"]
 
 [[run.tasks.steps]]
 name = "validate-and-report"
@@ -86,4 +84,4 @@ model = "ship-like/claude-sonnet-5"
 
 [run.tasks.steps.run_agent.prompt]
 type = "literal"
-value = "Read `/opt/red-team-harness/prompts/validate-and-report.md` and `/workspace/red-team-contract.md`. linear_mode={{linear_mode}}. Upstream JSON is on disk under /workspace/upstream/. Follow the prompt exactly."
+value = "Read /opt/red-team-cli/prompts/validate-and-report.md and return its required structured outputs."

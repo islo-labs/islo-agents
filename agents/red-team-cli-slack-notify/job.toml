@@ -46,11 +46,9 @@ SLACK_NOTIFY_CHANNEL_ID = "{{slack_channel_id}}"
 SLACK_NOTIFY_SUMMARY = "{{summary}}"
 SLACK_NOTIFY_LINEAR_ISSUE_URLS = "{{linear_issue_urls}}"
 SLACK_NOTIFY_LINE_STATUS = "{{line_status}}"
-PYTHONPATH = "/opt/red-team-harness"
-
 [[run.tasks]]
 name = "notify"
 
 [[run.tasks.steps]]
 name = "post-slack"
-exec = ["python3", "-m", "harness", "notify-slack"]
+exec = ["/opt/red-team-cli/bin/red-team-cli", "notify-slack"]

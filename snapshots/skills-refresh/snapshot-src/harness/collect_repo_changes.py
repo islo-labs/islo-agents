@@ -1,4 +1,4 @@
-"""Collect stack repo changes since SINCE_ISO into /workspace/changes.json."""
+"""Collect product repo changes since SINCE into /workspace/changes.json."""
 
 from __future__ import annotations
 
@@ -8,8 +8,22 @@ import subprocess
 from pathlib import Path
 
 
-def main() -> int:
-    since = os.environ["SINCE_ISO"]
+def collect_changes() -> int:
+    since = os.environ.get("SINCE", "7 days ago").strip()
+    since_iso = (
+        subprocess.check_output(
+            ["date", "-u", "-d", since, "+%Y-%m-%dT%H:%M:%SZ"],
+            text=True,
+        )
+        .strip()
+    )
+    os.environ["SINCE_ISO"] = since_iso
+    print(f"Collecting product repo changes since {since_iso}")
+    return collect_repo_changes(since_iso)
+
+
+def collect_repo_changes(since: str | None = None) -> int:
+    since = since or os.environ["SINCE_ISO"]
     repos: list[dict] = []
     seen: set[str] = set()
 

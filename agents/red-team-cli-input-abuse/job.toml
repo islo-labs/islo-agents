@@ -30,14 +30,12 @@ ANTHROPIC_DEFAULT_HAIKU_MODEL = "ship-like/claude-sonnet-5"
 ANTHROPIC_MODEL = "ship-like/claude-sonnet-5"
 ANTHROPIC_SMALL_FAST_MODEL = "ship-like/claude-sonnet-5"
 CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"
-PYTHONPATH = "/opt/red-team-harness"
-
 [[run.tasks]]
 name = "review"
 
 [[run.tasks.steps]]
 name = "prepare"
-exec = ["python3", "-m", "harness", "prepare-cli"]
+exec = ["/opt/red-team-cli/bin/red-team-cli", "prepare-cli"]
 
 [[run.tasks.steps]]
 name = "input-abuse-review"
@@ -49,4 +47,4 @@ model = "ship-like/claude-sonnet-5"
 
 [run.tasks.steps.run_agent.prompt]
 type = "literal"
-value = "Read `/opt/red-team-harness/prompts/input-abuse.md` and `/workspace/red-team-contract.md`. Follow them exactly."
+value = "Read /opt/red-team-cli/prompts/input-abuse.md and return its required report_json output."

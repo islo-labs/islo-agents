@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import infra_classify as ic  # noqa: E402
-import islo_env  # noqa: E402
 import slack_upload  # noqa: E402
 
 SEVERITY_EMOJI = {
@@ -35,10 +34,9 @@ def log(msg: str) -> None:
 
 def islo_json(args: list[str]):
     proc = subprocess.run(
-        [islo_env.CONTROL_PLANE_ISLO, *args, "-o", "json"],
+        ["islo", *args, "-o", "json"],
         capture_output=True,
         text=True,
-        env=islo_env.control_plane_env(),
     )
     if proc.returncode != 0:
         log(f"islo {' '.join(args)} failed rc={proc.returncode}: {proc.stderr[-400:]}")
@@ -187,10 +185,9 @@ def dedupe_within_run(findings: list[dict]) -> list[dict]:
 def consume_reports(reports: list[dict]) -> None:
     for r in reports:
         proc = subprocess.run(
-            [islo_env.CONTROL_PLANE_ISLO, "knowledge", "delete", r["_identifier"]],
+            ["islo", "knowledge", "delete", r["_identifier"]],
             capture_output=True,
             text=True,
-            env=islo_env.control_plane_env(),
         )
         log(f"consumed {r['_identifier']}: delete rc={proc.returncode}")
 
