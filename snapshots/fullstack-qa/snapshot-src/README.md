@@ -1,5 +1,5 @@
-# Snapshot build notes
+# `fullstack-qa` snapshot source
 
-Source for the `fullstack-qa` snapshot. Bake with `../setup-snapshot.sh`, then capture.
+Copy into a build VM per `../README.md`, then capture as snapshot `fullstack-qa`.
 
-The snapshot holds Playwright tests, prompts, and `stage.py` (knowledge handoff). No prepare/cleanup — Islo deletes provision-mode sandboxes when the run finishes.
+The snapshot holds Playwright tests, prompts, and `stage.py`. No prepare/cleanup — provision-mode sandboxes tear down when the run finishes.

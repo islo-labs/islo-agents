@@ -12,9 +12,8 @@ Scheduled Factory line that scans **product repos in a snapshot**, decides wheth
 
 ### 1. Snapshot `skills-refresh`
 
-Bake product repositories under `/workspace/` (each with a `.git` directory), run
-`snapshots/skills-refresh/setup-snapshot.sh`, and save as `skills-refresh`.
-The snapshot is prompt-only — the agent handles checkout, edits, and publish.
+Bake product repos under `/workspace/`, copy `snapshots/skills-refresh/snapshot-src/`
+per `snapshots/skills-refresh/README.md`, then `islo snapshot save skills-refresh`.
 
 ### 2. Configure the job
 

@@ -15,7 +15,7 @@ agents/                             — one directory per role
     job.toml                        — durable job (sandbox + steps); job name = role name
     trigger-rules/<source>.toml     — webhook rule fragments for that source
 lines/                              — deployable Factory line manifests
-snapshots/                          — VM snapshot source trees (build with setup-snapshot.sh)
+snapshots/                          — VM snapshot contracts (source under snapshot-src/)
 factory/                            — runbooks, prompts, and tests for internal lines
 webhooks/                           — assembled receivers
   github-events.toml
@@ -158,11 +158,10 @@ Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; de
 Besides PR review / implement / verify (`feature-delivery`), this repo ships **example Factory lines** you can fork and adapt. Each line has a manifest under `lines/<name>/line.toml` and per-line setup notes in `lines/<name>/README.md`. Stage jobs live under `agents/<job>/job.toml`.
 
 Reviewable snapshot source lives under `snapshots/<name>/snapshot-src/`; each
-snapshot README documents external application files that must be present.
-Run `setup-snapshot.sh` on a VM derived from the documented base snapshot, save
-the named snapshot, deploy every stage job, and deploy the line last. Job
-manifests intentionally contain only parameters, short agent pointers, and
-direct invocations of snapshot-installed executables.
+snapshot README documents the paths that must exist in the baked VM. Copy source
+into those paths on a build VM, save the named snapshot, deploy every stage job,
+then deploy the line last. Job manifests contain only parameters, short agent
+pointers, and direct exec invocations of installed scripts.
 
 | Line | Schedule (UTC) | Stages | Purpose |
 |------|----------------|--------|---------|

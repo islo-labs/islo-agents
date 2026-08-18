@@ -1,26 +1,16 @@
 # Snapshot contract: `fullstack-qa`
 
-Black-box QA snapshot: Playwright harness, agent prompts, and one staging script.
+Black-box QA snapshot: Playwright harness and one staging script.
 
-## What belongs in the snapshot
+## Layout (after bake)
 
 | Path | Contents |
 |------|----------|
 | `/opt/qa-harness/harness/stage.py` | Validates findings and writes a knowledge handoff |
-| `/opt/qa-harness/prompts/full/` | Agent briefs |
-| `/workspace/qa-harness/` | Playwright tests (`npm install` + `playwright install` at bake time) |
+| `/workspace/qa-harness/` | Playwright tests (`npm install` + `playwright install chromium`) |
 
-## What does **not** belong
+Source files live in `snapshot-src/`. On a build VM: copy `snapshot-src/harness/stage.py` to `/opt/qa-harness/harness/`, copy `snapshot-src/workspace/islo-qa/` to `/workspace/qa-harness/`, install Playwright deps, then `islo snapshot save fullstack-qa`.
 
-- Cleanup or prepare scripts — provision-mode job sandboxes are deleted when the run completes (`teardown_on_complete` defaults to true).
-- Snapshot self-check steps — a missing snapshot fails the job naturally.
-- Harness embedded in `job.toml`.
+**Agent prompts** live under `agents/fullstack-qa/prompt-*.md` and are embedded in `agents/fullstack-qa/job.toml`.
 
 Each fanout task is: `run_agent` → `stage.py`. The collector job reads staged knowledge.
-
-## Building
-
-```bash
-./snapshots/fullstack-qa/setup-snapshot.sh
-islo snapshot save fullstack-qa
-```

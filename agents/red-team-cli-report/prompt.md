@@ -10,14 +10,22 @@ You are the **validate-and-report** stage in the `red-team-cli` Factory line.
 4. Write a combined run summary.
 5. File one Linear issue per validated high-severity finding (unless `linear_mode=report`).
 
+## Before you begin
+
+1. Find the `islo-cli` git checkout baked in the snapshot (typically `/workspace/islo-cli`).
+2. `cd` there, `git fetch`, checkout the default branch, and `git pull --ff-only`.
+3. Write the resolved path to `/workspace/islo-cli-path.txt` (one line).
+4. Write `git rev-parse HEAD` to `/workspace/islo-cli-commit.txt`.
+5. Parse upstream JSON from sandbox env and write local copies for reference:
+   - `/workspace/upstream/trust-boundaries.json` ← `TRUST_BOUNDARIES_REPORT_JSON`
+   - `/workspace/upstream/input-abuse.json` ← `INPUT_ABUSE_REPORT_JSON`
+   - `/workspace/upstream/black-box.json` ← `BLACK_BOX_REPORT_JSON`
+
 ## Inputs
 
-- `trust_boundaries_report_json`: upstream trust-boundaries report (JSON string param).
-- `input_abuse_report_json`: upstream input-abuse report (JSON string param).
-- `black_box_report_json`: upstream black-box report (JSON string param).
-- `linear_mode`: `create` (file issues) or `report` (summary only, no Linear writes).
-- `islo-cli` path: `/workspace/islo-cli-path.txt` from the prepare step.
-- Shared contract: `/workspace/red-team-contract.md`.
+- `TRUST_BOUNDARIES_REPORT_JSON`, `INPUT_ABUSE_REPORT_JSON`, `BLACK_BOX_REPORT_JSON` in sandbox env (also available as job params).
+- `LINEAR_MODE` in sandbox env: `create` (file issues) or `report` (summary only, no Linear writes).
+- `RED_TEAM_RUN_ID` for black-box re-validation.
 
 Parse all three upstream JSON strings. If any is invalid JSON, fail the job with a clear error in `summary`.
 
@@ -95,3 +103,57 @@ If the Linear integration, Islo team, or `red-team` label cannot be resolved, fa
 - Scope remains **`islo-cli`** (white box) and **prod CLI behavior** (black box).
 - White-box re-validation may use source and local tests; black-box re-validation uses CLI only.
 - In `linear_mode=report`, perform validation and write files but **do not** call Linear mutations.
+
+# Shared red-team output contract
+
+All reviewer agents and the reporter must use this JSON shape. Return **valid JSON** only in the `report_json` job output (minified string).
+
+## Top-level schema
+
+```json
+{
+  "agent": "trust-boundaries | input-abuse | validate-and-report",
+  "target": "islo-cli",
+  "commit": "<git rev-parse HEAD of islo-cli checkout>",
+  "generated_at": "<ISO-8601 UTC timestamp>",
+  "findings": [],
+  "summary": "<short human-readable summary>"
+}
+```
+
+## Finding object
+
+Every candidate — confirmed or not — must include:
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `id` | yes | Stable slug, e.g. `auth-token-world-readable` |
+| `title` | yes | One-line issue title |
+| `severity` | yes | `high`, `medium`, `low`, or `info` |
+| `status` | yes | `confirmed`, `hypothesis`, or `rejected` |
+| `trust_boundary` | yes | Boundary crossed or protected |
+| `paths` | yes | Affected file paths relative to repo root |
+| `lines` | yes | `path:line` or `path:start-end` references |
+| `prerequisites` | yes | Attacker prerequisites in realistic terms |
+| `impact` | yes | Confidentiality, integrity, or availability impact |
+| `reproduction` | yes | Safe local steps (tests/commands) already run or to rerun |
+| `evidence` | yes | What you observed in code/tests |
+| `fingerprint` | yes | Deterministic marker: `red-team-cli:<id>:<primary-path>` |
+
+## High severity definition
+
+Use `high` only when **all** are true:
+
+1. Reproducible in a supported/default configuration using local tests or wiremock only.
+2. Crosses a trust boundary with material impact on confidentiality, integrity, or availability.
+3. Evidence is confirmed in source or passing tests — not speculative.
+
+Otherwise use `medium`, `low`, or `info`, or mark `status: rejected`.
+
+## Safety rules (all agents)
+
+- Scope is **`islo-cli` only**. Do not review other repositories.
+- Use only `cargo test`, wiremock/local listeners, synthetic credentials, and temporary `HOME` directories.
+- **Never** run `ISLO_E2E=1`, `islo login`, production APIs, Descope, or external-service probing.
+- **Never** publish code, open PRs, or modify remotes.
+- Distinguish confirmed findings from hypotheses. Do not upgrade severity without evidence.

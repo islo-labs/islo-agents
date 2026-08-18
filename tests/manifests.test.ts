@@ -387,8 +387,49 @@ test("template jobs reference shipped snapshot contracts", () => {
       `${job} snapshot ${snapshot} must have snapshots/${snapshot}/README.md`,
     );
     assert.ok(
-      existsSync(`snapshots/${snapshot}/setup-snapshot.sh`),
-      `${job} snapshot ${snapshot} must have setup-snapshot.sh`,
+      existsSync(`snapshots/${snapshot}/snapshot-src`),
+      `${job} snapshot ${snapshot} must have snapshots/${snapshot}/snapshot-src/`,
     );
+  }
+});
+
+const templatePromptSources: Record<string, string | string[]> = {
+  "weekly-skills-refresh": "agents/weekly-skills-refresh/prompt.md",
+  "red-team-cli-trust-boundaries": "agents/red-team-cli-trust-boundaries/prompt.md",
+  "red-team-cli-input-abuse": "agents/red-team-cli-input-abuse/prompt.md",
+  "red-team-cli-black-box": "agents/red-team-cli-black-box/prompt.md",
+  "red-team-cli-report": "agents/red-team-cli-report/prompt.md",
+  "fullstack-qa": [
+    "agents/fullstack-qa/prompt-web-core.md",
+    "agents/fullstack-qa/prompt-web-platform.md",
+    "agents/fullstack-qa/prompt-cli-cross.md",
+  ],
+};
+
+test("template run_agent prompts are embedded from agents/ sources", () => {
+  for (const [job, sources] of Object.entries(templatePromptSources)) {
+    const manifest = readFileSync(`agents/${job}/job.toml`, "utf-8");
+    const doc = parse(manifest) as {
+      run: { tasks: Array<{ steps: Array<{ run_agent?: { prompt?: { value?: string } } }> }> };
+    };
+    const literals = doc.run.tasks
+      .flatMap((task) => task.steps)
+      .map((step) => step.run_agent?.prompt?.value)
+      .filter((value): value is string => typeof value === "string");
+
+    for (const source of [sources].flat()) {
+      const expected = readFileSync(source, "utf-8").replace(/\r\n/g, "\n").trimEnd() + "\n";
+      assert.ok(
+        literals.includes(expected),
+        `${job} job.toml must embed prompt from ${source}`,
+      );
+    }
+
+    assert.doesNotMatch(
+      manifest,
+      /\/opt\/[^"\n]*\/prompts\//,
+      `${job} must not point run_agent at snapshot prompt paths`,
+    );
+    assert.doesNotMatch(manifest, /prepare\.py/, `${job} must not call prepare.py`);
   }
 });

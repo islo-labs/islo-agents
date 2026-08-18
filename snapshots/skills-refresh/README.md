@@ -1,15 +1,13 @@
 # Snapshot contract: `skills-refresh`
 
-Prompt-only snapshot for the weekly skills refresh line.
+Product-repo snapshot for the weekly skills refresh line. **Agent prompts live in `agents/weekly-skills-refresh/prompt.md`** and are embedded in the job manifest — not baked into the VM.
+
+## Layout (after bake)
 
 | Path | Contents |
 |------|----------|
-| `/opt/skills-refresh/prompts/analyze-and-update.md` | Full agent brief (checkout, diff, edit, publish) |
-| `/workspace/<repo>/` | Product git repos you bake into the snapshot |
+| `/workspace/<repo>/` | Product git repos you bake in (not the skills repo) |
 
-The agent clones `$SKILLS_REPO` to `/workspace/skills` at runtime. No harness scripts — git/gh work is agent-driven.
+There is no harness under `/opt/` for this snapshot. On a build VM: clone or update product repos under `/workspace/`, then `islo snapshot save skills-refresh`.
 
-```bash
-./snapshots/skills-refresh/setup-snapshot.sh
-islo snapshot save skills-refresh
-```
+The agent clones `$SKILLS_REPO` to `/workspace/skills` at runtime and handles checkout, edits, and publish.

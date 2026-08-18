@@ -1,6 +1,8 @@
 # Snapshot contract: `qa-collector`
 
-Lightweight collector snapshot — one Python script plus small helpers.
+Lightweight collector snapshot — Python scripts for dedupe and Linear filing.
+
+## Layout (after bake)
 
 | Path | Contents |
 |------|----------|
@@ -8,7 +10,4 @@ Lightweight collector snapshot — one Python script plus small helpers.
 | `/opt/qa-harness/agent/infra_classify.py` | Shared classification helpers |
 | `/opt/qa-harness/agent/slack_upload.py` | Optional Slack notifications |
 
-```bash
-./snapshots/qa-collector/setup-snapshot.sh
-islo snapshot save qa-collector
-```
+Copy `snapshot-src/agent/` to `/opt/qa-harness/agent/` on a build VM, then `islo snapshot save qa-collector`.
