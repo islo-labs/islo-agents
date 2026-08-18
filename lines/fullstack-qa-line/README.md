@@ -18,6 +18,12 @@ Jobs expect harness files baked into VM snapshots — **not** embedded in `job.t
 - [`snapshots/fullstack-qa/README.md`](../../snapshots/fullstack-qa/README.md)
 - [`snapshots/qa-collector/README.md`](../../snapshots/qa-collector/README.md)
 
+Build `fullstack-qa` from your application-stack snapshot after copying the
+required application-provided cleanup, staging, and stack-start scripts to the
+paths documented there. Build `qa-collector` separately from the public runner.
+Run each `setup-snapshot.sh`, save the snapshot with its exact manifest name,
+then deploy the jobs before the line.
+
 ### 2. Factory environment: `fullstack-qa`
 
 Create a Factory environment with secrets your QA harness needs:

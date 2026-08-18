@@ -11,7 +11,7 @@ Attack the **installed `islo` CLI** against the **production control plane** (`a
 - Target: `ISLO_BASE_URL` (`https://app.islo.dev`)
 - Auth: `ISLO_API_KEY` from Factory environment `red-team-cli-prod` (injected at sandbox create)
 - CLI: use the `islo` binary on `PATH` (from the snapshot/runner image)
-- Run id: `{{run_id}}` — use for resource naming
+- Run id: read `RED_TEAM_RUN_ID` from the sandbox environment
 - Contract: `/workspace/red-team-contract.md`
 
 **Never print secrets** (`ISLO_API_KEY`, tokens, or full auth responses).
@@ -29,10 +29,10 @@ Attack the **installed `islo` CLI** against the **production control plane** (`a
 Only create or mutate resources named:
 
 ```text
-redteam-{{run_id}}-*
+redteam-${RED_TEAM_RUN_ID}-*
 ```
 
-Examples: `redteam-{{run_id}}-sandbox`, `redteam-{{run_id}}-probe`.
+Examples: `redteam-${RED_TEAM_RUN_ID}-sandbox`, `redteam-${RED_TEAM_RUN_ID}-probe`.
 
 The job sandbox is ephemeral — provision-mode sandboxes are deleted when the run completes. Still delete resources you create during the run before finishing.
 
@@ -59,7 +59,7 @@ Focus adversarial testing on:
    - save command transcripts to `/workspace/black-box/transcripts/`
    - classify severity using the shared contract (high = reproducible boundary cross on prod with material impact)
 4. Mark findings `confirmed`, `hypothesis`, or `rejected` with evidence.
-5. Delete any `redteam-{{run_id}}-*` resources you created (`islo rm`, etc.).
+5. Delete any `redteam-${RED_TEAM_RUN_ID}-*` resources you created (`islo rm`, etc.).
 
 ## Deliverable
 

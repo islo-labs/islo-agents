@@ -57,3 +57,7 @@ def post_slack() -> int:
 
     print(f"Posted to {channel} (ts={body.get('ts')})")
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(post_slack())

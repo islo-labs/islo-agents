@@ -56,6 +56,7 @@ gateway_profile = "default"
 internet_enabled = true
 
 [run.sandbox.env]
+RED_TEAM_RUN_ID = "{{run_id}}"
 ANTHROPIC_BASE_URL = "https://gateway.islo.dev/inference/anthropic"
 ANTHROPIC_DEFAULT_HAIKU_MODEL = "ship-like/claude-sonnet-5"
 ANTHROPIC_MODEL = "ship-like/claude-sonnet-5"
@@ -72,7 +73,7 @@ name = "report"
 
 [[run.tasks.steps]]
 name = "prepare"
-exec = ["/opt/red-team-cli/bin/red-team-cli", "prepare-report"]
+exec = ["env", "RED_TEAM_PREPARE=report", "python3", "/opt/red-team-cli/harness/prepare.py"]
 
 [[run.tasks.steps]]
 name = "validate-and-report"

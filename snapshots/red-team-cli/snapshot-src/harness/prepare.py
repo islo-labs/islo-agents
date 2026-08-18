@@ -80,3 +80,10 @@ def _default_branch(repo: Path) -> str:
         if "HEAD branch:" in line:
             return line.split()[-1]
     return "main"
+
+
+if __name__ == "__main__":
+    mode = os.environ.get("RED_TEAM_PREPARE", "cli")
+    if mode == "report":
+        raise SystemExit(prepare_report())
+    raise SystemExit(prepare_cli())

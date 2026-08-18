@@ -12,11 +12,13 @@ Scheduled Factory line that scans **product repos in a snapshot**, decides wheth
 
 ### 1. Snapshot `skills-refresh`
 
-Bake a snapshot with your product repositories under `/workspace/` (each with a `.git` directory) plus the harness from `snapshots/skills-refresh/`.
+Bake product repositories under `/workspace/` (each with a `.git` directory), run
+`snapshots/skills-refresh/setup-snapshot.sh`, and save as `skills-refresh`.
+The snapshot is prompt-only — the agent handles checkout, edits, and publish.
 
 ### 2. Configure the job
 
-Edit `agents/weekly-skills-refresh/job.toml`:
+Edit `agents/weekly-skills-refresh/job.toml` params as needed. The agent handles git checkout, change discovery, edits, and publish — there are no harness exec steps.
 
 | Param / env | Default | Purpose |
 |-------------|---------|---------|

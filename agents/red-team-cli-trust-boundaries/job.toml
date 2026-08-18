@@ -41,7 +41,7 @@ name = "review"
 
 [[run.tasks.steps]]
 name = "prepare"
-exec = ["/opt/red-team-cli/bin/red-team-cli", "prepare-cli"]
+exec = ["python3", "/opt/red-team-cli/harness/prepare.py"]
 
 [[run.tasks.steps]]
 name = "trust-boundaries-review"

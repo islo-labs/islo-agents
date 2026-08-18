@@ -51,4 +51,4 @@ name = "notify"
 
 [[run.tasks.steps]]
 name = "post-slack"
-exec = ["/opt/red-team-cli/bin/red-team-cli", "notify-slack"]
+exec = ["python3", "/opt/red-team-cli/harness/notify.py"]

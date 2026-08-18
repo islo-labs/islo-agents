@@ -1,10 +1,13 @@
 # Snapshot contract: `skills-refresh`
 
+Prompt-only snapshot for the weekly skills refresh line.
+
 | Path | Contents |
 |------|----------|
-| `/opt/skills-refresh-harness/harness/` | `checkout`, `collect`, `publish` |
-| `/opt/skills-refresh-harness/prompts/` | Agent brief |
-| `/workspace/<repo>/` | Product git repos you bake into the snapshot (not the skills repo — that is cloned at runtime) |
+| `/opt/skills-refresh/prompts/analyze-and-update.md` | Full agent brief (checkout, diff, edit, publish) |
+| `/workspace/<repo>/` | Product git repos you bake into the snapshot |
+
+The agent clones `$SKILLS_REPO` to `/workspace/skills` at runtime. No harness scripts — git/gh work is agent-driven.
 
 ```bash
 ./snapshots/skills-refresh/setup-snapshot.sh

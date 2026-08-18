@@ -18,7 +18,11 @@ All stages use snapshot **`red-team-cli`**. White-box stages also need `/workspa
 
 ### 1. Snapshot `red-team-cli`
 
-Bake a snapshot with the harness from `snapshots/red-team-cli/`. For white-box review, include your CLI repository at `/workspace/islo-cli/`.
+Derive a build VM from `islo-stack`, keep the CLI checkout at
+`/workspace/islo-cli/`, run `snapshots/red-team-cli/setup-snapshot.sh`, and save
+it as `red-team-cli`. The setup installs the reviewable scripts, contracts, and
+prompts under `/opt/red-team-cli`; do not deploy the jobs until that snapshot is
+available.
 
 ### 2. Factory environment: `red-team-cli-prod` (black-box only)
 

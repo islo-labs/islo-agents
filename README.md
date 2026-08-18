@@ -157,7 +157,12 @@ Jobs clone this pack at runtime via `agents_git_ref` (branch, tag, or commit; de
 
 Besides PR review / implement / verify (`feature-delivery`), this repo ships **example Factory lines** you can fork and adapt. Each line has a manifest under `lines/<name>/line.toml` and per-line setup notes in `lines/<name>/README.md`. Stage jobs live under `agents/<job>/job.toml`.
 
-Snapshot **contracts** (what to bake into your VM, not runnable source) live under `snapshots/<name>/README.md`.
+Reviewable snapshot source lives under `snapshots/<name>/snapshot-src/`; each
+snapshot README documents external application files that must be present.
+Run `setup-snapshot.sh` on a VM derived from the documented base snapshot, save
+the named snapshot, deploy every stage job, and deploy the line last. Job
+manifests intentionally contain only parameters, short agent pointers, and
+direct invocations of snapshot-installed executables.
 
 | Line | Schedule (UTC) | Stages | Purpose |
 |------|----------------|--------|---------|
