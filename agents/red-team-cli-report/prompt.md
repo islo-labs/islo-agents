@@ -34,7 +34,7 @@ Parse all three upstream JSON strings. If any is invalid JSON, fail the job with
 For each finding with `severity: high` or `status: confirmed` in any upstream report:
 
 1. **White-box** (`trust-boundaries`, `input-abuse`): re-read cited `paths` / `lines` in the `islo-cli` checkout; re-run safe local tests.
-2. **Black-box** (`black-box-cli`): read `RED_TEAM_RUN_ID` from the sandbox environment and re-run the CLI reproduction against `https://app.islo.dev` using `redteam-${RED_TEAM_RUN_ID}-*` resources only; source code review is not required.
+2. **Black-box** (`black-box-cli`): read `RED_TEAM_RUN_ID` from the sandbox environment and re-run the CLI reproduction against `ISLO_BASE_URL` using `redteam-${RED_TEAM_RUN_ID}-*` resources only; source code review is not required.
 3. **Accept** only if still reproducible and in scope for `islo-cli`.
 4. **Reject** unsupported, duplicate, low/medium-only, defense-in-depth, or speculative items.
 
@@ -77,15 +77,15 @@ Use the tenant Linear integration through the default gateway. The sandbox expos
 
 ### GraphQL workflow (per validated high finding)
 
-1. **Resolve team** — query teams, select **Islo** by name. Fail clearly if missing.
-2. **Resolve label** — query team labels, select **`red-team`** by name. Fail clearly if missing.
+1. **Resolve team** — query teams, select the team whose name matches **`LINEAR_TEAM_NAME`** from sandbox env. Fail clearly if missing.
+2. **Resolve label** — query team labels, select the label whose name matches **`LINEAR_LABEL_NAME`** from sandbox env. Fail clearly if missing.
 3. **Dedup** — search team issues for the finding `fingerprint` in title/description (include marker `<!-- red-team-fingerprint:{fingerprint} -->`). Skip create if found.
 4. **Create issue** — one issue per validated high finding:
-   - `teamId`: Islo team id
-   - `title`: `[red-team] {finding.title}`
+   - `teamId`: resolved team id
+   - `title`: `[red-team-cli] {finding.title}`
    - `description` (Markdown): impact, paths/lines, reproduction, remediation direction, run metadata (`commit`, `generated_at`), fingerprint marker
    - `priority`: **2** (High)
-   - `labelIds`: include `red-team` label id
+   - `labelIds`: include the resolved label id
 
 Example request pattern:
 
@@ -96,7 +96,7 @@ curl -sS https://api.linear.app/graphql \
   -d '{"query":"mutation IssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url } } }","variables":{...}}'
 ```
 
-If the Linear integration, Islo team, or `red-team` label cannot be resolved, fail the job with an actionable `summary` — do not silently skip.
+If the Linear integration, `LINEAR_TEAM_NAME`, or `LINEAR_LABEL_NAME` cannot be resolved, fail the job with an actionable `summary` — do not silently skip.
 
 ## Safety
 

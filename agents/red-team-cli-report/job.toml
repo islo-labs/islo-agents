@@ -68,6 +68,7 @@ INPUT_ABUSE_REPORT_JSON = "{{input_abuse_report_json}}"
 BLACK_BOX_REPORT_JSON = "{{black_box_report_json}}"
 LINEAR_TEAM_NAME = "REPLACE_WITH_YOUR_LINEAR_TEAM_NAME"
 LINEAR_LABEL_NAME = "security-review"
+ISLO_BASE_URL = "https://app.islo.dev"
 
 [[run.tasks]]
 name = "report"

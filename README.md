@@ -14,9 +14,8 @@ agents/                             — one directory per role
     prompt.md                       — agent behavior
     job.toml                        — durable job (sandbox + steps); job name = role name
     trigger-rules/<source>.toml     — webhook rule fragments for that source
-lines/                              — deployable Factory line manifests
+lines/                              — deployable Factory line manifests (+ README per line)
 snapshots/                          — VM snapshot contracts (source under snapshot-src/)
-factory/                            — runbooks, prompts, and tests for internal lines
 webhooks/                           — assembled receivers
   github-events.toml
   linear-issues.toml
