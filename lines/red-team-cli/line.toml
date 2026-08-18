@@ -1,0 +1,127 @@
+[line]
+name = "red-team-cli"
+description = "Weekly white-box + black-box security review of your CLI with optional Linear filing (Monday 08:00 UTC)"
+
+[limits]
+timeout = "6h"
+
+[[stages]]
+id = "trust-boundaries"
+job = "red-team-cli-trust-boundaries"
+description = "White box: audit OAuth, token storage, SSH artifacts, update trust, and error leakage"
+
+[[stages]]
+id = "input-abuse"
+job = "red-team-cli-input-abuse"
+description = "White box: audit transport, filesystem bridges, shell quoting, and manifest parsing"
+
+[[stages]]
+id = "black-box-cli"
+job = "red-team-cli-black-box"
+description = "Black box: adversarial CLI testing against your production API (no source access)"
+
+[[stages]]
+id = "validate-and-report"
+job = "red-team-cli-report"
+description = "Re-verify all findings, deduplicate, summarize, and file high-severity Linear issues"
+
+[[stages]]
+id = "slack-notify"
+job = "red-team-cli-slack-notify"
+description = "Post line completion summary to Slack"
+
+[trigger]
+type = "schedule"
+cron = "0 8 * * 1"
+timezone = "UTC"
+
+[[transitions]]
+id = "trigger-to-trust-boundaries"
+from = "trigger"
+to = "trust-boundaries"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[[transitions]]
+id = "trust-boundaries-to-input-abuse"
+from = "trust-boundaries"
+to = "input-abuse"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[[transitions]]
+id = "input-abuse-to-black-box"
+from = "input-abuse"
+to = "black-box-cli"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[[transitions]]
+id = "black-box-to-report"
+from = "black-box-cli"
+to = "validate-and-report"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.trust_boundaries_report_json]
+type = "output"
+stage = "trust-boundaries"
+name = "report_json"
+
+[transitions.params.input_abuse_report_json]
+type = "output"
+stage = "input-abuse"
+name = "report_json"
+
+[transitions.params.black_box_report_json]
+type = "output"
+stage = "black-box-cli"
+name = "report_json"
+
+[transitions.params.linear_mode]
+type = "literal"
+value = "report"
+
+[[transitions]]
+id = "report-to-slack"
+from = "validate-and-report"
+to = "slack-notify"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.slack_channel_id]
+type = "literal"
+value = "REPLACE_WITH_YOUR_SLACK_CHANNEL_ID"
+
+[transitions.params.summary]
+type = "output"
+stage = "validate-and-report"
+name = "summary"
+
+[transitions.params.linear_issue_urls]
+type = "output"
+stage = "validate-and-report"
+name = "linear_issue_urls"
+
+[transitions.params.line_status]
+type = "literal"
+value = "succeeded"
+
+[[transitions]]
+id = "slack-to-done"
+from = "slack-notify"
+to = "done"
+type = "conditional"
+
+[transitions.when]
+op = "always"

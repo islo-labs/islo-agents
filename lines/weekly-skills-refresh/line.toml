@@ -1,0 +1,31 @@
+[line]
+name = "weekly-skills-refresh"
+description = "Weekly refresh of your agent skills repo from stack snapshot changes (Monday 07:00 UTC)"
+
+[trigger]
+type = "schedule"
+cron = "0 7 * * 1"
+timezone = "UTC"
+
+[[stages]]
+id = "refresh"
+job = "weekly-skills-refresh"
+description = "Collect weekly stack changes, update skills repo, and open a PR"
+
+[[transitions]]
+id = "trigger-to-refresh"
+from = "trigger"
+to = "refresh"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[[transitions]]
+id = "refresh-to-done"
+from = "refresh"
+to = "done"
+type = "conditional"
+
+[transitions.when]
+op = "always"
