@@ -5,8 +5,6 @@ on:
     branches: [main]
     paths:
       - "agents/**/job.toml"
-      - "agents/**/prompt.md"
-      - "agents/**/prompt-*.md"
       - "agents/**/trigger-rules/**"
       - "lines/**/line.toml"
 
@@ -37,9 +35,6 @@ jobs:
             if [[ "$file" =~ ^agents/([^/]+)/job\.toml$ ]]; then
               name="${BASH_REMATCH[1]}"
               # Skip deleted or renamed manifests
-              [ -f "agents/${name}/job.toml" ] && AGENTS+=("${name}")
-            elif [[ "$file" =~ ^agents/([^/]+)/prompt(-[^/]+)?\.md$ ]]; then
-              name="${BASH_REMATCH[1]}"
               [ -f "agents/${name}/job.toml" ] && AGENTS+=("${name}")
             elif [[ "$file" =~ ^lines/([^/]+)/line\.toml$ ]]; then
               name="${BASH_REMATCH[1]}"
@@ -73,34 +68,10 @@ jobs:
         env:
           ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
         run: |
-          publish_knowledge() {
-            local slug="$1"
-            local file="$2"
-            if islo knowledge get "$slug" >/dev/null 2>&1; then
-              islo knowledge update "$slug" --body @"$file"
-            else
-              islo knowledge create "$slug" --body @"$file"
-            fi
-          }
-
-          publish_agent_prompts() {
-            local agent="$1"
-            if [ -f "agents/${agent}/prompt.md" ]; then
-              publish_knowledge "${agent}-prompt" "agents/${agent}/prompt.md"
-            fi
-            for prompt_file in agents/${agent}/prompt-*.md; do
-              [ -e "$prompt_file" ] || continue
-              local stem="${prompt_file##*/}"
-              stem="${stem%.md}"
-              publish_knowledge "${agent}-${stem#prompt-}-prompt" "$prompt_file"
-            done
-          }
-
           for agent in $(echo '${{ steps.changes.outputs.agents }}' | jq -r '.[]'); do
             echo "::group::Deploying job: ${agent}"
             mkdir -p "jobs/${agent}"
             cp "agents/${agent}/job.toml" "jobs/${agent}/job.toml"
-            publish_agent_prompts "${agent}"
             islo job deploy "${agent}"
             echo "::endgroup::"
           done
