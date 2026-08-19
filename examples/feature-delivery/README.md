@@ -12,7 +12,7 @@ Factory line that **implements**, **reviews**, and **verifies** one Linear issue
 
 **Trigger:** Linear `issue.updated` when your label is added or changed (default placeholder `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` in `line.toml`).
 
-Sandboxes use `ensure` mode per issue so implement/review/verify can resume across iterations. Blocked stages pause for Factory Manager decisions (`retry-stage` or `cancel`).
+Sandboxes use `ensure` mode per issue so implement/review/verify can resume across iterations. When a stage returns `blocked`, agentic transitions offer `retry-stage` or `cancel` (requires the line routing agent — see step 4).
 
 ## Before you deploy
 
@@ -26,8 +26,8 @@ Install the Islo Linear integration and select the teams/issues this line should
 islo knowledge create feature-delivery-implement-prompt --level skill --body @examples/feature-delivery/prompts/implement.md
 islo knowledge create feature-delivery-review-prompt --level skill --body @examples/feature-delivery/prompts/review.md
 islo knowledge create feature-delivery-verify-prompt --level skill --body @examples/feature-delivery/prompts/verify.md
-islo knowledge create feature-delivery-integrations --level skill --body @examples/feature-delivery/prompts/integrations.md
-islo knowledge create feature-delivery-platform-env --level skill --body @examples/feature-delivery/prompts/platform-env.md
+islo knowledge create feature-delivery-integrations --level rule --body @examples/feature-delivery/prompts/integrations.md
+islo knowledge create feature-delivery-platform-env --level rule --body @examples/feature-delivery/prompts/platform-env.md
 ```
 
 ### 3. Build snapshots
@@ -40,9 +40,9 @@ islo snapshot save <your-code-build-sandbox> --name feature-delivery-code
 islo snapshot save <your-platform-build-sandbox> --name feature-delivery-platform
 ```
 
-### 4. Enable Factory Manager
+### 4. Enable the line routing agent
 
-This line uses manager decisions when a stage returns `blocked`:
+When a stage returns `blocked`, agentic transitions route via the line routing agent:
 
 ```bash
 islo factory manager status

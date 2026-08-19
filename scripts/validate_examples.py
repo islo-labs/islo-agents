@@ -60,7 +60,7 @@ def check_forbidden_text(path: Path, text: str) -> None:
             fail(f"{path}: forbidden pattern {pattern.pattern}")
 
 
-def validate_job(path: Path, example_dir: Path) -> str:
+def validate_job(path: Path, example_dir: Path) -> str | None:
     text = path.read_text()
     check_forbidden_text(path, text)
     doc = load_toml(path)

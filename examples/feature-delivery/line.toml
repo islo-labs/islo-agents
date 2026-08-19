@@ -15,13 +15,13 @@ scope = "selected"
 labels = ["REPLACE_WITH_YOUR_LINEAR_LABEL_NAME"]
 
 [[trigger.filters]]
-path = "$.action"
 op = "eq"
-value = "update"
+left = { type = "trigger", path = "$.action" }
+right = { type = "literal", value = "update" }
 
 [[trigger.filters]]
-path = "$.updatedFrom.labelIds"
 op = "exists"
+operand = { type = "trigger", path = "$.updatedFrom.labelIds" }
 
 [trigger.outputs]
 issue_id = { type = "trigger_path", path = "trigger.raw.data.identifier" }
@@ -30,7 +30,7 @@ issue_id = { type = "trigger_path", path = "trigger.raw.data.identifier" }
 max_iterations = 20
 timeout = "24h"
 
-[manager.instructions]
+[agent.instructions]
 type = "literal"
 value = """
 Preserve completed work and inspect the Linear issue, every linked pull
@@ -88,6 +88,37 @@ stage = "implement"
 name = "pull_requests"
 
 [[transitions]]
+id = "implement-blocked-route"
+from = "implement"
+type = "agentic"
+
+[transitions.instructions]
+type = "literal"
+value = """
+The implementation stage returned `blocked`. Choose whether to retry
+implementation after the blocker clears, or cancel the line run.
+"""
+
+[[transitions.options]]
+name = "retry-stage"
+to = "implement"
+label = "Retry implementation"
+
+[transitions.options.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[transitions.options.params.pull_requests]
+type = "output"
+stage = "implement"
+name = "pull_requests"
+
+[[transitions.options]]
+name = "cancel"
+to = "done"
+label = "Cancel line run"
+
+[[transitions]]
 id = "review-approved"
 from = "review"
 to = "verify"
@@ -128,23 +159,36 @@ type = "output"
 stage = "implement"
 name = "pull_requests"
 
-[[decisions]]
-id = "implementation-blocked"
-after_stage = "implement"
-when = "true"
-allowed_actions = ["retry-stage", "cancel"]
+[[transitions]]
+id = "review-blocked-route"
+from = "review"
+type = "agentic"
 
-[[decisions]]
-id = "review-blocked"
-after_stage = "review"
-when = "true"
-allowed_actions = ["retry-stage", "cancel"]
+[transitions.instructions]
+type = "literal"
+value = """
+The review stage returned `blocked`. Choose whether to retry review after
+missing context or infrastructure is available, or cancel the line run.
+"""
 
-[[decisions]]
-id = "verification-blocked"
-after_stage = "verify"
-when = "true"
-allowed_actions = ["retry-stage", "cancel"]
+[[transitions.options]]
+name = "retry-stage"
+to = "review"
+label = "Retry review"
+
+[transitions.options.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[transitions.options.params.pull_requests]
+type = "output"
+stage = "implement"
+name = "pull_requests"
+
+[[transitions.options]]
+name = "cancel"
+to = "done"
+label = "Cancel line run"
 
 [[transitions]]
 id = "verification-passed"
@@ -177,3 +221,35 @@ name = "issue_id"
 type = "output"
 stage = "implement"
 name = "pull_requests"
+
+[[transitions]]
+id = "verify-blocked-route"
+from = "verify"
+type = "agentic"
+
+[transitions.instructions]
+type = "literal"
+value = """
+The verification stage returned `blocked`. Choose whether to retry
+verification after infrastructure or credentials are available, or cancel
+the line run.
+"""
+
+[[transitions.options]]
+name = "retry-stage"
+to = "verify"
+label = "Retry verification"
+
+[transitions.options.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[transitions.options.params.pull_requests]
+type = "output"
+stage = "implement"
+name = "pull_requests"
+
+[[transitions.options]]
+name = "cancel"
+to = "done"
+label = "Cancel line run"
