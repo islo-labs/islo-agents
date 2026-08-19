@@ -22,6 +22,8 @@ python3 scripts/validate_examples.py
 
 The validator checks TOML structure, line-to-job references, snapshot READMEs, forbidden internal IDs/domains, and knowledge slug documentation.
 
+CI runs `validate_examples.py` on every pull request (including forks). A separate advisory job runs `islo factory line validate` only on trusted refs when `ISLO_API_KEY` is configured — fork PRs never receive org secrets, and CLI validation requires tenant auth.
+
 ## Pull requests
 
 1. Add or update one example directory under `examples/`.

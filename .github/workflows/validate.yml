@@ -7,6 +7,7 @@ on:
     branches: [main]
 
 jobs:
+  # Required on every PR (including forks). No secrets or tenant API access.
   validate-examples:
     runs-on: ubuntu-latest
     steps:
@@ -15,10 +16,20 @@ jobs:
       - name: Validate example packages
         run: python3 scripts/validate_examples.py
 
+  # Advisory only. Requires ISLO_API_KEY and a trusted ref (not fork PRs).
+  # factory line validate and job deploy --dry-run both call the API via auth_token().
+  validate-cli:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Install Islo CLI
         run: curl -fsSL https://islo.dev/install.sh | bash
 
-      - name: Validate line manifests
+      - name: Validate line manifests (API)
         env:
           ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
         run: |
