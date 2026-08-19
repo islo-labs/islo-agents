@@ -22,16 +22,23 @@ python3 scripts/validate_examples.py
 
 The validator checks TOML structure, line-to-job references, snapshot READMEs, forbidden internal IDs/domains, and knowledge slug documentation.
 
-CI runs `validate_examples.py` on every pull request (including forks). A separate advisory job runs `islo factory line validate` only on trusted refs when `ISLO_API_KEY` is configured — fork PRs never receive org secrets, and CLI validation requires tenant auth.
+CI runs **only** `validate_examples.py` on every pull request (including forks). This public repo does not call the Islo API in GitHub Actions — no tenant secrets, no `islo factory line validate` in CI.
+
+To validate against your own tenant before deploy, run locally:
+
+```bash
+islo job deploy --path examples/<name>/jobs/<job>/job.toml --dry-run
+islo factory line validate examples/<name>/line.toml
+```
 
 ## Pull requests
 
 1. Add or update one example directory under `examples/`.
 2. Run `python3 scripts/validate_examples.py` — must pass.
-3. If you have the Islo CLI installed, run `islo factory line validate examples/<name>/line.toml`.
-4. Describe how you verified the example (dry-run deploy, manual line run, etc.).
+3. Optionally run CLI dry-run / line validate against your tenant.
+4. Describe how you verified the example.
 
-Do not add tenant-specific secrets, internal Islo URLs, or auto-deploy workflows that mutate production tenants.
+Do not add tenant-specific secrets, internal Islo URLs, or workflows that mutate production tenants.
 
 ## New examples
 

@@ -28,6 +28,11 @@ REPORT_FENCE = re.compile(r"```qa_report\s*(.*?)```", re.S)
 DUPLICATE_SIMILARITY = 0.55
 
 
+def dry_run_enabled() -> bool:
+    value = (os.environ.get("DRY_RUN") or "").strip().lower()
+    return value not in ("", "0", "false", "no")
+
+
 def log(msg: str) -> None:
     print(f"[collect] {msg}", flush=True)
 
@@ -378,13 +383,16 @@ def main() -> int:
                 log(f"  - {r}")
         else:
             log(f"gate open: {len(findings)} finding(s) for {targets}")
-            try:
-                slack_posted = post_findings_to_slack(findings, reports)
-                if slack_posted:
-                    consume_reports(reports)
-            except slack_upload.SlackError as exc:
-                log(f"Slack post failed — knowledge items left for inspection: {exc}")
-                exit_code = 1
+            if dry_run_enabled():
+                log("DRY_RUN enabled — skipping Slack post and knowledge consume")
+            else:
+                try:
+                    slack_posted = post_findings_to_slack(findings, reports)
+                    if slack_posted:
+                        consume_reports(reports)
+                except slack_upload.SlackError as exc:
+                    log(f"Slack post failed — knowledge items left for inspection: {exc}")
+                    exit_code = 1
 
         return exit_code
     except Exception as exc:  # noqa: BLE001
@@ -410,7 +418,10 @@ def main() -> int:
             print(message, flush=True)
             print("=" * 72, flush=True)
             if not slack_posted:
-                notify_slack(message)
+                if dry_run_enabled():
+                    log("DRY_RUN enabled — skipping Slack notification")
+                else:
+                    notify_slack(message)
 
 
 if __name__ == "__main__":

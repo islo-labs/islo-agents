@@ -23,6 +23,8 @@ FORBIDDEN_PATTERNS = [
     re.compile(r"agents_git_ref"),
     re.compile(r"assemble-webhooks"),
     re.compile(r"src/agent\.ts"),
+    re.compile(r"fullstack-qa"),
+    re.compile(r"qa-collector"),
 ]
 
 ALLOWED_PLACEHOLDER_MARKERS = [
@@ -46,7 +48,6 @@ def load_toml(path: Path) -> dict:
 
 
 def fail(msg: str) -> None:
-    print(f"ERROR: {msg}", file=sys.stderr)
     errors.append(msg)
 
 
@@ -67,7 +68,7 @@ def validate_job(path: Path, example_dir: Path) -> str:
     name = job.get("name")
     if not name:
         fail(f"{path}: missing [job].name")
-        return ""
+        return None
     if name != path.parent.name:
         fail(f"{path}: [job].name {name!r} must match directory {path.parent.name!r}")
 
@@ -108,7 +109,9 @@ def collect_job_names(example_dir: Path) -> set[str]:
     for job_dir in jobs_root.iterdir():
         job_toml = job_dir / "job.toml"
         if job_toml.is_file():
-            names.add(validate_job(job_toml, example_dir))
+            name = validate_job(job_toml, example_dir)
+            if name:
+                names.add(name)
     return names
 
 
@@ -154,9 +157,6 @@ def validate_prompt_bindings(example_dir: Path) -> None:
         text = job_toml.read_text()
         for slug_match in re.finditer(r'slug = "([^"]+)"', text):
             slug = slug_match.group(1)
-            if slug == "islo-integrations":
-                continue
-            # Expect a matching prompt file documented in README
             readme = example_dir / "README.md"
             if readme.is_file() and slug not in readme.read_text():
                 fail(f"{example_dir}: knowledge slug {slug!r} not documented in README.md")
@@ -189,7 +189,7 @@ def main() -> int:
 
     if errors:
         for e in errors:
-            print(e, file=sys.stderr)
+            print(f"ERROR: {e}", file=sys.stderr)
         print(f"validate_examples: {len(errors)} error(s)", file=sys.stderr)
         return 1
 

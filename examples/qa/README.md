@@ -30,12 +30,11 @@ Create a Factory environment named `qa` with:
 | Variable | Purpose |
 |----------|---------|
 | `ISLO_API_KEY` | CLI auth for QA agents |
-| `LINEAR_TEAM_ID` | Linear team UUID for the reporter (optional) |
-| `SLACK_CHANNEL` | Optional Slack channel for notifications |
+| `SLACK_CHANNEL` or `SLACK_CHANNEL_ID` | Optional Slack channel for reporter notifications |
 
 Set your app URL via job param `qa_base_url` (default `https://your-app.example.com`) or override `ISLO_BASE_URL` in the job manifest.
 
-The reporter ships with `DRY_RUN=1` so the first deploy validates without filing issues. Set `DRY_RUN=0` in `jobs/qa-report/job.toml` when ready.
+The reporter ships with `DRY_RUN=1` in `jobs/qa-report/job.toml` so the first scheduled run collects and logs findings without posting to Slack. Set `DRY_RUN=0` when you are ready to notify a channel.
 
 ### 4. Deploy
 

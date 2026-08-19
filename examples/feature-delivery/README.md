@@ -36,8 +36,8 @@ islo knowledge create feature-delivery-platform-env --level skill --body @exampl
 - **Platform** (`feature-delivery-platform`) — full stack + `boot-stack.sh`. See `snapshots/feature-delivery-platform/README.md`.
 
 ```bash
-islo snapshot save feature-delivery-code
-islo snapshot save feature-delivery-platform
+islo snapshot save <your-code-build-sandbox> --name feature-delivery-code
+islo snapshot save <your-platform-build-sandbox> --name feature-delivery-platform
 ```
 
 ### 4. Enable Factory Manager

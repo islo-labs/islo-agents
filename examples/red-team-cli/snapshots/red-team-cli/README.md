@@ -11,7 +11,7 @@
 Copy `snapshot-src/harness/notify.py` to `/opt/red-team-cli/harness/`, create `/workspace/black-box/transcripts/`, clone your CLI repo to `/workspace/islo-cli/`, then:
 
 ```bash
-islo snapshot save red-team-cli
+islo snapshot save <your-build-sandbox> --name red-team-cli
 ```
 
 **Agent prompts** are published as knowledge items from `prompts/` — not baked into the VM.

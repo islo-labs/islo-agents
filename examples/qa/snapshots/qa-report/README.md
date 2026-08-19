@@ -13,5 +13,5 @@ Collector snapshot for deduplicating and publishing QA findings.
 Copy `snapshot-src/agent/` to `/opt/qa-harness/agent/` on a build VM, then:
 
 ```bash
-islo snapshot save qa-report
+islo snapshot save <your-build-sandbox> --name qa-report
 ```

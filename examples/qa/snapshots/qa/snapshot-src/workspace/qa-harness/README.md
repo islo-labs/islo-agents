@@ -1,6 +1,6 @@
 # QA Playwright workspace
 
-Minimal black-box browser workspace at `/workspace/qa-harness` in the `fullstack-qa` snapshot.
+Minimal black-box browser workspace at `/workspace/qa-harness` in the `qa` snapshot.
 
 ## Layout
 

@@ -11,7 +11,7 @@ Code sandbox for **implement** and **review** stages. Repos persist across itera
 Clone each repo your team implements in under `/workspace/`, configure `gh` auth, then:
 
 ```bash
-islo snapshot save feature-delivery-code
+islo snapshot save <your-build-sandbox> --name feature-delivery-code
 ```
 
 The implement and review agents use `ensure` sandboxes named per issue so checkouts survive review loops.

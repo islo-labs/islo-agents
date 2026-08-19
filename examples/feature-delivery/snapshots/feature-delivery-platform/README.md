@@ -13,7 +13,7 @@ Full-stack sandbox for the **verify** stage. Should include your app stack, brow
 Bake service dependencies, `browser-use` or Playwright if needed, and document boot flags in this README. Then:
 
 ```bash
-islo snapshot save feature-delivery-platform
+islo snapshot save <your-build-sandbox> --name feature-delivery-platform
 ```
 
 Publish `feature-delivery-platform-env` knowledge from `prompts/platform-env.md` so the verify agent knows how to source env exports.

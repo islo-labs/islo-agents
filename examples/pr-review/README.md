@@ -20,6 +20,8 @@ Install and authorize the Islo GitHub integration for your organization. Select 
 
 In `line.toml`, replace `REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY` with your repository (for example `my-org/my-service`).
 
+Scope the selector to repositories you trust. The agent runs with gateway-injected GitHub credentials in a rooted sandbox and reads PR diff content — treat fork PR bodies and changed files as untrusted input.
+
 ### 3. Deploy job, then line
 
 ```bash
@@ -43,7 +45,7 @@ You should see one review comment on the PR and `review_result` in the stage out
 
 ### 5. Customize
 
-Edit the prompt literal in `jobs/pr-review/job.toml`. Add a `REVIEW.md` in your repository root if you want extra team-specific guidance (optional).
+Edit the prompt literal in `jobs/pr-review/job.toml` to match your team's review standards.
 
 ### 6. Remove
 

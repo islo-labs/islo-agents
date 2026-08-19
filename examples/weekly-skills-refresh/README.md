@@ -21,7 +21,7 @@ islo knowledge create weekly-skills-refresh-prompt --level skill --body @example
 Bake product repos under `/workspace/` per `snapshots/skills-refresh/snapshot-src/README.md`, then:
 
 ```bash
-islo snapshot save skills-refresh
+islo snapshot save <your-build-sandbox> --name skills-refresh
 ```
 
 ### 3. Configure the job
@@ -37,7 +37,7 @@ Edit `jobs/weekly-skills-refresh/job.toml` params as needed:
 | `skills_globs` | `**` | Globs the agent may edit under the skills repo |
 | `commit_message` | `chore: refresh agent skills from product changes` | Git commit message |
 
-Ensure the sandbox has `gh` authenticated (`gh auth login` in snapshot or gateway-injected token).
+Ensure the sandbox has `gh` available. GitHub credentials are injected by the gateway at sandbox create — do not bake tokens into the snapshot.
 
 ### 4. Deploy
 
