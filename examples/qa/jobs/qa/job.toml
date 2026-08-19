@@ -1,0 +1,100 @@
+[job]
+name = "qa"
+version = "1.0.0"
+description = "Three parallel black-box QA agents against a deployed app URL"
+
+[job.params.qa_base_url]
+type = "string"
+required = false
+default = "https://your-app.example.com"
+description = "Deployed web app URL to test"
+
+[run]
+fail_fast = false
+fanout = true
+concurrency = 3
+timeout = 7200
+
+[run.sandbox]
+mode = "provision"
+image = "ghcr.io/islo-labs/islo-runner:latest"
+snapshot_name = "qa"
+gateway_profile = "default"
+environment = "qa"
+vcpus = 2
+memory_mb = 4096
+disk_gb = 20
+internet_enabled = true
+
+[run.sandbox.env]
+ISLO_BASE_URL = "{{qa_base_url}}"
+QA_RUN_ID = "{{run_id}}"
+
+[[run.tasks]]
+name = "qa-agent-web-core"
+
+[[run.tasks.steps]]
+name = "explore"
+workdir = "/workspace/qa-harness"
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "claude-sonnet-4-5"
+prompt = { type = "knowledge", slug = "qa-web-core-prompt" }
+
+[[run.tasks.steps]]
+name = "stage-findings"
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-web-core",
+  "QA_BRIEF_LABEL=Web core: login, navigation, and primary user flows",
+  "python3",
+  "/opt/qa-harness/harness/stage.py",
+]
+
+[[run.tasks]]
+name = "qa-agent-web-platform"
+
+[[run.tasks.steps]]
+name = "explore"
+workdir = "/workspace/qa-harness"
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "claude-sonnet-4-5"
+prompt = { type = "knowledge", slug = "qa-web-platform-prompt" }
+
+[[run.tasks.steps]]
+name = "stage-findings"
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-web-platform",
+  "QA_BRIEF_LABEL=Web platform: settings, deep links, and admin surfaces",
+  "python3",
+  "/opt/qa-harness/harness/stage.py",
+]
+
+[[run.tasks]]
+name = "qa-agent-cli-cross"
+
+[[run.tasks.steps]]
+name = "explore"
+workdir = "/workspace/qa-harness"
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "claude-sonnet-4-5"
+prompt = { type = "knowledge", slug = "qa-cli-cross-prompt" }
+
+[[run.tasks.steps]]
+name = "stage-findings"
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-cli-cross",
+  "QA_BRIEF_LABEL=CLI and cross-surface consistency",
+  "python3",
+  "/opt/qa-harness/harness/stage.py",
+]

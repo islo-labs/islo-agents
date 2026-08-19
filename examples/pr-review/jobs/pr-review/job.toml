@@ -1,0 +1,88 @@
+[job]
+name = "pr-review"
+version = "1.0.0"
+description = "Review one newly opened GitHub pull request and return a typed verdict"
+
+[job.params.repository]
+type = "string"
+required = true
+pattern = "^[^/]+/[^/]+$"
+description = "GitHub repository in owner/name form"
+
+[job.params.pull_request_number]
+type = "integer"
+required = true
+description = "Pull request number"
+
+[job.params.pull_request_url]
+type = "string"
+required = true
+description = "Canonical GitHub pull request URL"
+
+[outputs.review_result]
+type = "string"
+required = true
+enum = ["approved", "needs_changes"]
+description = "Aggregate review verdict"
+
+[outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable review summary"
+
+[outputs.reviewed_head_sha]
+type = "string"
+required = true
+description = "PR head commit SHA reviewed"
+
+[run]
+fail_fast = true
+fanout = false
+timeout = 2700
+workdir = "/workspace"
+teardown_on_complete = true
+
+[run.sandbox]
+mode = "provision"
+image = "ghcr.io/islo-labs/islo-runner:latest"
+vcpus = 2
+memory_mb = 4096
+gateway_profile = "default"
+init = { type = "full" }
+
+[[run.tasks]]
+name = "review"
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 2700
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "claude-sonnet-4-5"
+prompt = { type = "literal", value = """
+You are reviewing pull request {{pull_request_number}} in {{repository}} ({{pull_request_url}}).
+
+You are in an isolated sandbox with root access. Use `gh` with gateway-injected credentials.
+
+## Instructions
+
+1. Fetch PR metadata, diff, checks, and existing review threads with `gh pr view` and `gh pr diff`.
+2. Read changed files and surrounding code for context.
+3. Do not run the full unit test suite unless manual reproduction clearly helps. Prefer `gh pr checks` for CI status.
+4. Post one GitHub review comment with your findings:
+
+```bash
+gh pr review {{pull_request_number}} --repo {{repository}} --comment --body "<your summary>"
+```
+
+Use `--comment` only. Do not use `--approve` or `--request-changes`.
+
+5. Return structured outputs:
+- `review_result`: `approved` when no material issues remain; `needs_changes` when actionable fixes are required.
+- `summary`: the same summary you posted on GitHub.
+- `reviewed_head_sha`: the PR head SHA you reviewed.
+
+Focus on correctness, security, and architectural fit. Skip formatting, lint, and CI-owned test failures.
+""" }

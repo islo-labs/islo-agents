@@ -1,0 +1,64 @@
+[job]
+name = "feature-delivery-verify"
+version = "1.0.0"
+description = "Verify an integrated feature across its complete pull-request set"
+
+[job.params.issue_id]
+type = "string"
+required = true
+description = "Linear issue identifier or UUID"
+
+[job.params.pull_requests]
+type = "array"
+items = "string"
+required = true
+description = "Complete list of GitHub pull request URLs for the feature"
+
+[outputs.verification_result]
+type = "string"
+required = true
+enum = ["passed", "failed", "blocked"]
+
+[run]
+fail_fast = true
+fanout = false
+timeout = 10800
+workdir = "/workspace"
+teardown_on_complete = false
+
+[run.sandbox]
+mode = "ensure"
+name = "feature-delivery-verify-{{issue_id}}"
+image = "ghcr.io/islo-labs/islo-runner:latest"
+snapshot_name = "feature-delivery-platform"
+vcpus = 8
+memory_mb = 16384
+gateway_profile = "default"
+init = { type = "full" }
+
+[run.sandbox.lifecycle]
+pause_after_idle = 1800
+delete_after = 172800
+
+[[run.tasks]]
+name = "verify"
+
+[[run.tasks.steps]]
+name = "run-agent"
+timeout = 10800
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "claude-sonnet-4-5"
+prompt = { type = "knowledge", slug = "feature-delivery-verify-prompt" }
+resume_prompt = { type = "literal", value = "The pull requests have been updated after verification failure. Re-fetch PR heads, re-run checks, and verify the integrated feature again." }
+knowledge = [
+  { type = "knowledge", slug = "feature-delivery-integrations" },
+  { type = "knowledge", slug = "feature-delivery-platform-env" },
+]
+session = "feature-delivery-verify-{{issue_id}}"
+
+[[run.tasks.steps]]
+name = "pause-sandbox"
+pause = true

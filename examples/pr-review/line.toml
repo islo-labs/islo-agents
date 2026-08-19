@@ -1,0 +1,50 @@
+[line]
+name = "pr-review"
+description = "Review newly opened GitHub pull requests"
+
+[trigger]
+type = "integration_trigger"
+provider = "github"
+name = "pull_request.opened"
+
+[trigger.selector]
+provider = "github"
+kind = "repository"
+scope = "selected"
+repositories = ["REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY"]
+
+[trigger.outputs]
+repository = { type = "trigger_path", path = "trigger.raw.repository.full_name" }
+pull_request_number = { type = "trigger_path", path = "trigger.raw.pull_request.number" }
+pull_request_url = { type = "trigger_path", path = "trigger.raw.pull_request.html_url" }
+
+[limits]
+max_iterations = 1
+timeout = "2h"
+
+[[stages]]
+id = "review"
+job = "pr-review"
+
+[[transitions]]
+id = "trigger-to-review"
+from = "trigger"
+to = "review"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params]
+repository = { type = "input", name = "repository" }
+pull_request_number = { type = "input", name = "pull_request_number" }
+pull_request_url = { type = "input", name = "pull_request_url" }
+
+[[transitions]]
+id = "review-to-done"
+from = "review"
+to = "done"
+type = "conditional"
+
+[transitions.when]
+op = "always"

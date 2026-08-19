@@ -3,73 +3,14 @@ name: Validate
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 jobs:
-  validate:
+  validate-examples:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Tests
-        run: npm test
-
-      - name: Assemble webhooks
-        run: npm run assemble-webhooks
-
-      - name: Install Islo CLI
-        run: curl -fsSL https://islo.dev/install.sh | bash
-
-      - name: Validate job manifests
-        env:
-          ISLO_API_KEY: ${{ secrets.ISLO_API_KEY }}
-        run: |
-          # Customer template jobs bind knowledge slugs customers publish before deploy.
-          # npm test covers those manifests; API dry-run requires tenant knowledge items.
-          skip_jobs=(
-            fullstack-qa
-            fullstack-qa-collector
-            red-team-cli-trust-boundaries
-            red-team-cli-input-abuse
-            red-team-cli-black-box
-            red-team-cli-report
-            red-team-cli-slack-notify
-            weekly-skills-refresh
-          )
-          should_skip() {
-            local role="$1"
-            for skipped in "${skip_jobs[@]}"; do
-              [ "$role" = "$skipped" ] && return 0
-            done
-            return 1
-          }
-
-          failed=0
-          for dir in agents/*/; do
-            role="$(basename "$dir")"
-            manifest="${dir}job.toml"
-            [ -f "$manifest" ] || continue
-            if should_skip "$role"; then
-              echo "Skipping API dry-run for template job ${role} (covered by npm test)"
-              continue
-            fi
-            echo "::group::Validating ${role}"
-            mkdir -p "jobs/${role}"
-            cp "$manifest" "jobs/${role}/job.toml"
-            if islo job deploy "${role}" --dry-run; then
-              echo "OK"
-            else
-              echo "::error::${role} manifest validation failed"
-              failed=1
-            fi
-            echo "::endgroup::"
-          done
-          exit $failed
+      - name: Validate example packages
+        run: python3 scripts/validate_examples.py

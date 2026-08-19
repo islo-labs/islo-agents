@@ -1,0 +1,46 @@
+[job]
+name = "red-team-cli-black-box"
+version = "0.4.1"
+description = "Black-box adversarial testing of your CLI against a production API (no source access)"
+
+[outputs.report_json]
+type = "string"
+required = true
+description = "Minified JSON black-box security report"
+
+[run]
+fail_fast = true
+fanout = false
+timeout = 3600
+workdir = "/workspace"
+
+[run.sandbox]
+mode = "provision"
+image = "ghcr.io/islo-labs/islo-runner:latest"
+snapshot_name = "red-team-cli"
+vcpus = 2
+memory_mb = 4096
+disk_gb = 20
+gateway_profile = "default"
+environment = "red-team-cli"
+internet_enabled = true
+
+[run.sandbox.env]
+ISLO_BASE_URL = "https://api.example.com"
+RED_TEAM_RUN_ID = "{{run_id}}"
+ANTHROPIC_DEFAULT_HAIKU_MODEL = "claude-sonnet-4-5"
+ANTHROPIC_MODEL = "claude-sonnet-4-5"
+ANTHROPIC_SMALL_FAST_MODEL = "claude-sonnet-4-5"
+CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"
+
+[[run.tasks]]
+name = "black-box"
+
+[[run.tasks.steps]]
+name = "black-box-attack"
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "claude-sonnet-4-5"
+prompt = { type = "knowledge", slug = "red-team-cli-black-box-prompt" }
