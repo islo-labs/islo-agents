@@ -1,0 +1,179 @@
+[line]
+name = "feature-delivery"
+description = "Implement, review, and verify one Linear issue across its complete PR set"
+category = "engineering"
+
+[trigger]
+type = "integration_trigger"
+provider = "linear"
+name = "issue.updated"
+
+[trigger.selector]
+provider = "linear"
+kind = "issue"
+scope = "selected"
+labels = ["REPLACE_WITH_YOUR_LINEAR_LABEL_NAME"]
+
+[[trigger.filters]]
+path = "$.action"
+op = "eq"
+value = "update"
+
+[[trigger.filters]]
+path = "$.updatedFrom.labelIds"
+op = "exists"
+
+[trigger.outputs]
+issue_id = { type = "trigger_path", path = "trigger.raw.data.identifier" }
+
+[limits]
+max_iterations = 20
+timeout = "24h"
+
+[manager.instructions]
+type = "literal"
+value = """
+Preserve completed work and inspect the Linear issue, every linked pull
+request, the failed stage result, and recent line events before deciding.
+Retry the current stage only when the blocker is transient or external state
+has changed enough to make another attempt useful. Cancel when requirements
+conflict, required access or input is unavailable, the same root cause keeps
+failing, or continuing could damage customer work. Explain the evidence for
+the choice and do not retry merely to exhaust the iteration limit.
+"""
+
+[[stages]]
+id = "implement"
+job = "feature-delivery-implement"
+
+[[stages]]
+id = "review"
+job = "feature-delivery-review"
+
+[[stages]]
+id = "verify"
+job = "feature-delivery-verify"
+
+[[transitions]]
+id = "trigger-to-implement"
+from = "trigger"
+to = "implement"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[[transitions]]
+id = "implementation-ready"
+from = "implement"
+to = "review"
+type = "conditional"
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.implementation_result" }
+op = "eq"
+right = { type = "literal", value = "ready" }
+
+[transitions.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[transitions.params.pull_requests]
+type = "output"
+stage = "implement"
+name = "pull_requests"
+
+[[transitions]]
+id = "review-approved"
+from = "review"
+to = "verify"
+type = "conditional"
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.review_result" }
+op = "eq"
+right = { type = "literal", value = "approved" }
+
+[transitions.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[transitions.params.pull_requests]
+type = "output"
+stage = "implement"
+name = "pull_requests"
+
+[[transitions]]
+id = "review-needs-changes"
+from = "review"
+to = "implement"
+type = "conditional"
+max_iterations = 3
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.review_result" }
+op = "eq"
+right = { type = "literal", value = "needs_changes" }
+
+[transitions.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[transitions.params.pull_requests]
+type = "output"
+stage = "implement"
+name = "pull_requests"
+
+[[decisions]]
+id = "implementation-blocked"
+after_stage = "implement"
+when = "true"
+allowed_actions = ["retry-stage", "cancel"]
+
+[[decisions]]
+id = "review-blocked"
+after_stage = "review"
+when = "true"
+allowed_actions = ["retry-stage", "cancel"]
+
+[[decisions]]
+id = "verification-blocked"
+after_stage = "verify"
+when = "true"
+allowed_actions = ["retry-stage", "cancel"]
+
+[[transitions]]
+id = "verification-passed"
+from = "verify"
+to = "done"
+type = "conditional"
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.verification_result" }
+op = "eq"
+right = { type = "literal", value = "passed" }
+
+[[transitions]]
+id = "verification-failed"
+from = "verify"
+to = "implement"
+type = "conditional"
+max_iterations = 2
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.verification_result" }
+op = "eq"
+right = { type = "literal", value = "failed" }
+
+[transitions.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[transitions.params.pull_requests]
+type = "output"
+stage = "implement"
+name = "pull_requests"

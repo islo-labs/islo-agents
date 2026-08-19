@@ -28,6 +28,7 @@ See [examples/pr-review/README.md](examples/pr-review/README.md) for details.
 | Example | Trigger | Outcome |
 |---------|---------|---------|
 | [pr-review](examples/pr-review/) | GitHub PR opened | Advisory review comment + typed verdict |
+| [feature-delivery](examples/feature-delivery/) | Linear label on issue | Implement → review → verify across PR set |
 | [qa](examples/qa/) | Schedule | Parallel black-box QA agents + deduplicated report |
 | [red-team-cli](examples/red-team-cli/) | Schedule | White-box + black-box CLI security review |
 | [weekly-skills-refresh](examples/weekly-skills-refresh/) | Schedule | Refresh agent skills repo from product changes |

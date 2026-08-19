@@ -1,0 +1,19 @@
+# Snapshot contract: `feature-delivery-platform`
+
+Full-stack sandbox for the **verify** stage. Should include your app stack, browser tooling, and a boot script.
+
+## Layout (after bake)
+
+| Path | Contents |
+|------|----------|
+| `/workspace/` | Product repos or monorepo checkout |
+| `/workspace/scripts/boot-stack.sh` | Boots integrated stack with PR branch pins |
+| `/workspace/.platform-env` | Written by boot script — URLs and credentials |
+
+Bake service dependencies, `browser-use` or Playwright if needed, and document boot flags in this README. Then:
+
+```bash
+islo snapshot save feature-delivery-platform
+```
+
+Publish `feature-delivery-platform-env` knowledge from `prompts/platform-env.md` so the verify agent knows how to source env exports.
