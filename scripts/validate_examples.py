@@ -570,7 +570,7 @@ def validate_prompt_policy(example_dir: Path, jobs: list[Job], readme_text: str)
                     fail(f"{job.path}: step {step_name!r} {field} binds knowledge slug "
                          f"{binding.get('slug')!r}; the template is undeployable until someone "
                          f"hand-publishes that slug. Use {{ type = \"literal\", ... }} pointing "
-                         f"into a [[run.sandbox.sources]] checkout")
+                         f"into a repo checked out by an exec step")
             if exempt:
                 continue
             for item in rows(agent, "knowledge"):
