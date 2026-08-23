@@ -1,0 +1,321 @@
+[line]
+name = "bug-repro"
+description = "Slack-reported bug: reproduce it on a working branch, fix it, review, verify with committed evidence, open a pull request, and react on Slack."
+category = "fix"
+
+[limits]
+max_iterations = 12
+timeout = "6h"
+
+[agent.instructions]
+type = "literal"
+value = "Retry a stage once on transient sandbox or inference failure. Do not skip reproduce. Cancel if the Slack report cannot be turned into a failing check."
+
+[[stages]]
+id = "react-eyes"
+job = "bug-repro-slack-react"
+description = "Acknowledge the Slack report with :eyes:"
+
+[[stages]]
+id = "reproduce"
+job = "bug-repro-reproduce"
+description = "Reproduce the bug and add a failing test"
+
+[[stages]]
+id = "react-fail"
+job = "bug-repro-slack-react"
+description = "Mark reproduction failure on Slack"
+
+[[stages]]
+id = "implement"
+job = "bug-repro-implement"
+description = "Fix the bug and commit on the branch"
+
+[[stages]]
+id = "review"
+job = "bug-repro-review"
+description = "Review the fix before full verification"
+
+[[stages]]
+id = "verify"
+job = "bug-repro-verify"
+description = "Run the repository's own checks and commit evidence"
+
+[[stages]]
+id = "open-pr"
+job = "bug-repro-open-pr"
+description = "Push the branch and open a pull request with the evidence"
+
+[[stages]]
+id = "react-success"
+job = "bug-repro-slack-react"
+description = "React :white_check_mark: on the Slack message"
+
+[trigger]
+type = "integration_trigger"
+provider = "slack"
+name = "message.received"
+
+[trigger.selector]
+provider = "slack"
+kind = "channel"
+scope = "selected"
+channels = ["REPLACE_WITH_YOUR_SLACK_CHANNEL_ID"]
+
+[[trigger.filters]]
+op = "missing"
+operand = { type = "trigger", path = "$.event.subtype" }
+
+[trigger.outputs]
+work_key = { type = "trigger_path", path = "trigger.raw.event_id" }
+report = { type = "trigger_path", path = "trigger.raw.event.text" }
+slack_channel = { type = "trigger_path", path = "trigger.raw.event.channel" }
+slack_ts = { type = "trigger_path", path = "trigger.raw.event.ts" }
+slack_user = { type = "trigger_path", path = "trigger.raw.event.user" }
+
+[[transitions]]
+id = "trigger-to-react-eyes"
+from = "trigger"
+to = "react-eyes"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.slack_channel]
+type = "input"
+name = "slack_channel"
+
+[transitions.params.slack_ts]
+type = "input"
+name = "slack_ts"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.report]
+type = "input"
+name = "report"
+
+[transitions.params.slack_user]
+type = "input"
+name = "slack_user"
+
+[transitions.params.emoji]
+type = "literal"
+value = "eyes"
+
+[[transitions]]
+id = "react-eyes-to-reproduce"
+from = "react-eyes"
+to = "reproduce"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.report]
+type = "input"
+name = "report"
+
+[transitions.params.slack_channel]
+type = "input"
+name = "slack_channel"
+
+[transitions.params.slack_ts]
+type = "input"
+name = "slack_ts"
+
+[[transitions]]
+id = "reproduce-to-implement"
+from = "reproduce"
+to = "implement"
+type = "conditional"
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.reproduced" }
+op = "eq"
+right = { type = "literal", value = true }
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.report]
+type = "input"
+name = "report"
+
+[[transitions]]
+id = "reproduce-to-react-fail"
+from = "reproduce"
+to = "react-fail"
+type = "conditional"
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.reproduced" }
+op = "eq"
+right = { type = "literal", value = false }
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.slack_channel]
+type = "input"
+name = "slack_channel"
+
+[transitions.params.slack_ts]
+type = "input"
+name = "slack_ts"
+
+[transitions.params.emoji]
+type = "literal"
+value = "x"
+
+[[transitions]]
+id = "react-fail-to-done"
+from = "react-fail"
+to = "done"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[[transitions]]
+id = "implement-to-review"
+from = "implement"
+to = "review"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.report]
+type = "input"
+name = "report"
+
+[[transitions]]
+id = "review-to-verify"
+from = "review"
+to = "verify"
+type = "conditional"
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.review_result" }
+op = "eq"
+right = { type = "literal", value = "approved" }
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.report]
+type = "input"
+name = "report"
+
+[[transitions]]
+id = "review-to-implement"
+from = "review"
+to = "implement"
+type = "conditional"
+max_iterations = 3
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.review_result" }
+op = "eq"
+right = { type = "literal", value = "needs_changes" }
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.report]
+type = "input"
+name = "report"
+
+[[transitions]]
+id = "verify-to-open-pr"
+from = "verify"
+to = "open-pr"
+type = "conditional"
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.verdict" }
+op = "eq"
+right = { type = "literal", value = "approved" }
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.report]
+type = "input"
+name = "report"
+
+[transitions.params.recording_path]
+type = "output"
+stage = "verify"
+name = "recording_path"
+
+[[transitions]]
+id = "verify-to-implement"
+from = "verify"
+to = "implement"
+type = "conditional"
+max_iterations = 2
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.verdict" }
+op = "eq"
+right = { type = "literal", value = "needs_work" }
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.report]
+type = "input"
+name = "report"
+
+[[transitions]]
+id = "open-pr-to-react-success"
+from = "open-pr"
+to = "react-success"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[transitions.params.slack_channel]
+type = "input"
+name = "slack_channel"
+
+[transitions.params.slack_ts]
+type = "input"
+name = "slack_ts"
+
+[transitions.params.emoji]
+type = "literal"
+value = "white_check_mark"
+
+[[transitions]]
+id = "react-success-to-done"
+from = "react-success"
+to = "done"
+type = "conditional"
+
+[transitions.when]
+op = "always"
