@@ -1,0 +1,113 @@
+[job]
+name = "bug-repro-implement"
+version = "1.0.0"
+description = "Make the failing test pass and commit the fix"
+
+[job.params.repo]
+type = "string"
+required = false
+default = "REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY"
+description = "GitHub repository in owner/name form"
+pattern = "^[^/]+/[^/]+$"
+
+[job.params.base_branch]
+type = "string"
+required = false
+default = "main"
+description = "Branch the fix branches off and is reviewed against"
+
+[job.params.report]
+type = "string"
+required = false
+description = "The bug report text from Slack"
+
+[job.params.work_key]
+type = "string"
+required = true
+description = "Stable identifier for this piece of work; names the shared sandbox"
+pattern = "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,62}$"
+
+[run]
+fail_fast = true
+fanout = false
+timeout = 5400
+teardown_on_complete = false
+workdir = "/workspace"
+
+[run.sandbox]
+mode = "ensure"
+name = "bug-repro-{{work_key}}"
+image = "ghcr.io/islo-labs/islo-runner:latest"
+vcpus = 4
+memory_mb = 4096
+disk_gb = 10
+gateway_profile = "default"
+internet_enabled = true
+init = { type = "full" }
+
+[run.sandbox.lifecycle]
+pause_after_idle = 1800
+delete_after = 172800
+
+[[run.tasks]]
+name = "implement"
+
+# Fetch without checking out: the working branch fix/{{work_key}} is created by
+# the reproduce stage and every later stage in this shared sandbox must find it
+# intact, so this step must never move HEAD.
+[[run.tasks.steps]]
+name = "checkout-repo"
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+DEST=/workspace/REPLACE_WITH_REPOSITORY
+git config --global user.name "islo bug-repro"
+git config --global user.email "bug-repro@users.noreply.github.com"
+git config --global url."https://x-access-token:$GH_TOKEN@github.com/".insteadOf "https://github.com/"
+if [ -d "$DEST/.git" ]; then
+  git -C "$DEST" fetch origin
+else
+  git clone https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY.git "$DEST"
+fi
+''',
+]
+
+[[run.tasks.steps]]
+name = "checkout-branch"
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+cd /workspace/REPLACE_WITH_REPOSITORY
+git checkout fix/{{work_key}}
+''',
+]
+
+[[run.tasks.steps]]
+name = "implement"
+
+[run.tasks.steps.run_agent]
+mode = "session"
+harness = "claude"
+model = "claude-sonnet-4-5"
+session = "bug-repro-implement"
+prompt = { type = "literal", value = """
+Read and follow /workspace/REPLACE_WITH_REPOSITORY/.islo/prompts/implement.md.
+
+Repository checkout: /workspace/REPLACE_WITH_REPOSITORY
+Working branch: fix/{{work_key}}
+Base branch: origin/{{base_branch}}
+Review findings, if the review stage has run: /workspace/.islo-line/bug-repro/{{work_key}}/review.md
+Verification log, if the verify stage has run: /workspace/.islo-line/bug-repro/{{work_key}}/verify.log
+
+Bug report:
+{{report}}
+""" }
+resume_prompt = { type = "literal", value = """
+Address the review and verification feedback on fix/{{work_key}} as
+/workspace/REPLACE_WITH_REPOSITORY/.islo/prompts/implement.md describes. Commit
+your updates. Do not open a pull request.
+""" }
