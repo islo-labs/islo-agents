@@ -43,4 +43,7 @@ name = "black-box-attack"
 mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
-prompt = { type = "knowledge", slug = "red-team-cli-black-box-prompt" }
+prompt = { type = "literal", value = """
+Read and follow /workspace/prompts/black-box.md
+and the shared output contract in finding-contract.md beside it.
+""" }

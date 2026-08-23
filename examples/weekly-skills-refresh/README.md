@@ -10,11 +10,9 @@ Scheduled Factory line that scans **product repos in a snapshot**, decides wheth
 
 ## Before you deploy
 
-### 1. Publish prompt
+### 1. Bake the prompt into the snapshot
 
-```bash
-islo knowledge create weekly-skills-refresh-prompt --level skill --body @examples/weekly-skills-refresh/prompts/refresh.md
-```
+Copy `prompts/refresh.md` to `/workspace/prompts/` in the `skills-refresh` snapshot.
 
 ### 2. Build snapshot `skills-refresh`
 

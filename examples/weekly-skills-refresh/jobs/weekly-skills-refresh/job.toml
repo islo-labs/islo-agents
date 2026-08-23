@@ -78,4 +78,6 @@ name = "refresh"
 mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
-prompt = { type = "knowledge", slug = "weekly-skills-refresh-prompt" }
+prompt = { type = "literal", value = """
+Read and follow /workspace/prompts/refresh.md
+""" }

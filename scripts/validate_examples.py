@@ -42,14 +42,10 @@ PUBLIC_RUNNER_IMAGES = {
 
 PLACEHOLDER_TOKEN = re.compile(r"REPLACE_WITH_[A-Z_]+")
 
-# Examples still binding prompts through Islo Knowledge. Each entry owes the
-# same conversion feature-delivery, pr-review and qa already have: an
-# exec step that clones the user's own repo, and a literal prompt naming a file
-# inside that checkout. Until an entry converts, its jobs fail `islo job deploy
-# --dry-run` on any tenant that has not hand-published the slugs, so CI cannot
-# gate them at all and the repo is not the single source of truth for its own
-# prompts. The set must reach empty.
-PENDING_PROMPT_SOURCE_MIGRATION = {"red-team-cli", "weekly-skills-refresh"}
+# Examples still binding prompts through Islo Knowledge. Convert them by baking
+# the prompt files into the snapshot at /workspace/prompts/ and using a literal
+# run_agent prompt that names the file. The set must reach empty.
+PENDING_PROMPT_SOURCE_MIGRATION = set()
 
 # Only [[run.tasks.steps]] and run_agent are extra="forbid" in the live API, so
 # everything else here is the repo's own gate: a typo'd `memory_mb` deploys
@@ -556,22 +552,26 @@ def validate_prompt_policy(example_dir: Path, jobs: list[Job], readme_text: str)
                 if binding.get("type") == "literal":
                     literal_prompts.append(str(binding.get("value", "")))
                 elif binding.get("type") == "knowledge" and not exempt:
-                    fail(f"{job.path}: step {step_name!r} {field} binds knowledge slug "
-                         f"{binding.get('slug')!r}; the template is undeployable until someone "
-                         f"hand-publishes that slug. Use {{ type = \"literal\", ... }} pointing "
-                         f"into a repo checked out by an exec step")
+                    fail(
+                        f"{job.path}: step {step_name!r} {field} binds knowledge slug "
+                        f"{binding.get('slug')!r}; bake the file into the snapshot and use "
+                        f"a literal prompt pointing at /workspace/prompts/"
+                    )
             if exempt:
                 continue
             for item in rows(agent, "knowledge"):
                 if isinstance(item, dict) and item.get("type") == "knowledge":
                     fail(f"{job.path}: step {step_name!r} knowledge binds slug "
                          f"{item.get('slug')!r}; the template is undeployable until someone "
-                         f"hand-publishes that slug. Check the material out through a "
-                         f"checked-out file instead")
+                         f"hand-publishes that slug. Bake the file into the snapshot instead")
 
-    if prompt_files and not exempt and not checkout_declared:
-        fail(f"{example_dir}: ships prompts/ but no job has an exec step that clones the user's "
-             f"repo, so a literal prompt has no checked-out file to point at")
+    if checkout_declared:
+        fail(f"{example_dir}: jobs must not git-clone prompts at runtime; bake "
+             f"{example_dir.name}/prompts into the snapshot at /workspace/prompts/")
+
+    for job in jobs:
+        if "REPLACE_WITH_OWNER" in job.text or "checkout-prompts" in job.text:
+            fail(f"{job.path}: runtime git clone of customer prompts is not allowed")
 
     for prompt_file in prompt_files:
         if prompt_file.name in readme_text:

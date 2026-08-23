@@ -12,22 +12,17 @@ Weekly Factory line for **white-box source review** + **black-box CLI adversaria
 | `validate-and-report` | `red-team-cli-report` | Re-verify, dedupe, summarize |
 | `slack-notify` | `red-team-cli-slack-notify` | Post summary to Slack |
 
-All stages use snapshot **`red-team-cli`**. White-box stages need your CLI checkout at `/workspace/islo-cli/` in that snapshot.
+All stages use snapshot **`red-team-cli`**. White-box stages need your CLI checkout at `/workspace/your-cli/` in that snapshot.
 
 ## Before you deploy
 
-### 1. Publish prompts
+### 1. Bake prompts into the snapshot
 
-```bash
-islo knowledge create red-team-cli-trust-boundaries-prompt --level skill --body @examples/red-team-cli/prompts/trust-boundaries.md
-islo knowledge create red-team-cli-input-abuse-prompt --level skill --body @examples/red-team-cli/prompts/input-abuse.md
-islo knowledge create red-team-cli-black-box-prompt --level skill --body @examples/red-team-cli/prompts/black-box.md
-islo knowledge create red-team-cli-report-prompt --level skill --body @examples/red-team-cli/prompts/report.md
-```
+Copy this example's `prompts/` directory to `/workspace/prompts/` in the `red-team-cli` snapshot (see `snapshots/red-team-cli/snapshot-src/workspace/prompts/`).
 
 ### 2. Build snapshot `red-team-cli`
 
-See `snapshots/red-team-cli/README.md`. Clone your CLI repo to `/workspace/islo-cli/` and copy `snapshot-src/harness/notify.py` before saving the snapshot.
+See `snapshots/red-team-cli/README.md`. Clone your CLI repo to `/workspace/your-cli/` and copy `snapshot-src/harness/notify.py` before saving the snapshot.
 
 ### 3. Factory environment `red-team-cli`
 

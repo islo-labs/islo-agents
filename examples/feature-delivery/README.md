@@ -20,23 +20,9 @@ Sandboxes use `ensure` mode per issue so implement/review/verify can resume acro
 
 Install the Islo Linear integration and select the teams/issues this line should watch.
 
-### 2. Commit the prompts into your own repository
+### 2. Bake prompts into the snapshots
 
-Nothing here goes into Islo Knowledge. Copy this example's `prompts/` directory into your own repository under `.islo/prompts/`, on the branch each job clones:
-
-```bash
-mkdir -p .islo/prompts
-cp <this-repo>/examples/feature-delivery/prompts/*.md .islo/prompts/
-git add .islo && git commit -m "Add feature-delivery line prompts" && git push
-```
-
-Your repository then contains `.islo/prompts/{implement,review,verify,integrations,platform-env}.md`. `implement.md`, `review.md` and `verify.md` are the three stage prompts. `integrations.md` and `platform-env.md` are reference notes the stage prompts read from the same directory, replacing what used to be ambient knowledge items.
-
-Every job clones that repository into `/workspace/.islo-prompts/REPLACE_WITH_REPOSITORY` in a `checkout-prompts` step, then hands the agent a one-line prompt naming the file to read. The agent reads the prompt body fresh on every run, so editing a prompt in your repository changes the next run with no job redeploy, and your repository stays the single source of truth.
-
-The clone needs no extra wiring. `gateway_profile = "default"` injects `GH_TOKEN`, which the step uses, so private repositories work.
-
-> The checkout deliberately lands in `/workspace/.islo-prompts/`, not in `/workspace/REPLACE_WITH_REPOSITORY`. The snapshots pre-clone your working repositories directly under `/workspace/`, and if your prompts live in one of those repositories, a shared directory would let the prompt refresh discard the feature branch the agent is building.
+Copy this example's `prompts/` directory to `/workspace/prompts/` in the snapshot VMs (see `snapshots/feature-delivery-code/snapshot-src/workspace/prompts/` and the platform snapshot). Agents read those files at run time. Edit and rebake the snapshot when a prompt changes.
 
 ### 3. Build snapshots
 
@@ -59,15 +45,9 @@ islo factory manager enable
 
 ### 5. Replace placeholders
 
-Fill in all three before you deploy.
-
 | Placeholder | Where | Set it to |
 |-------------|-------|-----------|
-| `REPLACE_WITH_OWNER` | the clone URL in all three job manifests | the GitHub organisation or user that owns the repository holding your `.islo/prompts/` |
-| `REPLACE_WITH_REPOSITORY` | the clone URL, the checkout path, and every prompt path in all three job manifests | that repository's name |
 | `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` | `[trigger.selector].labels` in `line.toml` | the Linear label that starts a delivery loop, for example `factory-loop` |
-
-`REPLACE_WITH_REPOSITORY` is the one to be careful with. It is both the repository name and the checkout directory name, so it appears in the clone URL and in every `/workspace/.islo-prompts/` path.
 
 ### 6. Deploy
 

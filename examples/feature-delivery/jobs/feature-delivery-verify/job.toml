@@ -43,29 +43,6 @@ delete_after = 172800
 [[run.tasks]]
 name = "verify"
 
-# The prompts checkout is deliberately outside the working repos the
-# feature-delivery-platform snapshot pre-clones under /workspace/. If your
-# prompts live in one of those repos, sharing the directory would let this
-# step's `checkout -f` discard the PR heads the stack is pinned to.
-[[run.tasks.steps]]
-name = "checkout-prompts"
-exec = [
-  "bash",
-  "-lc",
-  '''
-set -euo pipefail
-DEST=/workspace/.islo-prompts/REPLACE_WITH_REPOSITORY
-git config --global url."https://x-access-token:$GH_TOKEN@github.com/".insteadOf "https://github.com/"
-if [ -d "$DEST/.git" ]; then
-  git -C "$DEST" fetch --depth 1 origin HEAD
-  git -C "$DEST" checkout -f FETCH_HEAD
-else
-  mkdir -p "$(dirname "$DEST")"
-  git clone --depth 1 https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY.git "$DEST"
-fi
-''',
-]
-
 [[run.tasks.steps]]
 name = "run-agent"
 timeout = 10800
@@ -75,7 +52,7 @@ mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
 prompt = { type = "literal", value = """
-Read and follow /workspace/.islo-prompts/REPLACE_WITH_REPOSITORY/.islo/prompts/verify.md,
+Read and follow /workspace/prompts/verify.md,
 and the two reference files beside it: integrations.md for gateway credentials
 and platform-env.md for the stack boot environment.
 
