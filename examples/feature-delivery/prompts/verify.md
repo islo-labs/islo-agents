@@ -27,7 +27,7 @@ done
 
    Understand how the PRs interact. The feature only makes sense when you understand all the changes as a whole.
 
-2. **Boot the stack.** Run your stack boot script from the snapshot (see `feature-delivery-platform-env` knowledge and `snapshots/feature-delivery-platform/README.md`). Pass flags for every PR-pinned service in a single call:
+2. **Boot the stack.** Run your stack boot script from the snapshot (see `platform-env.md` beside this file and `snapshots/feature-delivery-platform/README.md`). Pass flags for every PR-pinned service in a single call:
 
    ```bash
    # Example, adapt flags to your boot script

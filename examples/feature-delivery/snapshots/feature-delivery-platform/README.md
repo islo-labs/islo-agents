@@ -16,4 +16,4 @@ Bake service dependencies, `browser-use` or Playwright if needed, and document b
 islo snapshot save <your-build-sandbox> --name feature-delivery-platform
 ```
 
-Publish `feature-delivery-platform-env` knowledge from `prompts/platform-env.md` so the verify agent knows how to source env exports.
+Commit `prompts/platform-env.md` into your own repository under `.islo/prompts/` and describe your boot flags and env exports there. The verify job clones it into `/workspace/.islo-prompts/` at run time and its literal prompt tells the agent to read it, so nothing is published to Islo Knowledge.

@@ -41,11 +41,14 @@ PUBLIC_RUNNER_IMAGES = {
 
 PLACEHOLDER_TOKEN = re.compile(r"REPLACE_WITH_[A-Z_]+")
 
-# Examples still binding prompts through Islo Knowledge. Each entry makes the
-# template undeployable until the user hand-publishes the slug, and keeps CI's
-# dry-run dependent on tenant state, so this set must shrink to empty as examples
-# convert to a checkout step plus a literal prompt pointing into it.
-PENDING_PROMPT_SOURCE_MIGRATION = {"feature-delivery", "qa", "red-team-cli", "weekly-skills-refresh"}
+# Examples still binding prompts through Islo Knowledge. Each entry owes the
+# same conversion bug-repro, feature-delivery, pr-review and qa already have: an
+# exec step that clones the user's own repo, and a literal prompt naming a file
+# inside that checkout. Until an entry converts, its jobs fail `islo job deploy
+# --dry-run` on any tenant that has not hand-published the slugs, so CI cannot
+# gate them at all and the repo is not the single source of truth for its own
+# prompts. The set must reach empty.
+PENDING_PROMPT_SOURCE_MIGRATION = {"red-team-cli", "weekly-skills-refresh"}
 
 # Only [[run.tasks.steps]] and run_agent are extra="forbid" in the live API, so
 # everything else here is the repo's own gate: a typo'd `memory_mb` deploys

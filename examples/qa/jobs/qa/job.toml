@@ -33,6 +33,27 @@ QA_RUN_ID = "{{run_id}}"
 [[run.tasks]]
 name = "qa-agent-web-core"
 
+# Each fanout task provisions its own sandbox, so the prompts checkout repeats
+# per task rather than running once for the job.
+[[run.tasks.steps]]
+name = "checkout-prompts"
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+DEST=/workspace/.islo-prompts/REPLACE_WITH_REPOSITORY
+git config --global url."https://x-access-token:$GH_TOKEN@github.com/".insteadOf "https://github.com/"
+if [ -d "$DEST/.git" ]; then
+  git -C "$DEST" fetch --depth 1 origin HEAD
+  git -C "$DEST" checkout -f FETCH_HEAD
+else
+  mkdir -p "$(dirname "$DEST")"
+  git clone --depth 1 https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY.git "$DEST"
+fi
+''',
+]
+
 [[run.tasks.steps]]
 name = "explore"
 workdir = "/workspace/qa-harness"
@@ -41,7 +62,9 @@ workdir = "/workspace/qa-harness"
 mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
-prompt = { type = "knowledge", slug = "qa-web-core-prompt" }
+prompt = { type = "literal", value = """
+Read and follow /workspace/.islo-prompts/REPLACE_WITH_REPOSITORY/.islo/prompts/web-core.md.
+""" }
 
 [[run.tasks.steps]]
 name = "stage-findings"
@@ -57,6 +80,25 @@ exec = [
 name = "qa-agent-web-platform"
 
 [[run.tasks.steps]]
+name = "checkout-prompts"
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+DEST=/workspace/.islo-prompts/REPLACE_WITH_REPOSITORY
+git config --global url."https://x-access-token:$GH_TOKEN@github.com/".insteadOf "https://github.com/"
+if [ -d "$DEST/.git" ]; then
+  git -C "$DEST" fetch --depth 1 origin HEAD
+  git -C "$DEST" checkout -f FETCH_HEAD
+else
+  mkdir -p "$(dirname "$DEST")"
+  git clone --depth 1 https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY.git "$DEST"
+fi
+''',
+]
+
+[[run.tasks.steps]]
 name = "explore"
 workdir = "/workspace/qa-harness"
 
@@ -64,7 +106,9 @@ workdir = "/workspace/qa-harness"
 mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
-prompt = { type = "knowledge", slug = "qa-web-platform-prompt" }
+prompt = { type = "literal", value = """
+Read and follow /workspace/.islo-prompts/REPLACE_WITH_REPOSITORY/.islo/prompts/web-platform.md.
+""" }
 
 [[run.tasks.steps]]
 name = "stage-findings"
@@ -80,6 +124,25 @@ exec = [
 name = "qa-agent-cli-cross"
 
 [[run.tasks.steps]]
+name = "checkout-prompts"
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+DEST=/workspace/.islo-prompts/REPLACE_WITH_REPOSITORY
+git config --global url."https://x-access-token:$GH_TOKEN@github.com/".insteadOf "https://github.com/"
+if [ -d "$DEST/.git" ]; then
+  git -C "$DEST" fetch --depth 1 origin HEAD
+  git -C "$DEST" checkout -f FETCH_HEAD
+else
+  mkdir -p "$(dirname "$DEST")"
+  git clone --depth 1 https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY.git "$DEST"
+fi
+''',
+]
+
+[[run.tasks.steps]]
 name = "explore"
 workdir = "/workspace/qa-harness"
 
@@ -87,7 +150,9 @@ workdir = "/workspace/qa-harness"
 mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
-prompt = { type = "knowledge", slug = "qa-cli-cross-prompt" }
+prompt = { type = "literal", value = """
+Read and follow /workspace/.islo-prompts/REPLACE_WITH_REPOSITORY/.islo/prompts/cli-cross.md.
+""" }
 
 [[run.tasks.steps]]
 name = "stage-findings"

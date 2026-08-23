@@ -43,6 +43,29 @@ delete_after = 172800
 [[run.tasks]]
 name = "verify"
 
+# The prompts checkout is deliberately outside the working repos the
+# feature-delivery-platform snapshot pre-clones under /workspace/. If your
+# prompts live in one of those repos, sharing the directory would let this
+# step's `checkout -f` discard the PR heads the stack is pinned to.
+[[run.tasks.steps]]
+name = "checkout-prompts"
+exec = [
+  "bash",
+  "-lc",
+  '''
+set -euo pipefail
+DEST=/workspace/.islo-prompts/REPLACE_WITH_REPOSITORY
+git config --global url."https://x-access-token:$GH_TOKEN@github.com/".insteadOf "https://github.com/"
+if [ -d "$DEST/.git" ]; then
+  git -C "$DEST" fetch --depth 1 origin HEAD
+  git -C "$DEST" checkout -f FETCH_HEAD
+else
+  mkdir -p "$(dirname "$DEST")"
+  git clone --depth 1 https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY.git "$DEST"
+fi
+''',
+]
+
 [[run.tasks.steps]]
 name = "run-agent"
 timeout = 10800
@@ -51,12 +74,15 @@ timeout = 10800
 mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
-prompt = { type = "knowledge", slug = "feature-delivery-verify-prompt" }
+prompt = { type = "literal", value = """
+Read and follow /workspace/.islo-prompts/REPLACE_WITH_REPOSITORY/.islo/prompts/verify.md,
+and the two reference files beside it: integrations.md for gateway credentials
+and platform-env.md for the stack boot environment.
+
+Linear issue: {{issue_id}}
+Pull requests to verify as one integrated feature: {{pull_requests}}
+""" }
 resume_prompt = { type = "literal", value = "The pull requests have been updated after verification failure. Re-fetch PR heads, re-run checks, and verify the integrated feature again." }
-knowledge = [
-  { type = "knowledge", slug = "feature-delivery-integrations" },
-  { type = "knowledge", slug = "feature-delivery-platform-env" },
-]
 session = "feature-delivery-verify-{{issue_id}}"
 
 [[run.tasks.steps]]

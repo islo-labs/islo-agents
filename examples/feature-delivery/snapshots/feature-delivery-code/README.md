@@ -16,4 +16,4 @@ islo snapshot save <your-build-sandbox> --name feature-delivery-code
 
 The implement and review agents use `ensure` sandboxes named per issue so checkouts survive review loops.
 
-Prompts are published as knowledge items from `prompts/`, not baked into the VM.
+Prompts are not baked into the VM. Each job clones them from your own repository into `/workspace/.islo-prompts/` at run time, which is a separate directory from the working clones above so the prompt refresh can never touch a feature branch.
