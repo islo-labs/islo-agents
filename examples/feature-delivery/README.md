@@ -12,7 +12,7 @@ Factory line that **implements**, **reviews**, and **verifies** one Linear issue
 
 **Trigger:** Linear `issue.updated` when your label is added or changed (default placeholder `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` in `line.toml`).
 
-Sandboxes use `ensure` mode per issue so implement/review/verify can resume across iterations. When a stage returns `blocked`, agentic transitions offer `retry-stage` or `cancel` (requires the line routing agent — see step 4).
+Sandboxes use `ensure` mode per issue so implement/review/verify can resume across iterations. When a stage returns `blocked`, agentic transitions offer `retry` or `cancel-run` (requires the line routing agent — see step 4).
 
 ## Before you deploy
 

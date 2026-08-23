@@ -100,7 +100,7 @@ implementation after the blocker clears, or cancel the line run.
 """
 
 [[transitions.options]]
-name = "retry-stage"
+name = "retry"
 to = "implement"
 label = "Retry implementation"
 
@@ -114,7 +114,7 @@ stage = "implement"
 name = "pull_requests"
 
 [[transitions.options]]
-name = "cancel"
+name = "cancel-run"
 to = "done"
 label = "Cancel line run"
 
@@ -172,7 +172,7 @@ missing context or infrastructure is available, or cancel the line run.
 """
 
 [[transitions.options]]
-name = "retry-stage"
+name = "retry"
 to = "review"
 label = "Retry review"
 
@@ -186,7 +186,7 @@ stage = "implement"
 name = "pull_requests"
 
 [[transitions.options]]
-name = "cancel"
+name = "cancel-run"
 to = "done"
 label = "Cancel line run"
 
@@ -236,7 +236,7 @@ the line run.
 """
 
 [[transitions.options]]
-name = "retry-stage"
+name = "retry"
 to = "verify"
 label = "Retry verification"
 
@@ -250,6 +250,6 @@ stage = "implement"
 name = "pull_requests"
 
 [[transitions.options]]
-name = "cancel"
+name = "cancel-run"
 to = "done"
 label = "Cancel line run"
