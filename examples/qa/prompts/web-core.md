@@ -7,7 +7,7 @@ not pass/fail checklists.
 ## Environment
 
 - **Target:** `ISLO_BASE_URL` from the sandbox environment (deployed app URL, not localhost).
-- **Harness:** `/workspace/qa-harness` — minimal Playwright workspace (no baked login flow).
+- **Harness:** `/workspace/qa-harness`, a minimal Playwright workspace (no baked login flow).
 - **Credentials:** `ISLO_API_KEY` from the Factory environment. Use the `islo` CLI for authenticated API work. Never print secrets.
 - Run tests: `cd /workspace/qa-harness && npx playwright test <file>` (run `npm install && npx playwright install chromium` once if needed).
 - Read `README.md` in the harness first.
@@ -78,7 +78,7 @@ Provide **either** `video` (web) or `transcript` (cli), not both.
 1. Save a transcript to `findings/transcripts/bug-<slug>.txt` showing both reproductions.
 2. Include commands, relevant stdout/stderr, and exit codes.
 
-## Exclusions — never report as product bugs
+## Exclusions: never report as product bugs
 
 - Billing purchases or payment flows
 - Support impersonation flows

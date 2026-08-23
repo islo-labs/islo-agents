@@ -69,7 +69,7 @@ All reviewer agents and the reporter must use this JSON shape. Return **valid JS
 
 ## Finding object
 
-Every candidate — confirmed or not — must include:
+Every candidate, confirmed or not, must include:
 
 | Field | Required | Notes |
 |-------|----------|-------|
@@ -92,7 +92,7 @@ Use `high` only when **all** are true:
 
 1. Reproducible in a supported/default configuration using local tests or wiremock only.
 2. Crosses a trust boundary with material impact on confidentiality, integrity, or availability.
-3. Evidence is confirmed in source or passing tests — not speculative.
+3. Evidence is confirmed in source or passing tests, not speculative.
 
 Otherwise use `medium`, `low`, or `info`, or mark `status: rejected`.
 

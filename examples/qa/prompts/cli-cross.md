@@ -74,7 +74,7 @@ Provide **either** `video` (web) or `transcript` (cli), not both.
 1. Save a transcript to `findings/transcripts/bug-<slug>.txt` showing both reproductions.
 2. Include commands, relevant stdout/stderr, and exit codes.
 
-## Exclusions — never report as product bugs
+## Exclusions: never report as product bugs
 
 - Billing purchases or payment flows
 - Support impersonation flows

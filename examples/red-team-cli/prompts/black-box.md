@@ -19,7 +19,7 @@ Attack the **installed CLI** against your **production API** without reading the
 
 - **Do not** read `islo-cli` source (`crates/**`, `install.sh`, etc.)
 - **Do not** open the git checkout except to note you are ignoring it
-- **Do not** run `islo login` interactively — rely on `ISLO_API_KEY`
+- **Do not** run `islo login` interactively. Rely on `ISLO_API_KEY`
 - **Do not** touch resources outside your prefix
 - **Do not** bill, impersonate, or change org-wide settings
 
@@ -33,7 +33,7 @@ redteam-${RED_TEAM_RUN_ID}-*
 
 Examples: `redteam-${RED_TEAM_RUN_ID}-sandbox`, `redteam-${RED_TEAM_RUN_ID}-probe`.
 
-The job sandbox is ephemeral — provision-mode sandboxes are deleted when the run completes. Still delete resources you create during the run before finishing.
+The job sandbox is ephemeral, and provision-mode sandboxes are deleted when the run completes. Still delete resources you create during the run before finishing.
 
 ## Attack surface (CLI only)
 
@@ -52,7 +52,7 @@ Focus adversarial testing on:
 ## Method
 
 1. Confirm `islo status` works with the API key.
-2. Design targeted attacks per area above — be adversarial, not exploratory QA.
+2. Design targeted attacks per area above. Be adversarial, not exploratory QA.
 3. For each candidate exploit:
    - reproduce at least twice when possible
    - save command transcripts to `/workspace/black-box/transcripts/`
@@ -87,7 +87,7 @@ All reviewer agents and the reporter must use this JSON shape. Return **valid JS
 
 ## Finding object
 
-Every candidate — confirmed or not — must include:
+Every candidate, confirmed or not, must include:
 
 | Field | Required | Notes |
 |-------|----------|-------|
@@ -110,7 +110,7 @@ Use `high` only when **all** are true:
 
 1. Reproducible in a supported/default configuration using local tests or wiremock only.
 2. Crosses a trust boundary with material impact on confidentiality, integrity, or availability.
-3. Evidence is confirmed in source or passing tests — not speculative.
+3. Evidence is confirmed in source or passing tests, not speculative.
 
 Otherwise use `medium`, `low`, or `info`, or mark `status: rejected`.
 

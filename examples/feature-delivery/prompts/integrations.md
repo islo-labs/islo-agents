@@ -1,6 +1,6 @@
 # Islo Sandbox Integrations
 
-Your sandbox has pre-authenticated access to external services via the Islo gateway. Credentials are injected as environment variables — do not look for config files, CLI login flows, or token files on disk.
+Your sandbox has pre-authenticated access to external services via the Islo gateway. Credentials are injected as environment variables. Do not look for config files, CLI login flows, or token files on disk.
 
 ## GitHub
 

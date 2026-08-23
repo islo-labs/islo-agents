@@ -12,7 +12,7 @@ Factory line that **implements**, **reviews**, and **verifies** one Linear issue
 
 **Trigger:** Linear `issue.updated` when your label is added or changed (default placeholder `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` in `line.toml`).
 
-Sandboxes use `ensure` mode per issue so implement/review/verify can resume across iterations. When a stage returns `blocked`, agentic transitions offer `retry` or `cancel-run` (requires the line routing agent — see step 4).
+Sandboxes use `ensure` mode per issue so implement/review/verify can resume across iterations. When a stage returns `blocked`, agentic transitions offer `retry` or `cancel-run` (requires the line routing agent, see step 4).
 
 ## Before you deploy
 
@@ -32,8 +32,8 @@ islo knowledge create feature-delivery-platform-env --level rule --body @example
 
 ### 3. Build snapshots
 
-- **Code** (`feature-delivery-code`) — clone repos under `/workspace/`. See `snapshots/feature-delivery-code/README.md`.
-- **Platform** (`feature-delivery-platform`) — full stack + `boot-stack.sh`. See `snapshots/feature-delivery-platform/README.md`.
+- **Code** (`feature-delivery-code`). Clone repos under `/workspace/`. See `snapshots/feature-delivery-code/README.md`.
+- **Platform** (`feature-delivery-platform`). Full stack plus `boot-stack.sh`. See `snapshots/feature-delivery-platform/README.md`.
 
 ```bash
 islo snapshot save <your-code-build-sandbox> --name feature-delivery-code

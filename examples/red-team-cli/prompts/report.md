@@ -77,10 +77,10 @@ Use the tenant Linear integration through the default gateway. The sandbox expos
 
 ### GraphQL workflow (per validated high finding)
 
-1. **Resolve team** — query teams, select the team whose name matches **`LINEAR_TEAM_NAME`** from sandbox env. Fail clearly if missing.
-2. **Resolve label** — query team labels, select the label whose name matches **`LINEAR_LABEL_NAME`** from sandbox env. Fail clearly if missing.
-3. **Dedup** — search team issues for the finding `fingerprint` in title/description (include marker `<!-- red-team-fingerprint:{fingerprint} -->`). Skip create if found.
-4. **Create issue** — one issue per validated high finding:
+1. **Resolve team.** Query teams, select the team whose name matches **`LINEAR_TEAM_NAME`** from sandbox env. Fail clearly if missing.
+2. **Resolve label.** Query team labels, select the label whose name matches **`LINEAR_LABEL_NAME`** from sandbox env. Fail clearly if missing.
+3. **Dedup.** Search team issues for the finding `fingerprint` in title/description (include marker `<!-- red-team-fingerprint:{fingerprint} -->`). Skip create if found.
+4. **Create issue.** One issue per validated high finding:
    - `teamId`: resolved team id
    - `title`: `[red-team-cli] {finding.title}`
    - `description` (Markdown): impact, paths/lines, reproduction, remediation direction, run metadata (`commit`, `generated_at`), fingerprint marker
@@ -96,7 +96,7 @@ curl -sS https://api.linear.app/graphql \
   -d '{"query":"mutation IssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url } } }","variables":{...}}'
 ```
 
-If the Linear integration, `LINEAR_TEAM_NAME`, or `LINEAR_LABEL_NAME` cannot be resolved, fail the job with an actionable `summary` — do not silently skip.
+If the Linear integration, `LINEAR_TEAM_NAME`, or `LINEAR_LABEL_NAME` cannot be resolved, fail the job with an actionable `summary`. Do not silently skip.
 
 ## Safety
 
@@ -123,7 +123,7 @@ All reviewer agents and the reporter must use this JSON shape. Return **valid JS
 
 ## Finding object
 
-Every candidate — confirmed or not — must include:
+Every candidate, confirmed or not, must include:
 
 | Field | Required | Notes |
 |-------|----------|-------|
@@ -146,7 +146,7 @@ Use `high` only when **all** are true:
 
 1. Reproducible in a supported/default configuration using local tests or wiremock only.
 2. Crosses a trust boundary with material impact on confidentiality, integrity, or availability.
-3. Evidence is confirmed in source or passing tests — not speculative.
+3. Evidence is confirmed in source or passing tests, not speculative.
 
 Otherwise use `medium`, `low`, or `info`, or mark `status: rejected`.
 

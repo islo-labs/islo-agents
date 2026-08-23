@@ -29,13 +29,13 @@ curl -s https://api.linear.app/graphql \
 
 ## Gather context
 
-The issue identifier above is a snapshot from the trigger. Before coding, pull richer context from Linear — title, description, comments, linked issues, status, assignees, related PRs, anything that clarifies intent.
+The issue identifier above is a snapshot from the trigger. Before coding, pull richer context from Linear: title, description, comments, linked issues, status, assignees, related PRs, anything that clarifies intent.
 
 If `{{pull_requests}}` is non-empty, this is a subsequent iteration. Inspect all review and verification feedback on those PRs (GitHub review comments, check results, PR threads) before making changes.
 
 ## Environment
 
-You are inside an isolated sandbox VM with full root access. Repos are pre-cloned under `/workspace/`. The change may span one repo or several — explore what's there and decide scope from the issue.
+You are inside an isolated sandbox VM with full root access. Repos are pre-cloned under `/workspace/`. The change may span one repo or several, so explore what's there and decide scope from the issue.
 
 This sandbox persists across iterations on a fixed-size disk. Run targeted checks for the code you changed rather than building every target in a workspace, and remove build artifact directories when you no longer need them.
 
@@ -45,7 +45,7 @@ For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all
 
 1. **Understand the change.** Read the issue and the extra context you fetched. Explore the relevant codebase(s).
 2. **Implement.** Clean, focused, matching each project's patterns.
-3. **Verify locally.** Before pushing, run the repo's test suite, linters, and type checks. Fix any failures. For Python repos: `uv run pytest`, `uv run ruff check`, `uv run pre-commit run --all-files`. For Rust repos: `cargo test -p <crate>`, `cargo clippy -p <crate>` — not a workspace `--all-features` build. For frontend repos: `npm test`, `npx tsc --noEmit`. Check the repo's CI workflow (`.github/workflows/`) to see exactly what CI runs and replicate it locally.
+3. **Verify locally.** Before pushing, run the repo's test suite, linters, and type checks. Fix any failures. For Python repos: `uv run pytest`, `uv run ruff check`, `uv run pre-commit run --all-files`. For Rust repos: `cargo test -p <crate>`, `cargo clippy -p <crate>`, not a workspace `--all-features` build. For frontend repos: `npm test`, `npx tsc --noEmit`. Check the repo's CI workflow (`.github/workflows/`) to see exactly what CI runs and replicate it locally.
 4. **Open or update PR(s).** One PR per repo that needs a change:
 
    On the first run (no existing PRs):
@@ -74,7 +74,7 @@ For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all
    git push
    ```
 
-   **All commits and PR titles must follow [Conventional Commits](https://www.conventionalcommits.org/).** Use the appropriate type (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, etc.) and an optional scope. Include the issue identifier in the commit body or footer, not the subject line. Follow-up fix commits during the review loop should use `fix(scope):` — not `feat` again.
+   **All commits and PR titles must follow [Conventional Commits](https://www.conventionalcommits.org/).** Use the appropriate type (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`, etc.) and an optional scope. Include the issue identifier in the commit body or footer, not the subject line. Follow-up fix commits during the review loop should use `fix(scope):`, not `feat` again.
 
    If the change spans multiple repos, cross-reference the PRs in each body.
 
@@ -100,5 +100,5 @@ Treat all pull requests as one feature. Do not report `ready` until every requir
 
 - Stay focused on what the issue asks for. Don't refactor unrelated code.
 - Follow each project's existing style and conventions.
-- Be thorough — handle edge cases, add error handling.
+- Be thorough. Handle edge cases and add error handling.
 - Don't guess silently: if something is ambiguous, pick the most reasonable interpretation and note it in the PR and the Linear comment.

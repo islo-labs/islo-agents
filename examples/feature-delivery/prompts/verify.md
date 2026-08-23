@@ -25,12 +25,12 @@ done
    gh pr diff <pr-url>
    ```
 
-   Understand how the PRs interact — the feature only makes sense when you understand all the changes as a whole.
+   Understand how the PRs interact. The feature only makes sense when you understand all the changes as a whole.
 
 2. **Boot the stack.** Run your stack boot script from the snapshot (see `feature-delivery-platform-env` knowledge and `snapshots/feature-delivery-platform/README.md`). Pass flags for every PR-pinned service in a single call:
 
    ```bash
-   # Example — adapt flags to your boot script
+   # Example, adapt flags to your boot script
    /workspace/scripts/boot-stack.sh --api pr/455 --frontend pr/530
    ```
 
@@ -43,7 +43,7 @@ done
 
    If the correct branches are already deployed at the correct commits, **do not re-run the boot script**. Only re-boot when a needed service is at the wrong ref. Always pass flags for **every** PR-pinned service your boot script supports.
 
-3. **Devise verification scenarios.** Think like a QA engineer — and more importantly, **act like a real user**. Based on what the PRs change, determine 2-5 concrete scenarios that prove the change works correctly end-to-end. Consider:
+3. **Devise verification scenarios.** Think like a QA engineer, and more importantly, **act like a real user**. Based on what the PRs change, determine 2-5 concrete scenarios that prove the change works correctly end-to-end. Consider:
    - Happy path: does the feature work as intended, end-to-end?
    - Edge cases: what about empty inputs, missing data, boundary conditions?
    - Integration: does frontend <> backend <> database work together?
@@ -51,10 +51,10 @@ done
 
    If a scenario genuinely cannot be tested against the real stack (e.g. no backend endpoint exists and no related PR provides one), call that out explicitly as a gap and mark the scenario as **untested**, not passed.
 
-4. **Execute each scenario like a user would.** Your primary verification path must follow the same flow a real user would: navigate in the browser, click buttons, fill forms, and observe results. The browser is pre-authenticated — use it.
+4. **Execute each scenario like a user would.** Your primary verification path must follow the same flow a real user would: navigate in the browser, click buttons, fill forms, and observe results. The browser is pre-authenticated, so use it.
 
    - **Browser-first**: For any UI feature, the main test MUST go through the browser. Use `browser-use` to navigate, click, type, and screenshot.
-   - **API/DB as secondary evidence**: After verifying through the UI, you MAY check the database or call APIs to confirm side effects. But these are supplementary — they don't replace the user-facing flow.
+   - **API/DB as secondary evidence**: After verifying through the UI, you MAY check the database or call APIs to confirm side effects. But these are supplementary and they don't replace the user-facing flow.
    - **Screenshots are mandatory for UI scenarios.** Take a screenshot at each meaningful step. These go in your verification report.
    - **No shortcuts for the happy path.** Do not seed test data via SQL inserts or raw API calls and then just verify it renders. Create data through the same path a user would.
 
@@ -67,11 +67,11 @@ done
    Format your report using this structure. Put screenshots inside collapsible `<details>` sections:
 
    ```markdown
-   ## Verification Report — **PASSED** (or **FAILED**)
+   ## Verification Report: **PASSED** (or **FAILED**)
 
    Brief summary of what was verified and overall result.
 
-   ### Scenario 1: <name> — PASSED (or FAILED)
+   ### Scenario 1: <name> (PASSED or FAILED)
    What was tested and what happened.
 
    <details><summary>Screenshots</summary>

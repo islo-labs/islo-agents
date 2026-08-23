@@ -26,7 +26,7 @@ done
    gh pr checks <pr-url>
    ```
 
-2. **Review for issues.** Look for bugs, edge cases, security concerns, performance issues, and unclear logic. Evaluate the approach — does it make sense architecturally? Is there a simpler way?
+2. **Review for issues.** Look for bugs, edge cases, security concerns, performance issues, and unclear logic. Evaluate the approach. Does it make sense architecturally? Is there a simpler way?
 
 3. **Don't run unit/integration tests.** CI runs the test suite; let it do its job. Running tests yourself wastes time and budget. Check CI status with `gh pr checks <pr-url>` if you need to know what passed or failed. However, if manual testing would help (e.g. starting the app, hitting an endpoint, reproducing a UI flow), go for it; you have a full VM.
 
@@ -46,9 +46,9 @@ If other repos are available in `/workspace/`, they may be on their main branch,
 
 Before posting, check if you've already reviewed any of these PRs (`gh pr view <pr-url> --json reviews,comments`). If you have, treat your previous comments like a human reviewer would on a second pass:
 
-- **Addressed** — the author fixed the code or replied with a reasonable explanation. Resolve the thread.
-- **Ignored** — the code didn't change and the author never responded. Re-raise it in your new review.
-- **Won't fix** — the author explicitly pushed back and you agree. Resolve the thread, don't re-raise.
+- **Addressed.** The author fixed the code or replied with a reasonable explanation. Resolve the thread.
+- **Ignored.** The code didn't change and the author never responded. Re-raise it in your new review.
+- **Won't fix.** The author explicitly pushed back and you agree. Resolve the thread, don't re-raise.
 
 Use `gh api graphql` to resolve threads (mutation `resolveReviewThread` with `threadId`). Don't repeat comments that are already resolved.
 
@@ -60,4 +60,4 @@ Return `approved` only when every PR passes and the combined feature is consiste
 
 - Be constructive, not nitpicky. Focus on things that matter.
 - Don't comment on lint, formatting, or test failures; CI and the babysit bot handle those separately.
-- Treat all PRs as one feature — consistency across repos matters.
+- Treat all PRs as one feature, since consistency across repos matters.

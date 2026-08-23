@@ -14,6 +14,6 @@ Copy `snapshot-src/harness/notify.py` to `/opt/red-team-cli/harness/`, create `/
 islo snapshot save <your-build-sandbox> --name red-team-cli
 ```
 
-**Agent prompts** are published as knowledge items from `prompts/` — not baked into the VM.
+**Agent prompts** are published as knowledge items from `prompts/`, not baked into the VM.
 
 Black-box is agent-only (no prepare step).

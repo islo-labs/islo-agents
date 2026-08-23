@@ -13,4 +13,4 @@ Follow `snapshot-src/README.md` for setup steps, then:
 islo snapshot save <your-build-sandbox> --name skills-refresh
 ```
 
-Prompts are published as knowledge items from `prompts/` — not baked into the VM.
+Prompts are published as knowledge items from `prompts/`, not baked into the VM.

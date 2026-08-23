@@ -20,7 +20,7 @@ Install and authorize the Islo GitHub integration for your organization. Select 
 
 In `line.toml`, replace `REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY` with your repository (for example `my-org/my-service`).
 
-Scope the selector to repositories you trust. The agent runs with gateway-injected GitHub credentials in a rooted sandbox and reads PR diff content — treat fork PR bodies and changed files as untrusted input.
+Scope the selector to repositories you trust. The agent runs with gateway-injected GitHub credentials in a rooted sandbox and reads PR diff content, so treat fork PR bodies and changed files as untrusted input.
 
 ### 3. Deploy job, then line
 
