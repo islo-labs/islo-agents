@@ -44,7 +44,8 @@ Set `ISLO_BASE_URL` in `jobs/red-team-cli-black-box/job.toml` to your production
 | Location | Placeholder | Action |
 |----------|-------------|--------|
 | `line.toml` | `REPLACE_WITH_YOUR_SLACK_CHANNEL_ID` | Your Slack channel ID |
-| `jobs/red-team-cli-report/job.toml` | `LINEAR_TEAM_NAME`, `LINEAR_LABEL_NAME` | Team and label names for filing |
+| `jobs/red-team-cli-report/job.toml` | `REPLACE_WITH_YOUR_LINEAR_TEAM_NAME` | The Linear team that findings are filed against, set as `LINEAR_TEAM_NAME` in the sandbox env |
+| `jobs/red-team-cli-report/job.toml` | `LINEAR_LABEL_NAME` | Label applied to filed issues. Already set to `security-review`, change it if your team uses another label |
 | First report transition `linear_mode` | default `report` | Change to `create` when ready to file Linear issues |
 
 Connect Slack: `islo login --tool slack`
