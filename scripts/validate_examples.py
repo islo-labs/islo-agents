@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from collections import Counter, namedtuple
@@ -62,17 +63,18 @@ JOB_SECTION_KEYS = {
     "": {"job", "outputs", "run", "schedule", "verification"},
     "job": {"name", "version", "description", "params"},
     "job.params.*": {"type", "required", "default", "description", "enum", "pattern", "prefix", "items"},
-    "outputs.*": {"type", "required", "description", "enum", "items"},
+    "outputs.*": {"type", "required", "description", "enum", "items", "reduce"},
     "run": {"concurrency", "fail_fast", "fanout", "region", "resume_on_start",
             "teardown_on_complete", "timeout", "workdir", "sandbox", "tasks"},
-    "run.sandbox": {"cache_key", "disk_gb", "env", "environment", "environment_id",
+    "run.sandbox": {"cache_key", "disk_gb", "env", "environment",
                     "gateway_profile", "image", "init", "internet_enabled", "memory_mb",
                     "mode", "name", "snapshot_name", "vcpus", "workdir",
                     "lifecycle", "sources", "setup_scripts"},
     "run.sandbox.lifecycle": {"auto_resume", "delete_after", "pause_after", "pause_after_idle"},
     "run.tasks[]": {"name", "sandbox", "steps"},
     "run.tasks[].steps[]": {"name", "timeout", "user", "workdir",
-                            "exec", "pause", "resume", "delete", "snapshot", "run_agent"},
+                            "exec", "pause", "resume", "delete", "snapshot", "run_agent",
+                            "upload", "download", "outputs"},
     "run.tasks[].steps[].run_agent": {"mode", "harness", "model", "prompt", "resume_prompt",
                                       "knowledge", "session", "command"},
 }
@@ -209,17 +211,6 @@ def iter_run_agents(doc: dict):
                 yield step.get("name") or "?", agent
 
 
-def sandbox_source_sections(doc: dict) -> list[str]:
-    run = table(doc, "run")
-    found = ["run.sandbox"] if rows(table(run, "sandbox"), "sources") else []
-    for index, task in enumerate(rows(run, "tasks")):
-        if isinstance(task, dict) and rows(table(task, "sandbox"), "sources"):
-            found.append(f"run.tasks[{index}].sandbox")
-    return found
-
-
-# A checkout has to be a real step: the API accepts [[run.sandbox.sources]] and
-# then never acts on it, so the agent finds nothing at the target path.
 def declares_checkout_step(doc: dict) -> bool:
     for task in rows(table(doc, "run"), "tasks"):
         if not isinstance(task, dict):
@@ -272,10 +263,8 @@ def validate_job(path: Path, example_dir: Path, text: str, doc: dict) -> str | N
         if not snap_readme.is_file():
             fail(f"{path}: snapshot {snapshot!r} missing {snap_readme}")
 
-    for section in sandbox_source_sections(doc):
-        fail(f"{path}: [[{section}.sources]] is a silent no-op; the API validates it and never "
-             f"performs the checkout, so the agent finds nothing at target_path. Clone in an "
-             f"exec step instead")
+    # Fresh provision clones [[run.sandbox.sources]]. Exec clone remains valid
+    # for snapshot-restore jobs until compute restore-checkout lands.
 
     if "npx tsx" in text or "git clone https://github.com/islo-labs/islo-agents" in text:
         fail(f"{path}: must not clone this pack at runtime")
@@ -649,7 +638,19 @@ def validate_example(example_dir: Path) -> None:
 
 
 def main(argv: list[str]) -> int:
-    root = Path(argv[1]).resolve() if len(argv) > 1 else Path(__file__).resolve().parent.parent
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "repo",
+        nargs="?",
+        default=None,
+        help="Repository root (defaults to the parent of scripts/)",
+    )
+    args = parser.parse_args(argv[1:])
+    root = (
+        Path(args.repo).resolve()
+        if args.repo
+        else Path(__file__).resolve().parent.parent
+    )
     examples_root = root / "examples"
     example_dirs: list[Path] = []
     if not examples_root.is_dir():

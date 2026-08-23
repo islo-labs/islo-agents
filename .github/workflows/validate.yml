@@ -13,6 +13,8 @@ jobs:
   # fails for any template not already deployed on the CI tenant.
   validate-examples:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
