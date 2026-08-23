@@ -43,7 +43,7 @@ PUBLIC_RUNNER_IMAGES = {
 PLACEHOLDER_TOKEN = re.compile(r"REPLACE_WITH_[A-Z_]+")
 
 # Examples still binding prompts through Islo Knowledge. Each entry owes the
-# same conversion bug-repro, feature-delivery, pr-review and qa already have: an
+# same conversion feature-delivery, pr-review and qa already have: an
 # exec step that clones the user's own repo, and a literal prompt naming a file
 # inside that checkout. Until an entry converts, its jobs fail `islo job deploy
 # --dry-run` on any tenant that has not hand-published the slugs, so CI cannot
