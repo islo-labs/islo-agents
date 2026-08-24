@@ -13,8 +13,8 @@ Minimal black-box browser workspace at `/workspace/qa-harness` in the `qa` snaps
 
 ## Environment
 
-- `ISLO_BASE_URL` — deployed app URL (from job params / sandbox env)
-- `ISLO_API_KEY` — injected by the Factory environment; use with the `islo` CLI
+- `ISLO_BASE_URL`: deployed app URL (from job params / sandbox env)
+- `ISLO_API_KEY`: injected by the Factory environment; use with the `islo` CLI
 
 There is **no** baked email/OTP login harness. Establish browser sessions in your own Playwright specs when needed, or cross-check via CLI.
 

@@ -7,8 +7,14 @@ on:
     branches: [main]
 
 jobs:
+  # Secret-free, so it runs on fork PRs too. Line manifests are structurally
+  # validated here rather than with `islo factory line validate`, because that
+  # command resolves each stage's `job` against deployed tenant state and so
+  # fails for any template not already deployed on the CI tenant.
   validate-examples:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 

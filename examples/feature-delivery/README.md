@@ -12,7 +12,7 @@ Factory line that **implements**, **reviews**, and **verifies** one Linear issue
 
 **Trigger:** Linear `issue.updated` when your label is added or changed (default placeholder `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` in `line.toml`).
 
-Sandboxes use `ensure` mode per issue so implement/review/verify can resume across iterations. When a stage returns `blocked`, agentic transitions offer `retry-stage` or `cancel` (requires the line routing agent — see step 4).
+Sandboxes use `ensure` mode per issue so implement/review/verify can resume across iterations. When a stage returns `blocked`, agentic transitions offer `retry` or `cancel-run` (requires the line routing agent, see step 4).
 
 ## Before you deploy
 
@@ -20,20 +20,14 @@ Sandboxes use `ensure` mode per issue so implement/review/verify can resume acro
 
 Install the Islo Linear integration and select the teams/issues this line should watch.
 
-### 2. Publish prompts and knowledge
+### 2. Supporting prompt files in the snapshots
 
-```bash
-islo knowledge create feature-delivery-implement-prompt --level skill --body @examples/feature-delivery/prompts/implement.md
-islo knowledge create feature-delivery-review-prompt --level skill --body @examples/feature-delivery/prompts/review.md
-islo knowledge create feature-delivery-verify-prompt --level skill --body @examples/feature-delivery/prompts/verify.md
-islo knowledge create feature-delivery-integrations --level rule --body @examples/feature-delivery/prompts/integrations.md
-islo knowledge create feature-delivery-platform-env --level rule --body @examples/feature-delivery/prompts/platform-env.md
-```
+Stage briefs live in each job's `run_agent` prompt so a prompt edit is a new job version. Supporting notes live only under `snapshots/*/snapshot-src/workspace/prompts/` (`integrations.md` in both snapshots, `platform-env.md` in `feature-delivery-platform`). Bake those into `/workspace/prompts/` when you save the snapshot.
 
 ### 3. Build snapshots
 
-- **Code** (`feature-delivery-code`) — clone repos under `/workspace/`. See `snapshots/feature-delivery-code/README.md`.
-- **Platform** (`feature-delivery-platform`) — full stack + `boot-stack.sh`. See `snapshots/feature-delivery-platform/README.md`.
+- **Code** (`feature-delivery-code`). Clone repos under `/workspace/`. See `snapshots/feature-delivery-code/README.md`.
+- **Platform** (`feature-delivery-platform`). Full stack plus `boot-stack.sh`. See `snapshots/feature-delivery-platform/README.md`.
 
 ```bash
 islo snapshot save <your-code-build-sandbox> --name feature-delivery-code
@@ -51,7 +45,9 @@ islo factory manager enable
 
 ### 5. Replace placeholders
 
-In `line.toml`, set `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` to the Linear label that starts a delivery loop (for example `factory-loop`).
+| Placeholder | Where | Set it to |
+|-------------|-------|-----------|
+| `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` | `[trigger.selector].labels` in `line.toml` | the Linear label that starts a delivery loop, for example `factory-loop` |
 
 ### 6. Deploy
 

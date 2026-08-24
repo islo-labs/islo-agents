@@ -1,6 +1,6 @@
 [line]
 name = "feature-delivery"
-description = "Implement, review, and verify one Linear issue across its complete PR set"
+description = "Implement, review, and verify one Linear issue across its complete pull-request set"
 category = "engineering"
 
 [trigger]
@@ -40,6 +40,11 @@ has changed enough to make another attempt useful. Cancel when requirements
 conflict, required access or input is unavailable, the same root cause keeps
 failing, or continuing could damage customer work. Explain the evidence for
 the choice and do not retry merely to exhaust the iteration limit.
+
+When steering a stage to do specific work, pass the complete instruction with
+--param resume_prompt='<complete instruction>'. Do not assume the steering
+reason reaches the stage agent through other context. Omit resume_prompt only
+when the stage default follow-up prompt is the intended instruction.
 """
 
 [[stages]]
@@ -100,7 +105,7 @@ implementation after the blocker clears, or cancel the line run.
 """
 
 [[transitions.options]]
-name = "retry-stage"
+name = "retry"
 to = "implement"
 label = "Retry implementation"
 
@@ -114,7 +119,7 @@ stage = "implement"
 name = "pull_requests"
 
 [[transitions.options]]
-name = "cancel"
+name = "cancel-run"
 to = "done"
 label = "Cancel line run"
 
@@ -172,7 +177,7 @@ missing context or infrastructure is available, or cancel the line run.
 """
 
 [[transitions.options]]
-name = "retry-stage"
+name = "retry"
 to = "review"
 label = "Retry review"
 
@@ -186,7 +191,7 @@ stage = "implement"
 name = "pull_requests"
 
 [[transitions.options]]
-name = "cancel"
+name = "cancel-run"
 to = "done"
 label = "Cancel line run"
 
@@ -236,7 +241,7 @@ the line run.
 """
 
 [[transitions.options]]
-name = "retry-stage"
+name = "retry"
 to = "verify"
 label = "Retry verification"
 
@@ -250,6 +255,6 @@ stage = "implement"
 name = "pull_requests"
 
 [[transitions.options]]
-name = "cancel"
+name = "cancel-run"
 to = "done"
 label = "Cancel line run"

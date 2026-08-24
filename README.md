@@ -1,6 +1,6 @@
 # Islo Factory examples
 
-Runnable **Factory line** templates for Islo sandboxes. Each example is a self-contained package: `line.toml`, jobs, optional prompts, and snapshot recipes.
+Runnable **Factory line** templates for Islo sandboxes. Each example is a self-contained package: `line.toml`, jobs, and snapshot recipes.
 
 ## Quick start (PR review)
 
@@ -33,7 +33,7 @@ See [examples/pr-review/README.md](examples/pr-review/README.md) for details.
 | [red-team-cli](examples/red-team-cli/) | Schedule | White-box + black-box CLI security review |
 | [weekly-skills-refresh](examples/weekly-skills-refresh/) | Schedule | Refresh agent skills repo from product changes |
 
-Each example README covers knowledge publication, snapshot build, environment variables, placeholders, deploy order, and cleanup.
+Each example README covers snapshot build, environment variables, placeholders, deploy order, and cleanup.
 
 ## Repository layout
 
@@ -42,8 +42,7 @@ examples/<name>/
   README.md          # How to deploy this example
   line.toml          # Factory line manifest
   jobs/<job>/job.toml
-  prompts/           # Source for islo knowledge create (when used)
-  snapshots/<name>/  # Snapshot bake contract + snapshot-src/
+  snapshots/<name>/  # Snapshot bake contract + snapshot-src/ (supporting prompts live here)
 scripts/
   validate_examples.py
 ```

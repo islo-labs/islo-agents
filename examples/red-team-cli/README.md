@@ -1,6 +1,6 @@
 # Red-team CLI line
 
-Weekly Factory line for **white-box source review** + **black-box CLI adversarial testing**, with optional Linear filing and Slack notification.
+Weekly factory line for **white-box source review** + **black-box CLI adversarial testing**, with optional Linear filing and Slack notification.
 
 ## Stages
 
@@ -12,39 +12,37 @@ Weekly Factory line for **white-box source review** + **black-box CLI adversaria
 | `validate-and-report` | `red-team-cli-report` | Re-verify, dedupe, summarize |
 | `slack-notify` | `red-team-cli-slack-notify` | Post summary to Slack |
 
-All stages use snapshot **`red-team-cli`**. White-box stages need your CLI checkout at `/workspace/islo-cli/` in that snapshot.
+All stages use snapshot **`red-team-cli`**. White-box stages need your CLI checkout at `/workspace/your-cli/` in that snapshot.
 
 ## Before you deploy
 
-### 1. Publish prompts
+### 1. Bake the shared finding contract into the snapshot
 
-```bash
-islo knowledge create red-team-cli-trust-boundaries-prompt --level skill --body @examples/red-team-cli/prompts/trust-boundaries.md
-islo knowledge create red-team-cli-input-abuse-prompt --level skill --body @examples/red-team-cli/prompts/input-abuse.md
-islo knowledge create red-team-cli-black-box-prompt --level skill --body @examples/red-team-cli/prompts/black-box.md
-islo knowledge create red-team-cli-report-prompt --level skill --body @examples/red-team-cli/prompts/report.md
-```
+Stage briefs live in each job's `run_agent` prompt. The shared finding contract lives only in `snapshots/red-team-cli/snapshot-src/workspace/prompts/finding-contract.md`; bake it into `/workspace/prompts/` when you save the snapshot.
 
 ### 2. Build snapshot `red-team-cli`
 
-See `snapshots/red-team-cli/README.md`. Clone your CLI repo to `/workspace/islo-cli/` and copy `snapshot-src/harness/notify.py` before saving the snapshot.
+See `snapshots/red-team-cli/README.md`. Clone your CLI repo to `/workspace/your-cli/` and copy `snapshot-src/harness/notify.py` before saving the snapshot.
 
-### 3. Factory environment `red-team-cli`
+### 3. factory environment `red-team-cli`
 
-Create a Factory environment named `red-team-cli` with a scoped API key for black-box testing:
+Create a factory environment named `red-team-cli` with a scoped API key for the **target** CLI (not an Islo key):
 
 ```bash
-islo environment patch red-team-cli --secret ISLO_API_KEY=<your-scoped-key>
+islo environment patch red-team-cli --secret TARGET_API_KEY=<your-scoped-key>
 ```
 
-Set `ISLO_BASE_URL` in `jobs/red-team-cli-black-box/job.toml` to your production API URL.
+Set `TARGET_API_URL` in `jobs/red-team-cli-black-box/job.toml` to that CLI's production API URL.
+
+Bake `your-cli` onto `PATH` in the snapshot (the binary the black-box stage runs).
 
 ### 4. Replace placeholders
 
 | Location | Placeholder | Action |
 |----------|-------------|--------|
 | `line.toml` | `REPLACE_WITH_YOUR_SLACK_CHANNEL_ID` | Your Slack channel ID |
-| `jobs/red-team-cli-report/job.toml` | `LINEAR_TEAM_NAME`, `LINEAR_LABEL_NAME` | Team and label names for filing |
+| `jobs/red-team-cli-report/job.toml` | `REPLACE_WITH_YOUR_LINEAR_TEAM_NAME` | The Linear team that findings are filed against, set as `LINEAR_TEAM_NAME` in the sandbox env |
+| `jobs/red-team-cli-report/job.toml` | `LINEAR_LABEL_NAME` | Label applied to filed issues. Already set to `security-review`, change it if your team uses another label |
 | First report transition `linear_mode` | default `report` | Change to `create` when ready to file Linear issues |
 
 Connect Slack: `islo login --tool slack`

@@ -41,7 +41,9 @@ workdir = "/workspace/qa-harness"
 mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
-prompt = { type = "knowledge", slug = "qa-web-core-prompt" }
+prompt = { type = "literal", value = """
+Read and follow /workspace/prompts/web-core.md.
+""" }
 
 [[run.tasks.steps]]
 name = "stage-findings"
@@ -64,7 +66,9 @@ workdir = "/workspace/qa-harness"
 mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
-prompt = { type = "knowledge", slug = "qa-web-platform-prompt" }
+prompt = { type = "literal", value = """
+Read and follow /workspace/prompts/web-platform.md.
+""" }
 
 [[run.tasks.steps]]
 name = "stage-findings"
@@ -87,7 +91,9 @@ workdir = "/workspace/qa-harness"
 mode = "session"
 harness = "claude"
 model = "claude-sonnet-4-5"
-prompt = { type = "knowledge", slug = "qa-cli-cross-prompt" }
+prompt = { type = "literal", value = """
+Read and follow /workspace/prompts/cli-cross.md.
+""" }
 
 [[run.tasks.steps]]
 name = "stage-findings"

@@ -8,11 +8,10 @@ Black-box QA snapshot: `stage.py` plus a minimal Playwright workspace.
 |------|----------|
 | `/opt/qa-harness/harness/stage.py` | Validates findings and writes a knowledge handoff |
 | `/workspace/qa-harness/` | Minimal Playwright project |
+| `/workspace/prompts/` | Fan-out agent briefs (`web-core.md`, `web-platform.md`, `cli-cross.md`) |
 
-Source files live in `snapshot-src/`. On a build VM: copy `snapshot-src/harness/stage.py` to `/opt/qa-harness/harness/`, copy `snapshot-src/workspace/qa-harness/` to `/workspace/qa-harness/`, install Playwright deps, then:
+Source files live in `snapshot-src/`. On a build VM: copy `snapshot-src/harness/stage.py` to `/opt/qa-harness/harness/`, copy `snapshot-src/workspace/qa-harness/` to `/workspace/qa-harness/`, copy `snapshot-src/workspace/prompts/` to `/workspace/prompts/`, install Playwright deps, then:
 
 ```bash
 islo snapshot save <your-build-sandbox> --name qa
 ```
-
-Prompts live in `examples/qa/prompts/` and bind via knowledge slugs in `jobs/qa/job.toml`.

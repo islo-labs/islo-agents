@@ -7,13 +7,12 @@ Full-stack sandbox for the **verify** stage. Should include your app stack, brow
 | Path | Contents |
 |------|----------|
 | `/workspace/` | Product repos or monorepo checkout |
+| `/workspace/prompts/` | `integrations.md` and `platform-env.md` supporting notes |
 | `/workspace/scripts/boot-stack.sh` | Boots integrated stack with PR branch pins |
-| `/workspace/.platform-env` | Written by boot script — URLs and credentials |
+| `/workspace/.platform-env` | Written by boot script, holds URLs and credentials |
 
-Bake service dependencies, `browser-use` or Playwright if needed, and document boot flags in this README. Then:
+Copy `snapshot-src/workspace/prompts/` into `/workspace/prompts/`, bake service dependencies, then:
 
 ```bash
 islo snapshot save <your-build-sandbox> --name feature-delivery-platform
 ```
-
-Publish `feature-delivery-platform-env` knowledge from `prompts/platform-env.md` so the verify agent knows how to source env exports.

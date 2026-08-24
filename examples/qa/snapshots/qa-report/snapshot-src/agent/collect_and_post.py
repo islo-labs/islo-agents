@@ -250,7 +250,7 @@ def build_slack_message(
     exit_code: int,
 ) -> str:
     run_id = os.environ.get("ISLO_LINE_RUN_ID") or os.environ.get("ISLO_RUN_ID") or "manual"
-    lines = ["*Islo QA — automated run complete*"]
+    lines = ["*Islo QA: automated run complete*"]
 
     if exit_code == 0:
         lines.append(":white_check_mark: Collector finished successfully.")
@@ -259,13 +259,13 @@ def build_slack_message(
 
     if gate_open:
         lines.append(
-            f"Notify gate: *open* — {len(findings)} finding(s) against "
+            f"Notify gate: *open*. {len(findings)} finding(s) against "
             f"{', '.join(targets) or 'unknown target'}."
         )
         if slack_posted:
             lines.append(":speech_balloon: Findings and screen recordings posted to the channel.")
     else:
-        lines.append("Notify gate: *closed* — no findings posted.")
+        lines.append("Notify gate: *closed*. No findings posted.")
         for reason in gate_reasons:
             lines.append(f"• {reason}")
 
@@ -294,7 +294,7 @@ def build_slack_message(
     lines += [
         "",
         f"Run id: `{run_id}`",
-        "_Exploratory QA against the local fullstack environment — triage severities before acting._",
+        "_Exploratory QA against the local fullstack environment. Triage severities before acting._",
     ]
     return "\n".join(lines)
 
@@ -317,7 +317,7 @@ def post_findings_to_slack(
 ) -> bool:
     channel = slack_channel()
     if not channel:
-        log("SLACK_CHANNEL is not set — skipping Slack notification")
+        log("SLACK_CHANNEL is not set, skipping Slack notification")
         return False
 
     summary = build_slack_message(
@@ -348,7 +348,7 @@ def post_findings_to_slack(
 def notify_slack(message: str) -> None:
     channel = slack_channel()
     if not channel:
-        log("SLACK_CHANNEL is not set — skipping Slack notification")
+        log("SLACK_CHANNEL is not set, skipping Slack notification")
         return
     try:
         resp = slack_upload.post_message(channel, message)
@@ -378,20 +378,20 @@ def main() -> int:
         gate_open, gate_reasons, findings, targets, capped_from = gate(reports, max_findings)
 
         if not gate_open:
-            log("NOTIFY GATE CLOSED — nothing posted beyond the summary:")
+            log("NOTIFY GATE CLOSED, nothing posted beyond the summary:")
             for r in gate_reasons:
                 log(f"  - {r}")
         else:
             log(f"gate open: {len(findings)} finding(s) for {targets}")
             if dry_run_enabled():
-                log("DRY_RUN enabled — skipping Slack post and knowledge consume")
+                log("DRY_RUN enabled, skipping Slack post and knowledge consume")
             else:
                 try:
                     slack_posted = post_findings_to_slack(findings, reports)
                     if slack_posted:
                         consume_reports(reports)
                 except slack_upload.SlackError as exc:
-                    log(f"Slack post failed — knowledge items left for inspection: {exc}")
+                    log(f"Slack post failed. Knowledge items left for inspection: {exc}")
                     exit_code = 1
 
         return exit_code
@@ -419,7 +419,7 @@ def main() -> int:
             print("=" * 72, flush=True)
             if not slack_posted:
                 if dry_run_enabled():
-                    log("DRY_RUN enabled — skipping Slack notification")
+                    log("DRY_RUN enabled, skipping Slack notification")
                 else:
                     notify_slack(message)
 

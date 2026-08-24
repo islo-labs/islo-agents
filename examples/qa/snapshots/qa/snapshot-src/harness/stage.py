@@ -249,7 +249,7 @@ def main() -> int:
 
     body = "\n".join(
         [
-            f"# QA — {agent}",
+            f"# QA: {agent}",
             "",
             f"- run_ok: {run_ok}",
             f"- target: {item['target']}",

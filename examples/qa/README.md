@@ -11,13 +11,9 @@ Scheduled Factory line that runs **three parallel black-box QA agents** against 
 
 ## Before you deploy
 
-### 1. Publish prompts
+### 1. Bake the fan-out briefs into the `qa` snapshot
 
-```bash
-islo knowledge create qa-web-core-prompt --level skill --body @examples/qa/prompts/web-core.md
-islo knowledge create qa-web-platform-prompt --level skill --body @examples/qa/prompts/web-platform.md
-islo knowledge create qa-cli-cross-prompt --level skill --body @examples/qa/prompts/cli-cross.md
-```
+This job runs three parallel agents. Keep `web-core.md`, `web-platform.md`, and `cli-cross.md` in the snapshot (`snapshots/qa/snapshot-src/workspace/prompts/`) so the line/job view is not three pasted briefs. Bake that directory into `/workspace/prompts/` when you save the snapshot.
 
 ### 2. Build snapshots
 
