@@ -22,12 +22,7 @@ Install the Islo Linear integration and select the teams/issues this line should
 
 ### 2. Supporting prompt files in the snapshots
 
-Stage briefs (`implement.md`, `review.md`, `verify.md`) live in each job's `run_agent` prompt so a prompt edit is a new job version. Copy only the supporting notes into `/workspace/prompts/`:
-
-- `integrations.md` → both snapshots
-- `platform-env.md` → `feature-delivery-platform` only
-
-See `snapshots/*/snapshot-src/workspace/prompts/`.
+Stage briefs live in each job's `run_agent` prompt so a prompt edit is a new job version. Supporting notes live only under `snapshots/*/snapshot-src/workspace/prompts/` (`integrations.md` in both snapshots, `platform-env.md` in `feature-delivery-platform`). Bake those into `/workspace/prompts/` when you save the snapshot.
 
 ### 3. Build snapshots
 

@@ -18,7 +18,7 @@ All stages use snapshot **`red-team-cli`**. White-box stages need your CLI check
 
 ### 1. Bake the shared finding contract into the snapshot
 
-Stage briefs live in each job's `run_agent` prompt. Copy only `prompts/finding-contract.md` to `/workspace/prompts/` in the `red-team-cli` snapshot (see `snapshots/red-team-cli/snapshot-src/workspace/prompts/`).
+Stage briefs live in each job's `run_agent` prompt. The shared finding contract lives only in `snapshots/red-team-cli/snapshot-src/workspace/prompts/finding-contract.md`; bake it into `/workspace/prompts/` when you save the snapshot.
 
 ### 2. Build snapshot `red-team-cli`
 

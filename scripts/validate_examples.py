@@ -47,9 +47,9 @@ PLACEHOLDER_TOKEN = re.compile(r"REPLACE_WITH_[A-Z_]+")
 # or fan-out briefs may stay in the snapshot. The set must reach empty.
 PENDING_PROMPT_SOURCE_MIGRATION = set()
 
-# Prompt files that stay in the snapshot: supporting notes, or many fan-out
-# briefs that would clutter the line/job view. Everything else is inlined into
-# run_agent so job version == prompt version.
+# Prompt files that live only in snapshot-src (supporting notes, or fan-out
+# briefs that would clutter the line/job view). Stage briefs live in run_agent
+# literals — do not keep a parallel examples/*/prompts/ copy.
 SNAPSHOT_ONLY_PROMPTS = {
     "feature-delivery": {"integrations.md", "platform-env.md"},
     "qa": {"web-core.md", "web-platform.md", "cli-cross.md"},
@@ -549,7 +549,8 @@ def validate_prompt_policy(example_dir: Path, jobs: list[Job], readme_text: str)
     """Stage briefs live in run_agent so job versions change with the prompt.
 
     Snapshot copies are only for supporting docs, or for many fan-out briefs
-    that would clutter the line/job view (see SNAPSHOT_ONLY_PROMPTS).
+    that would clutter the line/job view (see SNAPSHOT_ONLY_PROMPTS). Do not
+    keep a parallel examples/*/prompts/ tree.
     """
     prompts_dir = example_dir / "prompts"
     prompt_files = sorted(p for p in prompts_dir.iterdir() if p.is_file()) if prompts_dir.is_dir() else []
@@ -593,35 +594,30 @@ def validate_prompt_policy(example_dir: Path, jobs: list[Job], readme_text: str)
         for p in example_dir.glob("snapshots/*/snapshot-src/workspace/prompts/*")
         if p.is_file()
     }
+    pointed_names = set(pointer_re.findall("\n".join(literal_prompts)))
 
-    joined_literals = "\n".join(literal_prompts)
-    for prompt_file in prompt_files:
-        body = prompt_file.read_text().strip()
-        inlined = bool(body) and body in joined_literals
-        pointed = any(prompt_file.name == name for name in pointer_re.findall(joined_literals))
-        in_readme = prompt_file.name in readme_text
-        if prompt_file.name in snapshot_only:
-            if prompt_file.name not in snapshot_copies:
-                fail(f"{prompt_file}: marked snapshot-only but missing from "
-                     f"snapshots/*/snapshot-src/workspace/prompts/")
-            else:
-                copy = snapshot_copies[prompt_file.name]
-                if copy.read_text() != prompt_file.read_text():
-                    fail(f"{copy}: diverges from {prompt_file}")
-            if not pointed and not in_readme:
-                fail(f"{prompt_file}: snapshot-only prompt is not referenced by a "
-                     f"job pointer or README.md")
-            continue
-        if prompt_file.name in snapshot_copies:
-            fail(f"{snapshot_copies[prompt_file.name]}: stage brief belongs in "
-                 f"run_agent, not the snapshot")
-        if not inlined:
-            fail(f"{prompt_file}: stage brief must be inlined into a run_agent "
-                 f"literal so a prompt change is a new job version")
+    if prompt_files:
+        fail(
+            f"{prompts_dir}: do not keep a prompts/ copy. Stage briefs live in "
+            f"run_agent literals; snapshot-only docs live in "
+            f"snapshots/*/snapshot-src/workspace/prompts/"
+        )
+
+    for name in snapshot_only:
+        if name not in snapshot_copies:
+            fail(
+                f"{example_dir}: snapshot-only prompt {name!r} is missing from "
+                f"snapshots/*/snapshot-src/workspace/prompts/"
+            )
+        if name not in pointed_names and name not in readme_text:
+            fail(
+                f"{snapshot_copies[name]}: snapshot-only prompt is not referenced "
+                f"by a job pointer or README.md"
+            )
 
     for name, copy in snapshot_copies.items():
-        if name not in snapshot_only and not any(p.name == name for p in prompt_files):
-            fail(f"{copy}: snapshot prompt has no source in {prompts_dir}")
+        if name not in snapshot_only:
+            fail(f"{copy}: snapshot prompt is not in SNAPSHOT_ONLY_PROMPTS")
 
 
 def validate_placeholders(manifests: list[tuple[Path, str]], readme: Path, readme_text: str) -> None:

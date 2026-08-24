@@ -13,7 +13,7 @@ Scheduled Factory line that runs **three parallel black-box QA agents** against 
 
 ### 1. Bake the fan-out briefs into the `qa` snapshot
 
-This job runs three parallel agents. Keep `web-core.md`, `web-platform.md`, and `cli-cross.md` in the snapshot (`/workspace/prompts/`) so the line/job view is not three pasted briefs. Copy `prompts/` into `snapshots/qa/snapshot-src/workspace/prompts/`.
+This job runs three parallel agents. Keep `web-core.md`, `web-platform.md`, and `cli-cross.md` in the snapshot (`snapshots/qa/snapshot-src/workspace/prompts/`) so the line/job view is not three pasted briefs. Bake that directory into `/workspace/prompts/` when you save the snapshot.
 
 ### 2. Build snapshots
 

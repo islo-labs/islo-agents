@@ -1,6 +1,6 @@
 # Islo Factory examples
 
-Runnable **Factory line** templates for Islo sandboxes. Each example is a self-contained package: `line.toml`, jobs, optional prompts, and snapshot recipes.
+Runnable **Factory line** templates for Islo sandboxes. Each example is a self-contained package: `line.toml`, jobs, and snapshot recipes.
 
 ## Quick start (PR review)
 
@@ -42,8 +42,7 @@ examples/<name>/
   README.md          # How to deploy this example
   line.toml          # Factory line manifest
   jobs/<job>/job.toml
-  prompts/           # Stage briefs (inlined into jobs) and snapshot-only supporting docs
-  snapshots/<name>/  # Snapshot bake contract + snapshot-src/
+  snapshots/<name>/  # Snapshot bake contract + snapshot-src/ (supporting prompts live here)
 scripts/
   validate_examples.py
 ```

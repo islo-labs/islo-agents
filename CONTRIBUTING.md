@@ -10,7 +10,7 @@ Every example under `examples/<name>/` must be a **complete deployable package**
 - `line.toml` — `[line].name` matches the directory name
 - `jobs/<job-name>/job.toml` — `[job].name` matches the job directory name
 - `snapshots/<snapshot-name>/README.md` when a job references `snapshot_name`
-- `prompts/` when jobs bind knowledge slugs — every slug must appear in the example README
+- Stage briefs in the job `run_agent` literal (not a parallel `prompts/` tree). Snapshot-only supporting docs live under `snapshots/*/snapshot-src/workspace/prompts/`
 
 ## Validator
 
@@ -20,7 +20,7 @@ Run locally before opening a pull request:
 python3 scripts/validate_examples.py
 ```
 
-The validator checks TOML structure, line-to-job references, snapshot READMEs, forbidden internal IDs/domains, and knowledge slug documentation.
+The validator checks TOML structure, line-to-job references, snapshot READMEs, forbidden internal IDs/domains, and that stage briefs are not duplicated under `prompts/`.
 
 CI runs **only** `validate_examples.py` on every pull request (including forks). This public repo does not call the Islo API in GitHub Actions.
 
