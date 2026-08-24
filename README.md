@@ -33,7 +33,7 @@ See [examples/pr-review/README.md](examples/pr-review/README.md) for details.
 | [red-team-cli](examples/red-team-cli/) | Schedule | White-box + black-box CLI security review |
 | [weekly-skills-refresh](examples/weekly-skills-refresh/) | Schedule | Refresh agent skills repo from product changes |
 
-Each example README covers knowledge publication, snapshot build, environment variables, placeholders, deploy order, and cleanup.
+Each example README covers snapshot build, environment variables, placeholders, deploy order, and cleanup.
 
 ## Repository layout
 
@@ -42,7 +42,7 @@ examples/<name>/
   README.md          # How to deploy this example
   line.toml          # Factory line manifest
   jobs/<job>/job.toml
-  prompts/           # Source for islo knowledge create (when used)
+  prompts/           # Stage briefs (inlined into jobs) and snapshot-only supporting docs
   snapshots/<name>/  # Snapshot bake contract + snapshot-src/
 scripts/
   validate_examples.py

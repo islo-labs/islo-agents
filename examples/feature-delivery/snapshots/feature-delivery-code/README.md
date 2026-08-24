@@ -7,7 +7,7 @@ Code sandbox for **implement** and **review** stages. Repos persist across itera
 | Path | Contents |
 |------|----------|
 | `/workspace/<repo-name>/` | Git clones of every repository this line may modify |
-| `/workspace/prompts/` | Stage briefs from this example's `prompts/` directory |
+| `/workspace/prompts/` | Gateway credential notes (`integrations.md`) |
 
 Copy `snapshot-src/workspace/prompts/` into `/workspace/prompts/`, clone each repo your team implements under `/workspace/`, configure `gh` auth, then:
 

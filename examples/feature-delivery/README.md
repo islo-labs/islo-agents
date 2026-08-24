@@ -20,9 +20,14 @@ Sandboxes use `ensure` mode per issue so implement/review/verify can resume acro
 
 Install the Islo Linear integration and select the teams/issues this line should watch.
 
-### 2. Bake prompts into the snapshots
+### 2. Supporting prompt files in the snapshots
 
-Copy this example's `prompts/` directory to `/workspace/prompts/` in the snapshot VMs (see `snapshots/feature-delivery-code/snapshot-src/workspace/prompts/` and the platform snapshot). Agents read those files at run time. Edit and rebake the snapshot when a prompt changes.
+Stage briefs (`implement.md`, `review.md`, `verify.md`) live in each job's `run_agent` prompt so a prompt edit is a new job version. Copy only the supporting notes into `/workspace/prompts/`:
+
+- `integrations.md` → both snapshots
+- `platform-env.md` → `feature-delivery-platform` only
+
+See `snapshots/*/snapshot-src/workspace/prompts/`.
 
 ### 3. Build snapshots
 

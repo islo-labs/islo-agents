@@ -1,6 +1,6 @@
 # Red-team CLI line
 
-Weekly Factory line for **white-box source review** + **black-box CLI adversarial testing**, with optional Linear filing and Slack notification.
+Weekly factory line for **white-box source review** + **black-box CLI adversarial testing**, with optional Linear filing and Slack notification.
 
 ## Stages
 
@@ -16,23 +16,25 @@ All stages use snapshot **`red-team-cli`**. White-box stages need your CLI check
 
 ## Before you deploy
 
-### 1. Bake prompts into the snapshot
+### 1. Bake the shared finding contract into the snapshot
 
-Copy this example's `prompts/` directory to `/workspace/prompts/` in the `red-team-cli` snapshot (see `snapshots/red-team-cli/snapshot-src/workspace/prompts/`).
+Stage briefs live in each job's `run_agent` prompt. Copy only `prompts/finding-contract.md` to `/workspace/prompts/` in the `red-team-cli` snapshot (see `snapshots/red-team-cli/snapshot-src/workspace/prompts/`).
 
 ### 2. Build snapshot `red-team-cli`
 
 See `snapshots/red-team-cli/README.md`. Clone your CLI repo to `/workspace/your-cli/` and copy `snapshot-src/harness/notify.py` before saving the snapshot.
 
-### 3. Factory environment `red-team-cli`
+### 3. factory environment `red-team-cli`
 
-Create a Factory environment named `red-team-cli` with a scoped API key for black-box testing:
+Create a factory environment named `red-team-cli` with a scoped API key for the **target** CLI (not an Islo key):
 
 ```bash
-islo environment patch red-team-cli --secret ISLO_API_KEY=<your-scoped-key>
+islo environment patch red-team-cli --secret TARGET_API_KEY=<your-scoped-key>
 ```
 
-Set `ISLO_BASE_URL` in `jobs/red-team-cli-black-box/job.toml` to your production API URL.
+Set `TARGET_API_URL` in `jobs/red-team-cli-black-box/job.toml` to that CLI's production API URL.
+
+Bake `your-cli` onto `PATH` in the snapshot (the binary the black-box stage runs).
 
 ### 4. Replace placeholders
 

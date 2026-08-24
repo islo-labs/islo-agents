@@ -10,11 +10,7 @@ Scheduled Factory line that scans **product repos in a snapshot**, decides wheth
 
 ## Before you deploy
 
-### 1. Bake the prompt into the snapshot
-
-Copy `prompts/refresh.md` to `/workspace/prompts/` in the `skills-refresh` snapshot.
-
-### 2. Build snapshot `skills-refresh`
+### 1. Build snapshot `skills-refresh`
 
 Bake product repos under `/workspace/` per `snapshots/skills-refresh/snapshot-src/README.md`, then:
 
@@ -22,7 +18,7 @@ Bake product repos under `/workspace/` per `snapshots/skills-refresh/snapshot-sr
 islo snapshot save <your-build-sandbox> --name skills-refresh
 ```
 
-### 3. Configure the job
+### 2. Configure the job
 
 Edit `jobs/weekly-skills-refresh/job.toml` params as needed:
 
@@ -37,7 +33,7 @@ Edit `jobs/weekly-skills-refresh/job.toml` params as needed:
 
 Ensure the sandbox has `gh` available. GitHub credentials are injected by the gateway at sandbox create. Do not bake tokens into the snapshot.
 
-### 4. Deploy
+### 3. Deploy
 
 ```bash
 islo job deploy --path examples/weekly-skills-refresh/jobs/weekly-skills-refresh/job.toml --dry-run
@@ -47,7 +43,7 @@ islo factory line deploy examples/weekly-skills-refresh/line.toml --dry-run
 islo factory line deploy examples/weekly-skills-refresh/line.toml
 ```
 
-### 5. Verify
+### 4. Verify
 
 After the scheduled run or a manual line run:
 
@@ -58,6 +54,6 @@ islo factory line-run events <run-id>
 
 With `publish_mode = pr`, expect a PR on your skills repo. With `report`, expect a summary output only.
 
-### 6. Remove
+### 5. Remove
 
 Delete the deployed line and job from your tenant when you no longer need this example.

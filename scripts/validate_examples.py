@@ -42,10 +42,20 @@ PUBLIC_RUNNER_IMAGES = {
 
 PLACEHOLDER_TOKEN = re.compile(r"REPLACE_WITH_[A-Z_]+")
 
-# Examples still binding prompts through Islo Knowledge. Convert them by baking
-# the prompt files into the snapshot at /workspace/prompts/ and using a literal
-# run_agent prompt that names the file. The set must reach empty.
+# Examples still binding prompts through Islo Knowledge. Convert them by putting
+# the stage brief in run_agent.prompt (job version == prompt version). Supporting
+# or fan-out briefs may stay in the snapshot. The set must reach empty.
 PENDING_PROMPT_SOURCE_MIGRATION = set()
+
+# Prompt files that stay in the snapshot: supporting notes, or many fan-out
+# briefs that would clutter the line/job view. Everything else is inlined into
+# run_agent so job version == prompt version.
+SNAPSHOT_ONLY_PROMPTS = {
+    "feature-delivery": {"integrations.md", "platform-env.md"},
+    "qa": {"web-core.md", "web-platform.md", "cli-cross.md"},
+    "red-team-cli": {"finding-contract.md"},
+}
+
 
 # Only [[run.tasks.steps]] and run_agent are extra="forbid" in the live API, so
 # everything else here is the repo's own gate: a typo'd `memory_mb` deploys
@@ -536,11 +546,18 @@ def validate_prompt_bindings(example_dir: Path, jobs: list[Job], readme_text: st
 
 
 def validate_prompt_policy(example_dir: Path, jobs: list[Job], readme_text: str) -> None:
+    """Stage briefs live in run_agent so job versions change with the prompt.
+
+    Snapshot copies are only for supporting docs, or for many fan-out briefs
+    that would clutter the line/job view (see SNAPSHOT_ONLY_PROMPTS).
+    """
     prompts_dir = example_dir / "prompts"
     prompt_files = sorted(p for p in prompts_dir.iterdir() if p.is_file()) if prompts_dir.is_dir() else []
     exempt = example_dir.name in PENDING_PROMPT_SOURCE_MIGRATION
+    snapshot_only = SNAPSHOT_ONLY_PROMPTS.get(example_dir.name, set())
     literal_prompts: list[str] = []
     checkout_declared = False
+    pointer_re = re.compile(r"/workspace/prompts/([A-Za-z0-9_-]+\.md)")
 
     for job in jobs:
         checkout_declared = checkout_declared or declares_checkout_step(job.doc)
@@ -554,32 +571,57 @@ def validate_prompt_policy(example_dir: Path, jobs: list[Job], readme_text: str)
                 elif binding.get("type") == "knowledge" and not exempt:
                     fail(
                         f"{job.path}: step {step_name!r} {field} binds knowledge slug "
-                        f"{binding.get('slug')!r}; bake the file into the snapshot and use "
-                        f"a literal prompt pointing at /workspace/prompts/"
+                        f"{binding.get('slug')!r}; put the stage brief in a literal "
+                        f"run_agent prompt so the job version tracks the prompt"
                     )
             if exempt:
                 continue
             for item in rows(agent, "knowledge"):
                 if isinstance(item, dict) and item.get("type") == "knowledge":
                     fail(f"{job.path}: step {step_name!r} knowledge binds slug "
-                         f"{item.get('slug')!r}; the template is undeployable until someone "
-                         f"hand-publishes that slug. Bake the file into the snapshot instead")
+                         f"{item.get('slug')!r}; put the brief in run_agent instead")
 
     if checkout_declared:
-        fail(f"{example_dir}: jobs must not git-clone prompts at runtime; bake "
-             f"{example_dir.name}/prompts into the snapshot at /workspace/prompts/")
+        fail(f"{example_dir}: jobs must not git-clone prompts at runtime")
 
     for job in jobs:
         if "REPLACE_WITH_OWNER" in job.text or "checkout-prompts" in job.text:
             fail(f"{job.path}: runtime git clone of customer prompts is not allowed")
 
+    snapshot_copies = {
+        p.name: p
+        for p in example_dir.glob("snapshots/*/snapshot-src/workspace/prompts/*")
+        if p.is_file()
+    }
+
+    joined_literals = "\n".join(literal_prompts)
     for prompt_file in prompt_files:
-        if prompt_file.name in readme_text:
+        body = prompt_file.read_text().strip()
+        inlined = bool(body) and body in joined_literals
+        pointed = any(prompt_file.name == name for name in pointer_re.findall(joined_literals))
+        in_readme = prompt_file.name in readme_text
+        if prompt_file.name in snapshot_only:
+            if prompt_file.name not in snapshot_copies:
+                fail(f"{prompt_file}: marked snapshot-only but missing from "
+                     f"snapshots/*/snapshot-src/workspace/prompts/")
+            else:
+                copy = snapshot_copies[prompt_file.name]
+                if copy.read_text() != prompt_file.read_text():
+                    fail(f"{copy}: diverges from {prompt_file}")
+            if not pointed and not in_readme:
+                fail(f"{prompt_file}: snapshot-only prompt is not referenced by a "
+                     f"job pointer or README.md")
             continue
-        if any(prompt_file.name in prompt for prompt in literal_prompts):
-            continue
-        fail(f"{prompt_file}: unreferenced by any job prompt or by "
-             f"{example_dir / 'README.md'}; it may be stale")
+        if prompt_file.name in snapshot_copies:
+            fail(f"{snapshot_copies[prompt_file.name]}: stage brief belongs in "
+                 f"run_agent, not the snapshot")
+        if not inlined:
+            fail(f"{prompt_file}: stage brief must be inlined into a run_agent "
+                 f"literal so a prompt change is a new job version")
+
+    for name, copy in snapshot_copies.items():
+        if name not in snapshot_only and not any(p.name == name for p in prompt_files):
+            fail(f"{copy}: snapshot prompt has no source in {prompts_dir}")
 
 
 def validate_placeholders(manifests: list[tuple[Path, str]], readme: Path, readme_text: str) -> None:
