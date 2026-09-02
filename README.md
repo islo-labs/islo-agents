@@ -23,6 +23,13 @@ islo factory line deploy examples/pr-review/line.toml
 
 See [examples/pr-review/README.md](examples/pr-review/README.md) for details.
 
+## Factory Manager
+
+Factory Manager is available to every tenant. Each member can enable or disable
+it for their own account without changing another member's setting.
+
+See [Factory Manager](docs/factory-manager.md) for behavior and controls.
+
 ## Examples
 
 | Example | Trigger | Outcome |
