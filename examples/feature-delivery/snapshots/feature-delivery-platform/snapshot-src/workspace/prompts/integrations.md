@@ -42,6 +42,20 @@ curl -s https://api.linear.app/graphql \
   -d '{"query":"mutation { commentCreate(input: { issueId: \"<issue-uuid>\", body: \"Your comment here\" }) { success } }"}'
 ```
 
+## Jira
+
+For work triggered by Jira, reply through the installed Islo Atlassian app:
+```bash
+islo jira comment \
+  --cloud-id "<forge.cloudId from trigger context>" \
+  --issue "PROJ-123" \
+  --body "Your comment here"
+```
+
+Use `--output json` when the job needs the returned Jira comment artifact.
+Include that artifact in the job's final `artifacts` output. This path posts as
+the Islo app and does not require Jira user credentials in the sandbox.
+
 ## Discovering other integrations
 
 Additional service tokens may be available. Check:
