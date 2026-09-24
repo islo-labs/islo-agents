@@ -59,7 +59,7 @@ def is_infrastructure_text(text: str) -> re.Match[str] | None:
 
 FINDINGS = "/workspace/findings.json"
 AGENT_LOG = "/workspace/agent.log"
-TAG = "islo-qa-findings"
+TAG = "qa-findings"
 MIN_EVIDENCE_BYTES = 2048
 
 
@@ -178,7 +178,7 @@ def evidence_excerpt(path: str, kind: str) -> str:
 def main() -> int:
     agent = (os.environ.get("QA_AGENT_ID") or "").strip()
     brief = (os.environ.get("QA_BRIEF_LABEL") or "").strip()
-    target = (os.environ.get("ISLO_BASE_URL") or "").rstrip("/")
+    target = (os.environ.get("QA_BASE_URL") or os.environ.get("ISLO_BASE_URL") or "").rstrip("/")
 
     if agent not in EXPECTED_AGENTS:
         log(f"unexpected QA_AGENT_ID={agent!r}")
@@ -265,8 +265,15 @@ def main() -> int:
         ]
     )
 
+    report_dir = "/workspace/reports"
+    os.makedirs(report_dir, exist_ok=True)
+    report_path = os.path.join(report_dir, f"{agent}.json")
+    with open(report_path, "w", encoding="utf-8") as fh:
+        json.dump(item, fh, separators=(",", ":"))
+    log(f"wrote {report_path}")
+
     stamp = os.environ.get("QA_RUN_STAMP") or datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    identifier = f"islo-qa-{agent}-{stamp}"
+    identifier = f"qa-{agent}-{stamp}"
     body_path = "/workspace/knowledge-body.md"
     with open(body_path, "w", encoding="utf-8") as fh:
         fh.write(body)

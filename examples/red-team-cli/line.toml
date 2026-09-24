@@ -23,12 +23,12 @@ description = "Black box: adversarial CLI testing against your production API (n
 [[stages]]
 id = "validate-and-report"
 job = "red-team-cli-report"
-description = "Re-verify all findings, deduplicate, summarize, and file high-severity Linear issues"
+description = "Reconcile findings, optionally file Linear issues, and emit the Slack message"
 
 [[stages]]
 id = "slack-notify"
 job = "red-team-cli-slack-notify"
-description = "Post line completion summary to Slack"
+description = "Post the reconcile Slack message"
 
 [trigger]
 type = "schedule"
@@ -86,10 +86,6 @@ type = "output"
 stage = "black-box-cli"
 name = "report_json"
 
-[transitions.params.linear_mode]
-type = "literal"
-value = "report"
-
 [[transitions]]
 id = "report-to-slack"
 from = "validate-and-report"
@@ -103,19 +99,10 @@ op = "always"
 type = "literal"
 value = "REPLACE_WITH_YOUR_SLACK_CHANNEL_ID"
 
-[transitions.params.summary]
+[transitions.params.slack_text]
 type = "output"
 stage = "validate-and-report"
-name = "summary"
-
-[transitions.params.linear_issue_urls]
-type = "output"
-stage = "validate-and-report"
-name = "linear_issue_urls"
-
-[transitions.params.line_status]
-type = "literal"
-value = "succeeded"
+name = "slack_text"
 
 [[transitions]]
 id = "slack-to-done"

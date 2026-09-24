@@ -3,12 +3,6 @@ name = "red-team-cli-trust-boundaries"
 version = "0.3.1"
 description = "Red-team trust-boundary review of your CLI (auth, tokens, SSH, update trust)"
 
-[job.params.linear_mode]
-type = "string"
-required = false
-default = "report"
-description = "Passed through the line: create Linear issues downstream or report-only"
-
 [outputs.report_json]
 type = "string"
 required = true

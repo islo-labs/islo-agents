@@ -1,6 +1,9 @@
 [line]
 name = "qa"
-description = "Scheduled black-box QA against your deployed app, then deduplicated reporting"
+description = "Scheduled black-box QA against your deployed app, then a deduplicated Slack message"
+
+[limits]
+timeout = "6h"
 
 [trigger]
 type = "schedule"
@@ -10,12 +13,17 @@ timezone = "UTC"
 [[stages]]
 id = "qa"
 job = "qa"
-description = "Run three parallel QA agents and stage findings"
+description = "Run three parallel QA agents and emit one report JSON each"
 
 [[stages]]
-id = "report"
+id = "collect"
 job = "qa-report"
-description = "Dedupe findings and publish results"
+description = "Dedupe whatever reports arrived and emit a Slack message"
+
+[[stages]]
+id = "slack-notify"
+job = "qa-slack-notify"
+description = "Post the Slack message"
 
 [[transitions]]
 id = "trigger-to-qa"
@@ -27,17 +35,50 @@ type = "conditional"
 op = "always"
 
 [[transitions]]
-id = "qa-to-report"
+id = "qa-to-collect"
 from = "qa"
-to = "report"
+to = "collect"
 type = "conditional"
 
 [transitions.when]
 op = "always"
 
+[transitions.params.cli_cross_report_json]
+type = "output"
+stage = "qa"
+name = "cli_cross_report_json"
+
+[transitions.params.web_core_report_json]
+type = "output"
+stage = "qa"
+name = "web_core_report_json"
+
+[transitions.params.web_platform_report_json]
+type = "output"
+stage = "qa"
+name = "web_platform_report_json"
+
 [[transitions]]
-id = "report-to-done"
-from = "report"
+id = "collect-to-slack"
+from = "collect"
+to = "slack-notify"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.slack_channel_id]
+type = "literal"
+value = "REPLACE_WITH_YOUR_SLACK_CHANNEL_ID"
+
+[transitions.params.slack_text]
+type = "output"
+stage = "collect"
+name = "slack_text"
+
+[[transitions]]
+id = "slack-to-done"
+from = "slack-notify"
 to = "done"
 type = "conditional"
 

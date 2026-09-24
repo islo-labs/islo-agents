@@ -4,7 +4,7 @@
 
 | Path | Contents |
 |------|----------|
-| `/opt/red-team-cli/harness/notify.py` | Post Slack summary |
+| `/opt/red-team-cli/harness/notify.py` | Optional. Posts `SLACK_NOTIFY_TEXT`. The line's slack job inlines the same call and does not use this snapshot. |
 | `/workspace/black-box/transcripts/` | Empty dir for black-box evidence |
 | `/workspace/your-cli/` | Your CLI git checkout (white-box stages) |
 | `PATH` | `your-cli` binary for the black-box stage |

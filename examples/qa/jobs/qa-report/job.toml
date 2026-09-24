@@ -1,7 +1,35 @@
 [job]
 name = "qa-report"
-version = "1.0.0"
-description = "Aggregate QA findings and publish deduplicated results"
+version = "1.1.0"
+description = "Dedupe QA agent reports and emit a Slack message"
+
+[job.params.cli_cross_report_json]
+type = "string"
+required = false
+default = ""
+description = "JSON report string from the cli-cross agent"
+
+[job.params.web_core_report_json]
+type = "string"
+required = false
+default = ""
+description = "JSON report string from the web-core agent"
+
+[job.params.web_platform_report_json]
+type = "string"
+required = false
+default = ""
+description = "JSON report string from the web-platform agent"
+
+[outputs.slack_text]
+type = "string"
+required = true
+description = "Entire Slack message: updates only, plus where a human should look"
+
+[outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable summary of the QA run"
 
 [run]
 fail_fast = true
@@ -21,7 +49,6 @@ disk_gb = 10
 internet_enabled = true
 
 [run.sandbox.env]
-DRY_RUN = "1"
 LOOKBACK_HOURS = "6"
 MAX_ISSUES = "8"
 
@@ -29,5 +56,22 @@ MAX_ISSUES = "8"
 name = "report"
 
 [[run.tasks.steps]]
+name = "prepare-reports"
+exec = ["bash", "-lc", """
+set -euo pipefail
+mkdir -p /workspace/upstream
+cat > /workspace/upstream/web-core.json <<'EOF_WEB_CORE'
+{{web_core_report_json}}
+EOF_WEB_CORE
+cat > /workspace/upstream/web-platform.json <<'EOF_WEB_PLATFORM'
+{{web_platform_report_json}}
+EOF_WEB_PLATFORM
+cat > /workspace/upstream/cli-cross.json <<'EOF_CLI_CROSS'
+{{cli_cross_report_json}}
+EOF_CLI_CROSS
+"""]
+
+[[run.tasks.steps]]
 name = "collect-and-post"
+outputs = ["slack_text", "summary"]
 exec = ["python3", "/opt/qa-harness/agent/collect_and_post.py"]

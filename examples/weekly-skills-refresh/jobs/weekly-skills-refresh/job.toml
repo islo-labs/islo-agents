@@ -1,7 +1,17 @@
 [job]
 name = "weekly-skills-refresh"
-version = "0.6.1"
+version = "0.7.0"
 description = "Review recent product repo changes and refresh your agent skills repository when guidance is stale"
+
+[job.params.org]
+type = "string"
+default = "your-org"
+description = "GitHub organization that owns the product repos baked into the snapshot"
+
+[job.params.repos]
+type = "string"
+default = "auto"
+description = "Reserved for filtering. auto scans every git repo already in the snapshot except the skills checkout."
 
 [job.params.branch_prefix]
 type = "string"
@@ -25,8 +35,8 @@ description = "Target skills repo to refresh (owner/name)"
 
 [job.params.skills_globs]
 type = "string"
-default = "**"
-description = "Space-separated globs (relative to skills repo root) the agent may edit"
+default = "skills/**"
+description = "Space-separated globs (relative to the skills repo root) the agent may edit. Narrow this to the paths agents actually read."
 
 [job.params.commit_message]
 type = "string"
@@ -55,6 +65,8 @@ disk_gb = 20
 internet_enabled = true
 
 [run.sandbox.env]
+ORG = "{{org}}"
+REPOS = "{{repos}}"
 SKILLS_REPO = "{{skills_repo}}"
 SINCE = "{{since}}"
 PUBLISH_MODE = "{{publish_mode}}"
@@ -72,6 +84,69 @@ CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"
 name = "refresh"
 
 [[run.tasks.steps]]
+name = "checkout-skills"
+exec = ["bash", "-lc", """
+set -euo pipefail
+mkdir -p /workspace
+cd /workspace
+if [ ! -d skills/.git ]; then
+  rm -rf skills
+  gh repo clone {{skills_repo}} skills
+else
+  cd skills
+  git checkout main || git checkout master
+  git pull --ff-only
+fi
+"""]
+
+[[run.tasks.steps]]
+name = "collect-changes"
+exec = ["bash", "-lc", """
+set -euo pipefail
+cd /workspace
+export SINCE_ISO=$(date -u -d "{{since}}" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+python3 - <<'PY'
+import json, os, subprocess
+from pathlib import Path
+
+since = os.environ.get("SINCE_ISO") or os.environ.get("SINCE") or "7 days ago"
+repos = []
+seen = set()
+
+def add_repo(root: Path) -> None:
+    if root.name == "skills" or str(root) in seen:
+        return
+    seen.add(str(root))
+    try:
+        log = subprocess.check_output(
+            ["git", "-C", str(root), "log", f"--since={since}", "--pretty=format:%h\\t%s\\t%an\\t%aI", "-n", "100"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if not log:
+            return
+        commits = []
+        for line in log.splitlines():
+            parts = line.split("\\t", 3)
+            if len(parts) != 4:
+                continue
+            sha, msg, author, date = parts
+            commits.append({"sha": sha, "message": msg, "author": author, "date": date})
+        repos.append({"repo": root.name, "path": str(root), "commits": commits})
+    except Exception:
+        return
+
+for pattern in ("*/.git", "*/*/.git"):
+    for gitdir in sorted(Path("/workspace").glob(pattern)):
+        if gitdir.is_dir():
+            add_repo(gitdir.parent)
+
+Path("/workspace/changes.json").write_text(json.dumps({"since": since, "repos": repos}, indent=2) + "\\n")
+print(f"Collected {len(repos)} repos into /workspace/changes.json")
+PY
+"""]
+
+[[run.tasks.steps]]
 name = "refresh"
 
 [run.tasks.steps.run_agent]
@@ -87,49 +162,29 @@ You are running a scheduled **agent skills refresh** Factory job.
 
 Only update skill docs when a product change would cause an agent to **work differently** than the current skill text says.
 
+## Already done
+
+- Skills repo is checked out at `/workspace/skills`.
+- `/workspace/changes.json` lists commits already present in the snapshot's product checkouts. Do not treat a missing remote update as a skill gap. If the snapshot looks stale, say so in `summary` and make no edits.
+
 ## Parameters (sandbox env)
 
 | Variable | Meaning |
 |----------|---------|
-| `SKILLS_REPO` | GitHub `owner/repo` to clone and update |
-| `SINCE` | Lookback window for product commits (e.g. `7 days ago`) |
-| `PUBLISH_MODE` | `pr`, `commit`, or `report` |
-| `BRANCH_PREFIX` | Branch prefix when opening a PR |
+| `ORG` | GitHub org that owns the product repos |
+| `REPOS` | `auto` scans snapshot checkouts. Set a filter only if you extend the collect step. |
+| `SKILLS_REPO` | GitHub `owner/repo` already cloned at `/workspace/skills` |
+| `SINCE` | Lookback window |
+| `PUBLISH_MODE` | `pr`, `commit`, or `report`. A later step publishes. You do not. |
 | `SKILLS_GLOBS` | Space-separated globs you may edit under the skills repo |
-| `COMMIT_MESSAGE` | Git commit message when publishing |
-| `GIT_COMMITTER_NAME` / `GIT_COMMITTER_EMAIL` | Git author |
-
-Product repos are already checked out under `/workspace/` (each with a `.git` directory). Do not treat `/workspace/skills` as a baked product repo.
+| `BRANCH_PREFIX` / `COMMIT_MESSAGE` | Used by the publish step, not by you |
 
 ## Workflow
 
-1. **Checkout skills repo** at `/workspace/skills`:
-   - If missing: `gh repo clone $SKILLS_REPO /workspace/skills`
-   - Else: `git fetch`, checkout `main` or `master`, `git pull --ff-only`
-   - Run `gh auth setup-git` if needed; set `git config user.name` / `user.email` from env
-
-2. **Collect product changes** since `SINCE`:
-   - Walk git repos under `/workspace/` (skip `/workspace/skills`)
-   - For each repo: `git log --since="$SINCE" …` and touched file lists
-   - Keep notes locally; you do not need to write a separate JSON file
-
-3. **Decide what to edit** (see rules below). Make minimal edits only under paths matching `SKILLS_GLOBS`.
-
-4. **Publish** when you changed files:
-   - If no edits: skip git publish
-   - `report`: do not commit or push; note that in output
-   - `commit`: commit on current branch, `git push origin HEAD:main` (or default branch)
-   - `pr`: create branch `$BRANCH_PREFIX/<timestamp>`, commit, push, `gh pr create`
-   - If nothing to commit after edits, skip publish
-
-5. **Return JSON** (required structured output):
-   ```json
-   {
-     "summary": "what you did or why no edits were needed",
-     "files_changed": ["relative/path/under/skills/repo"],
-     "publish_url": "PR or commit URL, or empty string"
-   }
-   ```
+1. Read `/workspace/changes.json` and the skill files those commits might invalidate.
+2. Edit only paths matching `SKILLS_GLOBS`.
+3. Do not commit, push, or open a pull request.
+4. Return `summary`: what you changed, or why no edits were needed.
 
 ## Decision rules
 
@@ -142,3 +197,31 @@ Product repos are already checked out under `/workspace/` (each with a `.git` di
 
 **Default when uncertain:** make **no** file edits.
 ''' }
+
+[[run.tasks.steps]]
+name = "publish"
+exec = ["bash", "-lc", """
+set -euo pipefail
+cd /workspace/skills
+gh auth setup-git
+git config user.email "factory-agent@users.noreply.github.com"
+git config user.name "Factory Agent"
+if git diff --cached --quiet && git diff --quiet; then
+  echo "No changes to publish" | tee /workspace/publish-result.txt
+  exit 0
+fi
+BRANCH="{{branch_prefix}}/$(date -u +%Y-%m-%d-%H%M%S)"
+git checkout -b "$BRANCH"
+git add -A
+git commit -m "{{commit_message}}"
+if [ "{{publish_mode}}" = "commit" ]; then
+  git push origin HEAD:main
+  URL="https://github.com/{{skills_repo}}/commit/$(git rev-parse HEAD)"
+elif [ "{{publish_mode}}" = "pr" ]; then
+  git push -u origin "$BRANCH"
+  URL=$(gh pr create --repo {{skills_repo}} --title "Skills refresh $(date -u +%Y-%m-%d)" --body "Automated refresh from product changes over {{since}}." --head "$BRANCH")
+else
+  URL="report-only"
+fi
+echo "$URL" | tee /workspace/publish-result.txt
+"""]

@@ -1,0 +1,111 @@
+[line]
+name = "designer-line"
+description = "Design a UI request in a retained Storybook sandbox and reply with a public share. Publish is a later steer of the same stage."
+category = "design"
+
+[trigger]
+type = "manual"
+
+[limits]
+max_iterations = 12
+timeout = "24h"
+
+[agent.instructions]
+type = "literal"
+value = """
+This line is started with work_key, task, and origin. origin is
+slack:<channel-id>:<thread-ts>.
+
+work_key must match ^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$. Slack thread_ts
+contains dots. Replace them (for example slack-C123-1710000000-000100).
+Preserve the sandbox designer-<work_key>. Do not start a second run for the
+same origin thread.
+
+Happy path: design succeeds with design_result=ready, then the run completes.
+That is the park. Do not use a routing wait. Do not stop the run unless the
+human asked to pause work.
+
+When a follow-up arrives, always steer design. Pass work_key, task, origin,
+and the complete message in resume_prompt. resume_prompt is the only channel
+into the design agent. There is no publish stage.
+
+- Iterate, tweak, redo, or a new visual note. resume_prompt is that note.
+  The default resume already says not to open a pull request.
+- Please publish, ship it, open the PR. resume_prompt must say to publish:
+  commit, push, and gh pr create. Do not agent-turn. Steer design. The first
+  visit of a stage ignores resume_prompt. A later visit applies it.
+- Stop, never mind, cancel. Cancel the run only when they want it dead.
+  Prefer leaving it succeeded so a later ask can still steer.
+
+If design_result=blocked, retry design once when the blocker is transient
+(Storybook or the share URL). Otherwise ask the human one question on origin.
+
+Never skip reporting. A started stage is not a finished share.
+"""
+
+[[stages]]
+id = "design"
+job = "designer-design"
+description = "Prep starts Storybook and the share. The agent designs against the live URL. Publish is a later resume of this stage."
+
+[[transitions]]
+id = "trigger-to-design"
+from = "trigger"
+to = "design"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.origin]
+type = "input"
+name = "origin"
+
+[transitions.params.task]
+type = "input"
+name = "task"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
+[[transitions]]
+id = "design-ready"
+from = "design"
+to = "done"
+type = "conditional"
+
+[transitions.when]
+left = { type = "stage", path = "$.outputs.design_result" }
+op = "eq"
+right = { type = "literal", value = "ready" }
+
+[[transitions]]
+id = "design-blocked"
+from = "design"
+type = "agentic"
+
+[transitions.instructions]
+type = "literal"
+value = """
+design_result was not ready. Retry design if the blocker is transient.
+Cancel remains a reserved line control. Publish is also a steer of design,
+only after a ready park and a human asking to ship.
+"""
+
+[[transitions.options]]
+name = "retry-design"
+to = "design"
+label = "Retry design"
+
+[transitions.options.params.origin]
+type = "input"
+name = "origin"
+
+[transitions.options.params.task]
+type = "input"
+name = "task"
+
+[transitions.options.params.work_key]
+type = "input"
+name = "work_key"

@@ -81,8 +81,8 @@ JOB_SECTION_KEYS = {
     "run.tasks[].steps[]": {"name", "timeout", "user", "workdir",
                             "exec", "pause", "resume", "delete", "snapshot", "run_agent",
                             "upload", "download", "outputs"},
-    "run.tasks[].steps[].run_agent": {"mode", "harness", "model", "prompt", "resume_prompt",
-                                      "knowledge", "session", "command"},
+    "run.tasks[].steps[].run_agent": {"mode", "harness", "model", "model_provider", "effort",
+                                      "prompt", "resume_prompt", "knowledge", "session", "command"},
 }
 
 JOB_SECTION_COLLECTIONS = {
@@ -498,10 +498,11 @@ def check_binding(path: Path, edge: Edge, param: str, binding: object,
             fail(f"{path}: {where} reads output {name!r}, which stage {stage!r} job "
                  f"{job.name!r} does not declare")
     elif binding_type == "input":
-        name = binding.get("name")
-        if trigger_outputs and name not in trigger_outputs:
-            fail(f"{path}: {where} reads trigger input {name!r}, which [trigger.outputs] "
-                 f"does not declare")
+        # Line inputs are the entry stage's params. An integration trigger maps
+        # only the event fields it has; manual runs and later stages still pass
+        # the other params (task, origin, pull_requests) with type = "input".
+        # trigger_outputs is intentionally not required to list those names.
+        _ = trigger_outputs
 
 
 def validate_contracts(path: Path, doc: dict, edges: list[Edge],
