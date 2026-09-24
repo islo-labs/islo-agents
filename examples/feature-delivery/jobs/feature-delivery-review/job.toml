@@ -5,14 +5,33 @@ description = "Review every pull request in a feature as one aggregate change"
 
 [job.params.issue_id]
 type = "string"
-required = true
-description = "Linear issue identifier or UUID"
+required = false
+default = ""
+description = "Linear issue identifier when this work is ticket-backed. Empty for standalone work, which takes requirements from task."
 
 [job.params.pull_requests]
 type = "array"
 items = "string"
 required = true
 description = "Complete list of GitHub pull request URLs for the feature"
+
+[job.params.resume_prompt]
+type = "string"
+required = false
+default = "The pull requests have been updated. Review the latest changes across all PRs."
+description = "Complete instruction for a resumed review stage. Ignored on the first visit."
+
+[job.params.task]
+type = "string"
+required = false
+default = ""
+description = "Verbatim requirement text when there is no ticket. Leave empty when issue_id is set."
+
+[job.params.work_key]
+type = "string"
+required = true
+pattern = "^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$"
+description = "Stable identity for this unit of work. Names the sandbox and agent session. Identity only."
 
 [outputs.review_result]
 type = "string"
@@ -28,7 +47,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "feature-delivery-review-{{issue_id}}"
+name = "feature-delivery-review-{{work_key}}"
 image = "ghcr.io/islo-labs/islo-runner:latest"
 snapshot_name = "feature-delivery-code"
 vcpus = 4
@@ -49,16 +68,25 @@ timeout = 7200
 
 [run.tasks.steps.run_agent]
 mode = "session"
-harness = "claude"
-model = "claude-sonnet-4-5"
+harness = "codex"
+model = "openai/gpt-6-sol"
+model_provider = "islo_inference"
+effort = "medium"
 prompt = { type = "literal", value = '''
 You are reviewing these pull requests as one coherent feature:
 
 {{pull_requests}}
 
-They implement Linear issue {{issue_id}}.
+Work key (identity only): {{work_key}}
+Ticket id (empty for standalone work): {{issue_id}}
 
-You are inside an isolated sandbox VM with full root access. You can install packages, start services, run databases, build and run the app. This is your sandbox, use it freely. This sandbox persists across review rounds for this issue, so checkouts from an earlier round may already be on disk. Re-fetch every PR head instead of trusting what you find there.
+Standalone requirement (empty when a ticket id is set):
+
+<task>
+{{task}}
+</task>
+
+You are inside an isolated sandbox VM with full root access. You can install packages, start services, run databases, build and run the app. This is your sandbox, use it freely. This sandbox persists across review rounds for this work key, so checkouts from an earlier round may already be on disk. Re-fetch every PR head instead of trusting what you find there.
 
 ## Acknowledge start
 
@@ -72,7 +100,7 @@ done
 
 ## Instructions
 
-1. **Understand the full change.** Read the Linear issue so you can judge whether the feature does what was actually asked for. Fetch every PR from GitHub and inspect its current head, diff, checks, existing threads, and cross-repository assumptions. Review all URLs before deciding.
+1. **Understand the full change.** Read the ticket, or `<task>` when there is no ticket, so you can judge whether the feature does what was actually asked for. Fetch every PR from GitHub and inspect its current head, diff, checks, existing threads, and cross-repository assumptions. Review all URLs before deciding.
 
    ```bash
    gh pr view <pr-url> --json title,body,headRefName,reviews,comments
@@ -118,8 +146,11 @@ Return `approved` only when every PR passes and the combined feature is consiste
 
 Also follow the gateway credential notes in /workspace/prompts/integrations.md.
 ''' }
-resume_prompt = { type = "literal", value = "The pull requests have been updated. Review the latest changes across all PRs." }
-session = "feature-delivery-review-{{issue_id}}"
+resume_prompt = { type = "literal", value = """Current pull requests: {{pull_requests}}
+
+{{resume_prompt}}
+""" }
+session = "feature-delivery-review-{{work_key}}"
 
 [[run.tasks.steps]]
 name = "pause-sandbox"

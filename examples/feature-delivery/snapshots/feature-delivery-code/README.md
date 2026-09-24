@@ -1,6 +1,6 @@
 # Snapshot contract: `feature-delivery-code`
 
-Code sandbox for **implement** and **review** stages. Repos persist across iterations on the same Linear issue.
+Code sandbox for **implement** and **review** stages. Repos persist across iterations on the same `work_key`.
 
 ## Layout (after bake)
 
@@ -15,4 +15,4 @@ Copy `snapshot-src/workspace/prompts/` into `/workspace/prompts/`, clone each re
 islo snapshot save <your-build-sandbox> --name feature-delivery-code
 ```
 
-The implement and review agents use `ensure` sandboxes named per issue so checkouts survive review loops.
+The implement and review agents use `ensure` sandboxes named per `work_key` so checkouts survive review loops.

@@ -6,9 +6,9 @@ Collector snapshot for deduplicating and publishing QA findings.
 
 | Path | Contents |
 |------|----------|
-| `/opt/qa-harness/agent/collect_and_post.py` | Read staged knowledge, dedupe, publish results |
+| `/opt/qa-harness/agent/collect_and_post.py` | Read upstream JSON (or `qa-findings` knowledge), dedupe, write `slack_text` |
 | `/opt/qa-harness/agent/infra_classify.py` | Classification helpers |
-| `/opt/qa-harness/agent/slack_upload.py` | Optional Slack notifications |
+| `/opt/qa-harness/agent/slack_upload.py` | Unused by this line. `qa-slack-notify` posts `slack_text`. |
 
 Copy `snapshot-src/agent/` to `/opt/qa-harness/agent/` on a build VM, then:
 

@@ -1,7 +1,7 @@
 [job]
-name = "red-team-cli-slack-notify"
-version = "0.3.0"
-description = "Post the reconcile Slack message"
+name = "qa-slack-notify"
+version = "1.0.0"
+description = "Post the QA Slack message"
 
 [job.params.slack_channel_id]
 type = "string"
@@ -11,7 +11,7 @@ description = "Slack channel ID for chat.postMessage"
 [job.params.slack_text]
 type = "string"
 required = true
-description = "Entire Slack message from validate-and-report"
+description = "Entire Slack message from the collector"
 
 [run]
 fail_fast = true

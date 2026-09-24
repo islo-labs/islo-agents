@@ -51,6 +51,15 @@ Edit the prompt literal in `jobs/pr-review/job.toml` to match your team's review
 
 Delete the deployed line and job from your tenant when you no longer need this example.
 
+## Adoption notes for agents
+
+Read this before copying the line into a tenant.
+
+- This is the one-stage line. It reviews a newly opened PR and stops. It does not implement, re-review, or share a sandbox with feature-delivery.
+- Replace `REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY` in `line.toml`. The selector is the trust boundary. Fork PR text is untrusted input.
+- The prompt is a literal in `jobs/pr-review/job.toml`. Edit that file and redeploy the job before the line picks up new review rules.
+- Harness is Claude (`claude-sonnet-4-5`) through your connected Claude account. Change `harness` and `model` if you want a different provider. Do not point the job at a private snapshot name.
+
 ## Limitations
 
 - Only `pull_request.opened` is wired. Reopened or updated PRs do not retrigger this line until you extend the trigger.

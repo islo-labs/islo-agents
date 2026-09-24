@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collector stage: gather agent reports, gate, dedupe, and notify Slack."""
+"""Collector stage: gather agent reports, dedupe, and emit slack_text."""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import infra_classify as ic  # noqa: E402
-import slack_upload  # noqa: E402
 
 SEVERITY_EMOJI = {
     "critical": ":red_circle:",
@@ -23,7 +22,13 @@ SEVERITY_EMOJI = {
     "low": ":white_circle:",
 }
 
-TAG = "islo-qa-findings"
+TAG = "qa-findings"
+
+UPSTREAM_FILES = (
+    ("web-core.json", "qa-agent-web-core"),
+    ("web-platform.json", "qa-agent-web-platform"),
+    ("cli-cross.json", "qa-agent-cli-cross"),
+)
 REPORT_FENCE = re.compile(r"```qa_report\s*(.*?)```", re.S)
 DUPLICATE_SIMILARITY = 0.55
 
@@ -120,6 +125,50 @@ def collect_reports(lookback_hours: int) -> list[dict]:
     return reports
 
 
+def load_upstream_reports() -> list[dict]:
+    """Reports passed in by the QA stage, one JSON file per agent."""
+    root = "/workspace/upstream"
+    reports: list[dict] = []
+    if not os.path.isdir(root):
+        return reports
+    for name, agent in UPSTREAM_FILES:
+        path = os.path.join(root, name)
+        if not os.path.isfile(path):
+            continue
+        raw = open(path, encoding="utf-8").read().strip()
+        if not raw:
+            log(f"skip {name}: empty")
+            continue
+        try:
+            report = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            log(f"skip {name}: invalid JSON ({exc})")
+            continue
+        if not isinstance(report, dict):
+            log(f"skip {name}: not an object")
+            continue
+        report.setdefault("agent", agent)
+        report["_identifier"] = ""
+        reports.append(report)
+        log(
+            f"read {name}: agent={report.get('agent')} run_ok={report.get('run_ok')} "
+            f"findings={len(report.get('findings') or [])}"
+        )
+    return reports
+
+
+def emit_outputs(slack_text: str, summary: str) -> None:
+    path = (os.environ.get("ISLO_OUTPUT") or "").strip()
+    if not path or path == "/dev/null":
+        log("ISLO_OUTPUT unset; slack_text follows")
+        print(slack_text)
+        return
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("slack_text=" + json.dumps(slack_text) + "\n")
+        fh.write("summary=" + json.dumps(summary) + "\n")
+    log(f"wrote slack_text and summary to {path}")
+
+
 def gate(reports: list[dict], max_findings: int):
     reasons: list[str] = []
     if not reports:
@@ -197,10 +246,6 @@ def consume_reports(reports: list[dict]) -> None:
         log(f"consumed {r['_identifier']}: delete rc={proc.returncode}")
 
 
-def slack_channel() -> str:
-    return (os.environ.get("SLACK_CHANNEL") or os.environ.get("SLACK_CHANNEL_ID") or "").strip()
-
-
 def condense(text: str | None, limit: int) -> str:
     value = " ".join((text or "").split())
     if len(value) <= limit:
@@ -250,7 +295,7 @@ def build_slack_message(
     exit_code: int,
 ) -> str:
     run_id = os.environ.get("ISLO_LINE_RUN_ID") or os.environ.get("ISLO_RUN_ID") or "manual"
-    lines = ["*Islo QA: automated run complete*"]
+    lines = ["*QA: automated run complete*"]
 
     if exit_code == 0:
         lines.append(":white_check_mark: Collector finished successfully.")
@@ -294,74 +339,16 @@ def build_slack_message(
     lines += [
         "",
         f"Run id: `{run_id}`",
-        "_Exploratory QA against the local fullstack environment. Triage severities before acting._",
+        "_Exploratory QA against the deployed app. Triage severities before acting._",
     ]
     return "\n".join(lines)
-
-
-def collect_recording_files(findings: list[dict]) -> list[tuple[str, bytes, str]]:
-    files: list[tuple[str, bytes, str]] = []
-    for finding in findings:
-        file_id = (finding.get("slack_file_id") or "").strip()
-        if not file_id:
-            continue
-        title = str(finding.get("title") or "Screen recording")
-        content, filename = slack_upload.download_file(file_id)
-        files.append((filename, content, title))
-    return files
-
-
-def post_findings_to_slack(
-    findings: list[dict],
-    reports: list[dict],
-) -> bool:
-    channel = slack_channel()
-    if not channel:
-        log("SLACK_CHANNEL is not set, skipping Slack notification")
-        return False
-
-    summary = build_slack_message(
-        gate_open=True,
-        gate_reasons=[],
-        reports=reports,
-        findings=findings,
-        targets=sorted({r.get("target") for r in reports if r.get("target")}),
-        capped_from=len(findings),
-        slack_posted=True,
-        exit_code=0,
-    )
-
-    recordings = collect_recording_files(findings)
-    if recordings:
-        slack_upload.share_files_to_channel(
-            channel,
-            recordings,
-            initial_comment=summary,
-        )
-        log(f"posted Slack summary with {len(recordings)} recording(s) to {channel}")
-    else:
-        resp = slack_upload.post_message(channel, summary)
-        log(f"posted Slack summary to {channel} ts={resp.get('ts')}")
-    return True
-
-
-def notify_slack(message: str) -> None:
-    channel = slack_channel()
-    if not channel:
-        log("SLACK_CHANNEL is not set, skipping Slack notification")
-        return
-    try:
-        resp = slack_upload.post_message(channel, message)
-        log(f"posted Slack summary to {channel} ts={resp.get('ts')}")
-    except slack_upload.SlackError as exc:
-        log(f"Slack notification failed: {exc}")
 
 
 def main() -> int:
     lookback = int(os.environ.get("LOOKBACK_HOURS") or "6")
     max_findings = int(os.environ.get("MAX_ISSUES") or os.environ.get("MAX_FINDINGS") or "8")
 
-    log(f"lookback={lookback}h max_findings={max_findings} slack_channel={slack_channel() or '(unset)'}")
+    log(f"lookback={lookback}h max_findings={max_findings}")
 
     reports: list[dict] = []
     gate_open = False
@@ -374,25 +361,26 @@ def main() -> int:
     crash_error: str | None = None
 
     try:
-        reports = collect_reports(lookback)
+        upstream = load_upstream_reports()
+        if upstream:
+            log(f"using {len(upstream)} upstream report(s); skipping knowledge lookback")
+            reports = upstream
+        else:
+            reports = collect_reports(lookback)
         gate_open, gate_reasons, findings, targets, capped_from = gate(reports, max_findings)
 
         if not gate_open:
-            log("NOTIFY GATE CLOSED, nothing posted beyond the summary:")
+            log("NOTIFY GATE CLOSED:")
             for r in gate_reasons:
                 log(f"  - {r}")
         else:
             log(f"gate open: {len(findings)} finding(s) for {targets}")
-            if dry_run_enabled():
-                log("DRY_RUN enabled, skipping Slack post and knowledge consume")
+            if upstream:
+                log("upstream handoff; leaving knowledge items untouched")
+            elif dry_run_enabled():
+                log("DRY_RUN enabled, leaving knowledge items in place")
             else:
-                try:
-                    slack_posted = post_findings_to_slack(findings, reports)
-                    if slack_posted:
-                        consume_reports(reports)
-                except slack_upload.SlackError as exc:
-                    log(f"Slack post failed. Knowledge items left for inspection: {exc}")
-                    exit_code = 1
+                consume_reports([r for r in reports if r.get("_identifier")])
 
         return exit_code
     except Exception as exc:  # noqa: BLE001
@@ -417,11 +405,8 @@ def main() -> int:
             print("\n" + "=" * 72, flush=True)
             print(message, flush=True)
             print("=" * 72, flush=True)
-            if not slack_posted:
-                if dry_run_enabled():
-                    log("DRY_RUN enabled, skipping Slack notification")
-                else:
-                    notify_slack(message)
+            summary = message if len(message) <= 1500 else message[:1499] + "…"
+            emit_outputs(message, summary)
 
 
 if __name__ == "__main__":

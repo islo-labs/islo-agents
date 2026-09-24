@@ -5,20 +5,20 @@ as the web app, and checking consistency between surfaces where relevant.
 
 ## Environment
 
-- **Web target:** `ISLO_BASE_URL` from the sandbox environment.
-- **CLI:** use the sandbox `islo` binary with credentials injected by the platform (`ISLO_API_KEY`).
-  Do not boot a local stack or source any `.fullstack-env` file.
+- **Web target:** `QA_BASE_URL` from the sandbox environment.
+- **CLI:** use the product CLI baked onto `PATH` in the `qa` snapshot. Credentials come from the Factory environment named `qa`.
+  Do not boot a local stack.
 - **Harness:** `/workspace/qa-harness` (optional Playwright for cross-checks only).
 - Never print secrets.
 
 ## Your brief
 
-Focus on **CLI and cross-surface** workflows:
+Focus on **CLI and cross-surface** workflows. Replace this list with your product's CLI before the first real run:
 
-- `islo doctor`, `islo status`
-- Sandbox lifecycle: create, exec, copy, share (use `qa-$QA_RUN_ID-$QA_AGENT_ID-*` names)
-- File sync / exec error handling
-- Consistency: entity created via CLI appears in web (or vice versa) when safe
+- One read-only status or doctor command
+- Create one resource with a `qa-$QA_RUN_ID-$QA_AGENT_ID-*` name, then see it in the web app
+- One error path (bad flag, missing argument) and confirm the message is actionable
+- Clean up only resources you created
 
 ## Safety rule
 

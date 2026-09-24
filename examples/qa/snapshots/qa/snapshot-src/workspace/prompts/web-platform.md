@@ -5,19 +5,19 @@ Act like an IT engineer trying the product for the first time. Find real bugs an
 
 ## Environment
 
-- **Target:** `ISLO_BASE_URL` from the sandbox environment (deployed app URL).
+- **Target:** `QA_BASE_URL` from the sandbox environment (deployed app URL).
 - **Harness:** `/workspace/qa-harness`, a minimal Playwright workspace (no baked login flow).
-- **Credentials:** `ISLO_API_KEY` from the Factory environment. Use the `islo` CLI when you need authenticated API access. Never print secrets.
+- **Credentials:** whatever the Factory environment named `qa` injects. Never print secrets.
 - Read `README.md` in the harness first.
 
 ## Your brief
 
-Focus on **web platform** surfaces:
+Focus on **web platform** surfaces. Replace this list with your product's settings and admin flows before the first real run:
 
 - Settings pages and preference persistence (refresh and confirm values stick)
 - Deep links and URL robustness (refresh, back/forward, invalid ids)
-- Factory lines, jobs, and run history UI
-- Environments, gateway profiles, webhooks, and integrations pages
+- Admin or configuration pages a signed-in user can reach
+- One cross-link from a settings page back to the main object
 
 ## Safety rule
 

@@ -1,7 +1,7 @@
 [job]
 name = "red-team-cli-report"
 version = "0.4.1"
-description = "Validate red-team findings and file deduplicated high-severity Linear issues"
+description = "Reconcile red-team findings, optionally file Linear issues, and write the Slack message"
 
 [job.params.trust_boundaries_report_json]
 type = "string"
@@ -24,20 +24,20 @@ required = false
 default = "report"
 description = "create files Linear issues; report validates only"
 
-[outputs.summary]
-type = "string"
-required = true
-description = "Human-readable run summary"
-
 [outputs.report_json]
 type = "string"
 required = true
 description = "Minified combined validation report JSON"
 
-[outputs.linear_issue_urls]
+[outputs.slack_text]
 type = "string"
 required = true
-description = "JSON array string of Linear issue URLs created (or [])"
+description = "Entire Slack message: updates only, plus where a human should look"
+
+[outputs.summary]
+type = "string"
+required = true
+description = "Human-readable run summary"
 
 [run]
 fail_fast = true
@@ -147,9 +147,9 @@ Write `/workspace/red-team-run-report.json`:
 
 Set job outputs:
 
-- **`summary`**: 2–6 sentence run summary (counts validated high, filed, skipped, rejected).
+- **`summary`**: 2-6 sentence run summary (counts validated high, filed, skipped, rejected).
 - **`report_json`**: minified JSON string of the combined report above.
-- **`linear_issue_urls`**: JSON array string of created issue URLs (empty array `[]` when `linear_mode=report` or nothing filed).
+- **`slack_text`**: the entire Slack message for this run. Updates only (new or changed high findings), plus Linear URLs when you filed any. Do not paste the raw JSON. This string is what the next stage posts, unchanged.
 
 ## Linear filing (`linear_mode=create` only)
 

@@ -6,27 +6,27 @@ not pass/fail checklists.
 
 ## Environment
 
-- **Target:** `ISLO_BASE_URL` from the sandbox environment (deployed app URL, not localhost).
+- **Target:** `QA_BASE_URL` from the sandbox environment (deployed app URL, not localhost).
 - **Harness:** `/workspace/qa-harness`, a minimal Playwright workspace (no baked login flow).
-- **Credentials:** `ISLO_API_KEY` from the Factory environment. Use the `islo` CLI for authenticated API work. Never print secrets.
+- **Credentials:** whatever the Factory environment named `qa` injects. Never print secrets.
 - Run tests: `cd /workspace/qa-harness && npx playwright test <file>` (run `npm install && npx playwright install chromium` once if needed).
 - Read `README.md` in the harness first.
 - Do not boot a local stack.
 
 ## Your brief
 
-Focus on **web core** workflows:
+Focus on **web core** workflows. Replace this list with your product's primary flows before the first real run:
 
 - Login and session persistence
-- Primary navigation (sidebar, top-level routes)
-- Sandbox creation, detail view, lifecycle (start/stop/delete where safe)
-- Terminal and share links behaviour on a sandbox you created
+- Primary navigation
+- Create, open, and update the main object a new user would touch
+- One happy path and one empty or error state
 
 Stay inside your brief. Other areas are covered by parallel agents.
 
 ## Safety rule
 
-Use `qa-$QA_RUN_ID-$QA_AGENT_ID-*` prefixes for any sandboxes or resources you create (from env `QA_RUN_ID`).
+Use `qa-$QA_RUN_ID-$QA_AGENT_ID-*` prefixes for any resources you create (from env `QA_RUN_ID`).
 No billing, impersonation, or destructive org-wide changes.
 
 ## Output
@@ -99,7 +99,7 @@ Provide **either** `video` (web) or `transcript` (cli), not both.
   "run_ok": true,
   "agent": "qa-agent-web-core",
   "target": "https://your-app.example.com",
-  "coverage": "Login, sidebar navigation, sandbox list and detail.",
+  "coverage": "Login, primary navigation, and the main create flow.",
   "findings": []
 }
 ```

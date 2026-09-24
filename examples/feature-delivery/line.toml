@@ -1,6 +1,6 @@
 [line]
 name = "feature-delivery"
-description = "Implement, review, and verify one Linear issue across its complete pull-request set"
+description = "Implement, review, and verify one Linear issue or standalone task across its complete pull-request set"
 category = "engineering"
 
 [trigger]
@@ -25,6 +25,7 @@ operand = { type = "trigger", path = "$.updatedFrom.labelIds" }
 
 [trigger.outputs]
 issue_id = { type = "trigger_path", path = "trigger.raw.data.identifier" }
+work_key = { type = "trigger_path", path = "trigger.raw.data.identifier" }
 
 [limits]
 max_iterations = 20
@@ -33,18 +34,28 @@ timeout = "24h"
 [agent.instructions]
 type = "literal"
 value = """
-Preserve completed work and inspect the Linear issue, every linked pull
+Preserve completed work and inspect the work request, every linked pull
 request, the failed stage result, and recent line events before deciding.
+
+The work request arrives as run params. work_key is identity only. It names
+the sandbox and session and is never a requirements source. issue_id
+non-empty means the run is ticket-backed: the tracker holds the requirements
+and is the reporting channel. task non-empty means standalone work: task is
+the verbatim requirement. origin is slack:<channel-id>:<thread-ts> for
+standalone reporting. Leave origin empty on ticket-backed runs. Exactly one
+of issue_id or task must be non-empty.
+
 Retry the current stage only when the blocker is transient or external state
 has changed enough to make another attempt useful. Cancel when requirements
 conflict, required access or input is unavailable, the same root cause keeps
 failing, or continuing could damage customer work. Explain the evidence for
 the choice and do not retry merely to exhaust the iteration limit.
 
-When steering a stage to do specific work, pass the complete instruction with
---param resume_prompt='<complete instruction>'. Do not assume the steering
-reason reaches the stage agent through other context. Omit resume_prompt only
-when the stage default follow-up prompt is the intended instruction.
+When steering a stage, pass the complete instruction with
+--param resume_prompt='<complete instruction>'. The steering reason does not
+reach the stage agent through other context. Omit resume_prompt only when
+the stage default follow-up prompt is the intended instruction. The first
+visit of a stage ignores resume_prompt.
 """
 
 [[stages]]
@@ -72,6 +83,22 @@ op = "always"
 type = "input"
 name = "issue_id"
 
+[transitions.params.origin]
+type = "input"
+name = "origin"
+
+[transitions.params.pull_requests]
+type = "input"
+name = "pull_requests"
+
+[transitions.params.task]
+type = "input"
+name = "task"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
 [[transitions]]
 id = "implementation-ready"
 from = "implement"
@@ -92,6 +119,14 @@ type = "output"
 stage = "implement"
 name = "pull_requests"
 
+[transitions.params.task]
+type = "input"
+name = "task"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
+
 [[transitions]]
 id = "implement-blocked-route"
 from = "implement"
@@ -100,12 +135,14 @@ type = "agentic"
 [transitions.instructions]
 type = "literal"
 value = """
-The implementation stage returned `blocked`. Choose whether to retry
-implementation after the blocker clears, or cancel the line run.
+No conditional transition matched after implement. Retry implement when the
+blocker is transient. Cancel remains a reserved line control, so do not add
+it as an option. A blocked retry receives the pull_requests that entered the
+stage, not a new list from the failed attempt.
 """
 
 [[transitions.options]]
-name = "retry"
+name = "retry-stage"
 to = "implement"
 label = "Retry implementation"
 
@@ -113,15 +150,21 @@ label = "Retry implementation"
 type = "input"
 name = "issue_id"
 
+[transitions.options.params.origin]
+type = "input"
+name = "origin"
+
 [transitions.options.params.pull_requests]
-type = "output"
-stage = "implement"
+type = "input"
 name = "pull_requests"
 
-[[transitions.options]]
-name = "cancel-run"
-to = "done"
-label = "Cancel line run"
+[transitions.options.params.task]
+type = "input"
+name = "task"
+
+[transitions.options.params.work_key]
+type = "input"
+name = "work_key"
 
 [[transitions]]
 id = "review-approved"
@@ -134,14 +177,31 @@ left = { type = "stage", path = "$.outputs.review_result" }
 op = "eq"
 right = { type = "literal", value = "approved" }
 
+[transitions.params.acceptance_criteria]
+type = "output"
+stage = "implement"
+name = "acceptance_criteria"
+
 [transitions.params.issue_id]
 type = "input"
 name = "issue_id"
+
+[transitions.params.origin]
+type = "input"
+name = "origin"
 
 [transitions.params.pull_requests]
 type = "output"
 stage = "implement"
 name = "pull_requests"
+
+[transitions.params.task]
+type = "input"
+name = "task"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
 
 [[transitions]]
 id = "review-needs-changes"
@@ -159,10 +219,22 @@ right = { type = "literal", value = "needs_changes" }
 type = "input"
 name = "issue_id"
 
+[transitions.params.origin]
+type = "input"
+name = "origin"
+
 [transitions.params.pull_requests]
 type = "output"
 stage = "implement"
 name = "pull_requests"
+
+[transitions.params.task]
+type = "input"
+name = "task"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
 
 [[transitions]]
 id = "review-blocked-route"
@@ -172,12 +244,12 @@ type = "agentic"
 [transitions.instructions]
 type = "literal"
 value = """
-The review stage returned `blocked`. Choose whether to retry review after
-missing context or infrastructure is available, or cancel the line run.
+No conditional transition matched after review. Retry review when missing
+context or infrastructure is transient. Cancel remains a reserved line control.
 """
 
 [[transitions.options]]
-name = "retry"
+name = "retry-stage"
 to = "review"
 label = "Retry review"
 
@@ -190,10 +262,13 @@ type = "output"
 stage = "implement"
 name = "pull_requests"
 
-[[transitions.options]]
-name = "cancel-run"
-to = "done"
-label = "Cancel line run"
+[transitions.options.params.task]
+type = "input"
+name = "task"
+
+[transitions.options.params.work_key]
+type = "input"
+name = "work_key"
 
 [[transitions]]
 id = "verification-passed"
@@ -222,10 +297,22 @@ right = { type = "literal", value = "failed" }
 type = "input"
 name = "issue_id"
 
+[transitions.params.origin]
+type = "input"
+name = "origin"
+
 [transitions.params.pull_requests]
 type = "output"
 stage = "implement"
 name = "pull_requests"
+
+[transitions.params.task]
+type = "input"
+name = "task"
+
+[transitions.params.work_key]
+type = "input"
+name = "work_key"
 
 [[transitions]]
 id = "verify-blocked-route"
@@ -235,26 +322,38 @@ type = "agentic"
 [transitions.instructions]
 type = "literal"
 value = """
-The verification stage returned `blocked`. Choose whether to retry
-verification after infrastructure or credentials are available, or cancel
-the line run.
+No conditional transition matched after verify. Retry verify when
+infrastructure or credentials are transiently unavailable. Cancel remains a
+reserved line control.
 """
 
 [[transitions.options]]
-name = "retry"
+name = "retry-stage"
 to = "verify"
 label = "Retry verification"
+
+[transitions.options.params.acceptance_criteria]
+type = "output"
+stage = "implement"
+name = "acceptance_criteria"
 
 [transitions.options.params.issue_id]
 type = "input"
 name = "issue_id"
+
+[transitions.options.params.origin]
+type = "input"
+name = "origin"
 
 [transitions.options.params.pull_requests]
 type = "output"
 stage = "implement"
 name = "pull_requests"
 
-[[transitions.options]]
-name = "cancel-run"
-to = "done"
-label = "Cancel line run"
+[transitions.options.params.task]
+type = "input"
+name = "task"
+
+[transitions.options.params.work_key]
+type = "input"
+name = "work_key"

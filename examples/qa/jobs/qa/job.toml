@@ -9,6 +9,21 @@ required = false
 default = "https://your-app.example.com"
 description = "Deployed web app URL to test"
 
+[outputs.cli_cross_report_json]
+type = "string"
+required = false
+description = "Minified cli-cross report JSON. Empty when that agent did not report."
+
+[outputs.web_core_report_json]
+type = "string"
+required = false
+description = "Minified web-core report JSON. Empty when that agent did not report."
+
+[outputs.web_platform_report_json]
+type = "string"
+required = false
+description = "Minified web-platform report JSON. Empty when that agent did not report."
+
 [run]
 fail_fast = false
 fanout = true
@@ -27,6 +42,7 @@ disk_gb = 20
 internet_enabled = true
 
 [run.sandbox.env]
+QA_BASE_URL = "{{qa_base_url}}"
 ISLO_BASE_URL = "{{qa_base_url}}"
 QA_RUN_ID = "{{run_id}}"
 
@@ -36,6 +52,7 @@ name = "qa-agent-web-core"
 [[run.tasks.steps]]
 name = "explore"
 workdir = "/workspace/qa-harness"
+outputs = []
 
 [run.tasks.steps.run_agent]
 mode = "session"
@@ -55,12 +72,24 @@ exec = [
   "/opt/qa-harness/harness/stage.py",
 ]
 
+[[run.tasks.steps]]
+name = "emit-report"
+outputs = ["web_core_report_json"]
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-web-core",
+  "QA_OUTPUT_KEY=web_core_report_json",
+  "python3",
+  "/opt/qa-harness/harness/emit_report.py",
+]
+
 [[run.tasks]]
 name = "qa-agent-web-platform"
 
 [[run.tasks.steps]]
 name = "explore"
 workdir = "/workspace/qa-harness"
+outputs = []
 
 [run.tasks.steps.run_agent]
 mode = "session"
@@ -80,12 +109,24 @@ exec = [
   "/opt/qa-harness/harness/stage.py",
 ]
 
+[[run.tasks.steps]]
+name = "emit-report"
+outputs = ["web_platform_report_json"]
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-web-platform",
+  "QA_OUTPUT_KEY=web_platform_report_json",
+  "python3",
+  "/opt/qa-harness/harness/emit_report.py",
+]
+
 [[run.tasks]]
 name = "qa-agent-cli-cross"
 
 [[run.tasks.steps]]
 name = "explore"
 workdir = "/workspace/qa-harness"
+outputs = []
 
 [run.tasks.steps.run_agent]
 mode = "session"
@@ -103,4 +144,15 @@ exec = [
   "QA_BRIEF_LABEL=CLI and cross-surface consistency",
   "python3",
   "/opt/qa-harness/harness/stage.py",
+]
+
+[[run.tasks.steps]]
+name = "emit-report"
+outputs = ["cli_cross_report_json"]
+exec = [
+  "env",
+  "QA_AGENT_ID=qa-agent-cli-cross",
+  "QA_OUTPUT_KEY=cli_cross_report_json",
+  "python3",
+  "/opt/qa-harness/harness/emit_report.py",
 ]
