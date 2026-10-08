@@ -16,7 +16,7 @@ The sandbox uses `ensure` mode, named `designer-<work_key>`, so a follow-up rejo
 
 ### 1. Build snapshot `designer`
 
-See `snapshots/designer/README.md`. The UI checkout lives at `/workspace/app`. The job starts its frontend with the app's `npm run start` command on port 3000. Bake an idempotent `start-storybook.sh` script into the snapshot to start Storybook on port 6006 without opening shares or Surfaces. The job checks both HTTP endpoints, runs one `islo surface web` command for each service, and writes their URLs to `/workspace/design/share.json`.
+See `snapshots/designer/README.md`. The UI checkout lives at `/workspace/app`. The job starts its frontend with the app's `npm run start` command on port 3000. Bake an idempotent `start-storybook.sh` script into the snapshot to start Storybook on port 6006 without opening shares or Surfaces. The job checks the frontend's page content and share-host response plus Storybook's index JSON through the sandbox address, then runs one `islo surface web` command for each service and writes their URLs to `/workspace/design/share.json`.
 
 ```bash
 islo snapshot save <your-build-sandbox> --name designer

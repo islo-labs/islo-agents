@@ -91,7 +91,27 @@ if [ ! -x /workspace/scripts/start-storybook.sh ]; then
   exit 0
 fi
 
-if ! curl --fail --silent --max-time 5 http://127.0.0.1:3000/ >/dev/null; then
+SANDBOX_IP=$(hostname -I | awk '{print $1}')
+if [ -z "$SANDBOX_IP" ]; then
+  printf '%s\n' "Could not determine the sandbox network address; no Surface was opened." > /workspace/design/PREP.md
+  exit 0
+fi
+
+frontend_ready() {
+  local page
+  page=$(curl --fail --silent --max-time 5 -H "Host: designer-probe.share.islo.dev" "http://$SANDBOX_IP:3000/") || return 1
+  [[ "$page" == *'<title>islo</title>'* && "$page" == *'<div id="root"></div>'* ]]
+}
+
+storybook_ready() {
+  curl --fail --silent --max-time 5 -H "Host: designer-probe.share.islo.dev" "http://$SANDBOX_IP:6006/index.json" | jq -e '.v and (.entries | type == "object")' >/dev/null
+}
+
+if ! frontend_ready; then
+  if curl --fail --silent --max-time 5 http://127.0.0.1:3000/ >/dev/null; then
+    printf '%s\n' "An existing process on port 3000 is not the expected Islo frontend or rejects the public share Host header. Fix its configuration before publishing; no Surface was opened." > /workspace/design/PREP.md
+    exit 0
+  fi
   (
     cd /workspace/app
     VITE_ALLOWED_HOSTS=.share.islo.dev nohup npm run start -- --host 0.0.0.0 --strictPort > /workspace/design/frontend.log 2>&1 </dev/null &
@@ -99,9 +119,9 @@ if ! curl --fail --silent --max-time 5 http://127.0.0.1:3000/ >/dev/null; then
 fi
 STORYBOOK_SHARE=1 /workspace/scripts/start-storybook.sh
 
-wait_for_http() {
+wait_for_ready() {
   for attempt in {1..30}; do
-    if curl --fail --silent --max-time 5 "$1" >/dev/null; then
+    if "$@"; then
       return 0
     fi
     sleep 2
@@ -109,8 +129,8 @@ wait_for_http() {
   return 1
 }
 
-if ! wait_for_http http://127.0.0.1:3000/ || ! wait_for_http http://127.0.0.1:6006/index.json; then
-  printf '%s\n' "Frontend or Storybook did not become HTTP-ready. Check the start scripts and their logs; no Surface was opened." > /workspace/design/PREP.md
+if ! wait_for_ready frontend_ready || ! wait_for_ready storybook_ready; then
+  printf '%s\n' "Frontend or Storybook did not pass the share-host content checks. Check frontend.log and the Storybook start script; no Surface was opened." > /workspace/design/PREP.md
   exit 0
 fi
 

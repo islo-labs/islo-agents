@@ -36,10 +36,14 @@ def main() -> None:
     assert prep.index("\nSTORYBOOK_SHARE=1 /workspace/scripts/start-storybook.sh\n") < prep.index(
         surface_calls[0]
     )
-    assert prep.index("http://127.0.0.1:3000/") < prep.index(surface_calls[0])
-    assert prep.index("http://127.0.0.1:6006/index.json") < prep.index(
-        surface_calls[0]
-    )
+    assert "SANDBOX_IP=$(hostname -I" in prep
+    assert "Host: designer-probe.share.islo.dev" in prep
+    assert "<title>islo</title>" in prep and '<div id="root"></div>' in prep
+    assert "http://$SANDBOX_IP:3000/" in prep
+    assert "http://$SANDBOX_IP:6006/index.json" in prep
+    assert "jq -e '.v and (.entries | type == \"object\")'" in prep
+    assert prep.index("wait_for_ready frontend_ready") < prep.index(surface_calls[0])
+    assert prep.index("wait_for_ready storybook_ready") < prep.index(surface_calls[0])
     assert "frontend_url" in prep and "share.json" in prep
     assert prep.index(surface_calls[1]) < prep.rindex("share.json")
 
