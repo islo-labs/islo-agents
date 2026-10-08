@@ -20,3 +20,5 @@ jobs:
 
       - name: Validate example packages
         run: python3 scripts/validate_examples.py
+      - name: Validate designer Surface contract
+        run: python3 scripts/validate_designer_surfaces.py

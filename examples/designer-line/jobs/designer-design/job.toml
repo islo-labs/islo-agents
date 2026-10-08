@@ -1,7 +1,7 @@
 [job]
 name = "designer-design"
-version = "1.0.0"
-description = "Design one UI request in a retained Storybook sandbox and reply with a public share. Publish is a later resume of this same job."
+version = "1.1.0"
+description = "Design one UI request in a retained frontend and Storybook sandbox and reply with public shares. Publish is a later resume of this same job."
 
 [job.params.origin]
 type = "string"
@@ -85,14 +85,39 @@ exec = ["bash", "-lc", """
 set -euo pipefail
 mkdir -p /workspace/design /workspace/design/screenshots
 export SANDBOX_NAME="designer-{{work_key}}"
-if [ -x /workspace/scripts/start-storybook.sh ]; then
-  /workspace/scripts/start-storybook.sh
-else
-  printf '%s\n' "No /workspace/scripts/start-storybook.sh. Bake one in the designer snapshot. It should start Storybook on port 6006 and write /workspace/design/share.json with a url field." > /workspace/design/PREP.md
+printf '%s\n' '{"url":"","port":6006,"frontend_url":"","frontend_port":3000}' > /workspace/design/share.json
+if [ ! -x /workspace/scripts/start-storybook.sh ]; then
+  printf '%s\n' "Bake executable start-storybook.sh into the designer snapshot. It must start Storybook on port 6006 without opening any Surface or share." > /workspace/design/PREP.md
+  exit 0
 fi
-if [ ! -f /workspace/design/share.json ]; then
-  printf '%s\n' '{"url":"","port":6006}' > /workspace/design/share.json
+
+if ! curl --fail --silent --max-time 5 http://127.0.0.1:3000/ >/dev/null; then
+  (
+    cd /workspace/app
+    VITE_ALLOWED_HOSTS=.share.islo.dev nohup npm run start -- --host 0.0.0.0 --strictPort > /workspace/design/frontend.log 2>&1 </dev/null &
+  )
 fi
+STORYBOOK_SHARE=1 /workspace/scripts/start-storybook.sh
+
+wait_for_http() {
+  for attempt in {1..30}; do
+    if curl --fail --silent --max-time 5 "$1" >/dev/null; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+if ! wait_for_http http://127.0.0.1:3000/ || ! wait_for_http http://127.0.0.1:6006/index.json; then
+  printf '%s\n' "Frontend or Storybook did not become HTTP-ready. Check the start scripts and their logs; no Surface was opened." > /workspace/design/PREP.md
+  exit 0
+fi
+
+FRONTEND_URL=$(islo surface web 3000 --label "Frontend")
+STORYBOOK_URL=$(islo surface web 6006 --label "Storybook")
+printf '{"url":"%s","port":6006,"frontend_url":"%s","frontend_port":3000}\n' "$STORYBOOK_URL" "$FRONTEND_URL" > /workspace/design/share.json
+printf '%s\n' "Frontend and Storybook passed HTTP readiness and were published as the only two run Surfaces." > /workspace/design/PREP.md
 """]
 
 [[run.tasks.steps]]
@@ -130,7 +155,7 @@ Do not open a pull request on the first visit. Publish only when a later resume_
 
 ## Already running
 
-A prep step should have started Storybook and written `/workspace/design/share.json` and `/workspace/design/PREP.md`. Read both. If `share.json` has a url, post it on origin immediately, then design. Live reload should update the share.
+A prep step should have started the frontend and Storybook, then opened exactly two run Surfaces, one for each. Read `/workspace/design/share.json` and `/workspace/design/PREP.md`. `share.json` holds the Storybook `url` and the `frontend_url`. If both URLs are present, post both on origin immediately, then design. Live reload should update the shares. Do not open any additional Surface.
 
 When stories exist, post a deep link to the primary story, not the share root:
 
@@ -138,7 +163,7 @@ When stories exist, post a deep link to the primary story, not the share root:
 
 Confirm the story id in the Storybook URL bar at `http://127.0.0.1:6006` if you are unsure.
 
-Do not start a second Storybook. If `http://127.0.0.1:6006` is down, say so on origin and return blocked. Prep will retry on the next visit.
+Do not start another frontend or Storybook process. If either `http://127.0.0.1:3000` or `http://127.0.0.1:6006` is down, say so on origin and return blocked. Prep will retry on the next visit.
 
 ## How to work
 
@@ -153,7 +178,7 @@ If the brief is ambiguous, pick the most reasonable reading, write the assumptio
 
 `{{origin}}` is `slack:<channel-id>:<thread-ts>`. Split on `:`. Channel is field 2. Thread is field 3. If origin is empty, skip Slack and still write the disk files.
 
-On first start, post that design started, with the work key and the share URL.
+On first start, post that design started, with the work key, frontend URL, and Storybook share URL.
 
 When stories exist, post in the same thread:
 

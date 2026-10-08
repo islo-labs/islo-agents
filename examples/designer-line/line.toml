@@ -1,6 +1,6 @@
 [line]
 name = "designer-line"
-description = "Design a UI request in a retained Storybook sandbox and reply with a public share. Publish is a later steer of the same stage."
+description = "Design a UI request in a retained frontend and Storybook sandbox and reply with their public shares. Publish is a later steer of the same stage."
 category = "design"
 
 [trigger]
@@ -46,7 +46,7 @@ Never skip reporting. A started stage is not a finished share.
 [[stages]]
 id = "design"
 job = "designer-design"
-description = "Prep starts Storybook and the share. The agent designs against the live URL. Publish is a later resume of this stage."
+description = "Prep starts and publishes the frontend and Storybook. The agent designs against their live URLs. Publish is a later resume of this stage."
 
 [[transitions]]
 id = "trigger-to-design"

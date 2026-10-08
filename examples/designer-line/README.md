@@ -1,6 +1,6 @@
 # Designer line
 
-Factory line that designs **one UI request** in a retained Storybook sandbox, posts a public share, and parks. Publishing the pull request is a later steer of the same stage, not a second stage.
+Factory line that designs **one UI request** in a retained frontend and Storybook sandbox, publishes separate public run Surfaces for both, and parks. Publishing the pull request is a later steer of the same stage, not a second stage.
 
 ## Stage
 
@@ -16,7 +16,7 @@ The sandbox uses `ensure` mode, named `designer-<work_key>`, so a follow-up rejo
 
 ### 1. Build snapshot `designer`
 
-See `snapshots/designer/README.md`. The UI checkout lives at `/workspace/app`. `start-storybook.sh` must start Storybook on port 6006 and write `/workspace/design/share.json`.
+See `snapshots/designer/README.md`. The UI checkout lives at `/workspace/app`. The job starts its frontend with the app's `npm run start` command on port 3000. Bake an idempotent `start-storybook.sh` script into the snapshot to start Storybook on port 6006 without opening shares or Surfaces. The job checks both HTTP endpoints, runs one `islo surface web` command for each service, and writes their URLs to `/workspace/design/share.json`.
 
 ```bash
 islo snapshot save <your-build-sandbox> --name designer
@@ -61,7 +61,7 @@ islo factory line runs designer-line
 islo factory line-run events <run-id>
 ```
 
-Expect `design_result=ready`, a `share_url`, and a Slack note when `origin` is set. `pr_url` stays empty until a publish steer.
+Expect `design_result=ready`, a Storybook `share_url`, a frontend URL in `/workspace/design/share.json`, and a Slack note with both URLs when `origin` is set. The run canvas should have only Frontend and Storybook Surface entries. `pr_url` stays empty until a publish steer. Verify the live canvas and links separately after deployment.
 
 ### 5. Remove
 
@@ -75,6 +75,6 @@ Read this before copying the line into a tenant.
 - `work_key` names `designer-<work_key>` and the agent session. Pattern: `^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$`. Replace dots in a Slack `thread_ts`. Reusing a key rejoins that design. A second run for the same thread fights the same sandbox.
 - `task` is the verbatim request. `origin` is `slack:<channel-id>:<thread-ts>` or empty.
 - Happy path parks on `done` after `design_result=ready`. Leave the run succeeded so a later steer can still reach the sandbox. Cancel only when the human wants the work dead.
-- The prep step does not clone a repo. Bake `/workspace/app` and `/workspace/scripts/start-storybook.sh` into the snapshot named `designer`. That name is yours. Do not point `snapshot_name` at an internal image.
+- The prep step does not clone a repo. Bake `/workspace/app` and `/workspace/scripts/start-storybook.sh` into the snapshot named `designer`. The script must not open a Surface or share; the job opens only the two named web Surfaces. That snapshot name is yours. Do not point `snapshot_name` at an internal image.
 - The prompt assumes Claude (`claude-sonnet-4-5`) via your connected Claude account. Swap `harness`, `model`, and `model_provider` if you want Islo inference instead.
 - `linear_issue_id` and `pr_url` are required outputs and stay empty until a publish resume creates them. Always return them.
