@@ -24,11 +24,12 @@ islo snapshot save <your-build-sandbox> --name designer
 
 ### 2. Prepare the Manager Agent
 
-Create the Manager Machine (or choose an existing Machine in this Factory), then validate and create the prompt Agent before validating the Line:
+Create the Manager Machine from a repository you control. Complete any Machine build setup questions, then wait until `islo factory machine get` shows a successful latest build before creating the Agent. If you already have a ready Machine in this Factory, set `machine` in `manager-agent.toml` to its name and skip the create command:
 
 ```bash
 islo schema agent
-islo factory machine create designer-line-manager
+islo factory machine create designer-line-manager --repo <your-repository-url>
+islo factory machine get designer-line-manager
 islo agent validate examples/designer-line/manager-agent.toml
 islo agent create examples/designer-line/manager-agent.toml
 islo agent get designer-line-manager
