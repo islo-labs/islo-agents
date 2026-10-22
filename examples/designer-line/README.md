@@ -22,13 +22,16 @@ See `snapshots/designer/README.md`. The UI checkout lives at `/workspace/app`. `
 islo snapshot save <your-build-sandbox> --name designer
 ```
 
-### 2. Enable the line routing agent
+### 2. Prepare the Manager Agent
 
-Blocked design and later "please publish" steers need it:
+Create the Manager Machine (or choose an existing Machine in this Factory), then validate and create the prompt Agent before validating the Line:
 
 ```bash
-islo factory manager status
-islo factory manager enable
+islo schema agent
+islo factory machine create designer-line-manager
+islo agent validate examples/designer-line/manager-agent.toml
+islo agent create examples/designer-line/manager-agent.toml
+islo agent get designer-line-manager
 ```
 
 Connect Slack if `origin` is a Slack thread: `islo login --tool slack`.

@@ -34,13 +34,16 @@ islo snapshot save <your-code-build-sandbox> --name feature-delivery-code
 islo snapshot save <your-platform-build-sandbox> --name feature-delivery-platform
 ```
 
-### 4. Enable the line routing agent
+### 4. Prepare the Manager Agent
 
-When a stage returns `blocked`, agentic transitions route via the line routing agent:
+Create the Manager Machine (or choose an existing Machine in this Factory), then validate and create the prompt Agent before validating the Line:
 
 ```bash
-islo factory manager status
-islo factory manager enable
+islo schema agent
+islo factory machine create feature-delivery-manager
+islo agent validate examples/feature-delivery/manager-agent.toml
+islo agent create examples/feature-delivery/manager-agent.toml
+islo agent get feature-delivery-manager
 ```
 
 ### 5. Replace placeholders

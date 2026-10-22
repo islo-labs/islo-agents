@@ -295,6 +295,44 @@ def collect_jobs(example_dir: Path) -> list[Job]:
     return found
 
 
+def validate_manager_agent(path: Path, doc: dict, agent_path: Path) -> None:
+    manager = doc.get("manager")
+    if manager is None:
+        return
+    if not isinstance(manager, dict) or set(manager) - {"agent", "prompt"}:
+        fail(f"{path}: [manager] permits only agent and prompt")
+        return
+    name = manager.get("agent")
+    if not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,62}", name):
+        fail(f"{path}: [manager].agent must name a prompt Agent")
+    prompt = manager.get("prompt")
+    if prompt is not None and (not isinstance(prompt, str) or not prompt.strip()):
+        fail(f"{path}: [manager].prompt must be nonblank")
+    if table(doc, "agent").get("instructions") is not None:
+        fail(f"{path}: [manager] cannot be combined with [agent.instructions]")
+    agent = load_toml(agent_path) if agent_path.is_file() else None
+    if agent is None:
+        fail(f"{agent_path}: Manager Agent manifest missing or invalid")
+        return
+    required = {"name", "machine", "type", "harness", "model", "prompt"}
+    allowed = required | {"description", "model_provider", "effort", "skills", "mcp"}
+    if missing := required - set(agent):
+        fail(f"{agent_path}: missing Agent fields {sorted(missing)}")
+    if extra := set(agent) - allowed:
+        fail(f"{agent_path}: unknown Agent fields {sorted(extra)}")
+    if agent.get("name") != name or agent.get("type") != "prompt":
+        fail(f"{agent_path}: must define prompt Agent {name!r}")
+    if not isinstance(agent.get("machine"), str) or not agent.get("machine", "").strip():
+        fail(f"{agent_path}: machine must name an existing Factory Machine")
+    if agent.get("harness") not in {"codex", "claude", "cursor", "opencode"}:
+        fail(f"{agent_path}: unsupported harness")
+    if any(not isinstance(agent.get(key), str) or not agent.get(key, "").strip() for key in ("model", "prompt")):
+        fail(f"{agent_path}: model and prompt must be nonblank")
+    provider = agent.get("model_provider")
+    if provider not in {None, "islo", "islo_inference"} or (provider == "islo" and agent.get("harness") != "codex") or (provider == "islo_inference" and agent.get("harness") not in {"codex", "claude"}):
+        fail(f"{agent_path}: invalid model_provider for harness")
+
+
 def validate_line(path: Path, text: str, doc: dict, job_names: set[str]) -> None:
     check_forbidden_text(path, text)
     line_name = table(doc, "line").get("name")
@@ -320,9 +358,7 @@ def validate_line(path: Path, text: str, doc: dict, job_names: set[str]) -> None
     if not rows(doc, "transitions"):
         fail(f"{path}: no [[transitions]]")
 
-    if "manager" in doc:
-        fail(f"{path}: [manager] is not a line section; put routing guidance in "
-             f"[agent.instructions] and express the decision as an 'agentic' transition")
+    validate_manager_agent(path, doc, path.parent / "manager-agent.toml")
     if "decisions" in doc:
         fail(f"{path}: [[decisions]] is not a line section; express the decision as an "
              f"'agentic' transition with [[transitions.options]]")
