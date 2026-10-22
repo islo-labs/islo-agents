@@ -19,4 +19,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate example packages
-        run: python3 scripts/validate_examples.py
+        run: |
+          python3 scripts/validate_examples.py
+          python3 scripts/test_manager_setup.py

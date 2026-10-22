@@ -31,32 +31,8 @@ work_key = { type = "trigger_path", path = "trigger.raw.data.identifier" }
 max_iterations = 20
 timeout = "24h"
 
-[agent.instructions]
-type = "literal"
-value = """
-Preserve completed work and inspect the work request, every linked pull
-request, the failed stage result, and recent line events before deciding.
-
-The work request arrives as run params. work_key is identity only. It names
-the sandbox and session and is never a requirements source. issue_id
-non-empty means the run is ticket-backed: the tracker holds the requirements
-and is the reporting channel. task non-empty means standalone work: task is
-the verbatim requirement. origin is slack:<channel-id>:<thread-ts> for
-standalone reporting. Leave origin empty on ticket-backed runs. Exactly one
-of issue_id or task must be non-empty.
-
-Retry the current stage only when the blocker is transient or external state
-has changed enough to make another attempt useful. Cancel when requirements
-conflict, required access or input is unavailable, the same root cause keeps
-failing, or continuing could damage customer work. Explain the evidence for
-the choice and do not retry merely to exhaust the iteration limit.
-
-When steering a stage, pass the complete instruction with
---param resume_prompt='<complete instruction>'. The steering reason does not
-reach the stage agent through other context. Omit resume_prompt only when
-the stage default follow-up prompt is the intended instruction. The first
-visit of a stage ignores resume_prompt.
-"""
+[manager]
+agent = "feature-delivery-manager"
 
 [[stages]]
 id = "implement"
