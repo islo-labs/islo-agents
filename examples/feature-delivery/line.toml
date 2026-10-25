@@ -25,7 +25,6 @@ operand = { type = "trigger", path = "$.updatedFrom.labelIds" }
 
 [trigger.outputs]
 issue_id = { type = "trigger_path", path = "trigger.raw.data.identifier" }
-work_key = { type = "trigger_path", path = "trigger.raw.data.identifier" }
 
 [limits]
 max_iterations = 20
@@ -67,10 +66,6 @@ name = "pull_requests"
 type = "input"
 name = "task"
 
-[transitions.params.work_key]
-type = "input"
-name = "work_key"
-
 [[transitions]]
 id = "implementation-ready"
 from = "implement"
@@ -94,10 +89,6 @@ name = "pull_requests"
 [transitions.params.task]
 type = "input"
 name = "task"
-
-[transitions.params.work_key]
-type = "input"
-name = "work_key"
 
 [[transitions]]
 id = "implement-blocked-route"
@@ -129,11 +120,6 @@ name = "pull_requests"
 [transitions.options.params.task]
 type = "input"
 name = "task"
-
-[transitions.options.params.work_key]
-type = "input"
-name = "work_key"
-
 [[transitions]]
 id = "review-approved"
 from = "review"
@@ -163,10 +149,6 @@ name = "pull_requests"
 type = "input"
 name = "task"
 
-[transitions.params.work_key]
-type = "input"
-name = "work_key"
-
 [[transitions]]
 id = "review-needs-changes"
 from = "review"
@@ -191,10 +173,6 @@ name = "pull_requests"
 [transitions.params.task]
 type = "input"
 name = "task"
-
-[transitions.params.work_key]
-type = "input"
-name = "work_key"
 
 [[transitions]]
 id = "review-blocked-route"
@@ -225,11 +203,6 @@ name = "pull_requests"
 [transitions.options.params.task]
 type = "input"
 name = "task"
-
-[transitions.options.params.work_key]
-type = "input"
-name = "work_key"
-
 [[transitions]]
 id = "verification-passed"
 from = "verify"
@@ -266,10 +239,6 @@ name = "pull_requests"
 type = "input"
 name = "task"
 
-[transitions.params.work_key]
-type = "input"
-name = "work_key"
-
 [[transitions]]
 id = "verify-blocked-route"
 from = "verify"
@@ -305,7 +274,3 @@ name = "pull_requests"
 [transitions.options.params.task]
 type = "input"
 name = "task"
-
-[transitions.options.params.work_key]
-type = "input"
-name = "work_key"

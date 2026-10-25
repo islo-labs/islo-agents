@@ -115,6 +115,7 @@ RESERVED_OPTION_NAMES = {"cancel", "stop"}
 # stray em-dash here fails a downstream drift check rather than this one.
 EM_DASH = "—"
 SWEPT_SUFFIXES = {".md", ".toml", ".py", ".ts", ".json", ".sh", ".yml", ".yaml"}
+REMOVED_IDENTITY_PATTERN = re.compile(r"\bwork_key\b")
 
 Edge = namedtuple("Edge", "transition_id origin source target params")
 Job = namedtuple("Job", "path name text doc")
@@ -679,6 +680,20 @@ def validate_em_dashes(example_dir: Path) -> None:
             fail(f"{path}: em-dash on line(s) {', '.join(lines)}; use a period or comma")
 
 
+def validate_removed_identity_conventions(example_dir: Path) -> None:
+    for path in sorted(example_dir.rglob("*")):
+        if not path.is_file() or path.suffix not in SWEPT_SUFFIXES:
+            continue
+        if "__pycache__" in path.parts:
+            continue
+        try:
+            text = path.read_text()
+        except UnicodeDecodeError:
+            continue
+        if REMOVED_IDENTITY_PATTERN.search(text):
+            fail(f"{path}: work_key must not identify first-party sandboxes or sessions")
+
+
 def validate_example(example_dir: Path) -> None:
     readme = example_dir / "README.md"
     line_path = example_dir / "line.toml"
@@ -710,6 +725,7 @@ def validate_example(example_dir: Path) -> None:
     validate_prompt_policy(example_dir, jobs, readme_text)
     validate_placeholders(manifests, readme, readme_text)
     validate_em_dashes(example_dir)
+    validate_removed_identity_conventions(example_dir)
 
 
 def main(argv: list[str]) -> int:

@@ -27,12 +27,6 @@ required = false
 default = ""
 description = "Verbatim requirement text when there is no ticket. Leave empty when issue_id is set. Exactly one of task or issue_id must be non-empty."
 
-[job.params.work_key]
-type = "string"
-required = true
-pattern = "^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$"
-description = "Stable identity for this unit of work. Names the sandbox and agent session. Use the ticket id when there is one, otherwise a fresh task-<slug>. Identity only. Never read it as requirements. Dots are not allowed."
-
 [outputs.acceptance_criteria]
 type = "array"
 items = "string"
@@ -58,7 +52,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "feature-delivery-implement-{{work_key}}"
+name = "feature-delivery-implement-{{line_run_id}}"
 image = "ghcr.io/islo-labs/islo-runner:latest"
 snapshot_name = "feature-delivery-code"
 vcpus = 4
@@ -87,8 +81,6 @@ prompt = { type = "literal", value = '''
 You are the implementation owner for one complete feature across one or more repositories.
 
 ## Work request
-
-Work key (identity only, never a requirements source): {{work_key}}
 
 Ticket id (empty when this is standalone work): {{issue_id}}
 
@@ -182,7 +174,7 @@ resume_prompt = { type = "literal", value = """Current pull requests: {{pull_req
 
 {{resume_prompt}}
 """ }
-session = "feature-delivery-impl-{{work_key}}"
+session = "feature-delivery-impl-{{line_run_id}}"
 
 [[run.tasks.steps]]
 name = "pause-sandbox"

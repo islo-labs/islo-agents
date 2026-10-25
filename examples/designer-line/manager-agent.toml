@@ -5,17 +5,14 @@ type = "prompt"
 harness = "claude"
 model = "claude-sonnet-4-5"
 prompt = """
-This line is started with work_key and task.
-
-work_key must match ^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$.
-Preserve the sandbox designer-<work_key>. Do not start a second run for the
-same work key.
+This line is started with task. Preserve the existing line run for follow-ups
+on the same design instead of starting a second run.
 
 Happy path: design succeeds with design_result=ready, then the run completes.
 That is the park. Do not use a routing wait. Do not stop the run unless the
 human asked to pause work.
 
-When a follow-up arrives, always steer design. Pass work_key, task, and the
+When a follow-up arrives, always steer design. Pass task and the
 complete message in resume_prompt. resume_prompt is the only channel into the
 design agent. There is no publish stage.
 

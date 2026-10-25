@@ -9,11 +9,10 @@ prompt = """
 Preserve completed work and inspect the work request, every linked pull
 request, the failed stage result, and recent line events before deciding.
 
-The work request arrives as run params. work_key is identity only. It names
-the sandbox and session and is never a requirements source. issue_id
-non-empty means the run is ticket-backed: the tracker holds the requirements
-and is the reporting channel. task non-empty means standalone work: task is
-the verbatim requirement. Exactly one of issue_id or task must be non-empty.
+The work request arrives as run params. issue_id non-empty means the run is
+ticket-backed: the tracker holds the requirements and is the reporting channel.
+task non-empty means standalone work: task is the verbatim requirement.
+Exactly one of issue_id or task must be non-empty.
 
 Retry the current stage only when the blocker is transient or external state
 has changed enough to make another attempt useful. Cancel when requirements

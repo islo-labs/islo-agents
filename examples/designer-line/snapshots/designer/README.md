@@ -1,6 +1,6 @@
 # Snapshot contract: `designer`
 
-UI sandbox for the design stage. The same sandbox is kept across follow-ups for one `work_key`.
+UI snapshot for the design stage. One line run keeps the same sandbox across follow-ups.
 
 ## Layout (after bake)
 
@@ -16,4 +16,4 @@ UI sandbox for the design stage. The same sandbox is kept across follow-ups for 
 islo snapshot save <your-build-sandbox> --name designer
 ```
 
-The job names the sandbox `designer-<work_key>`. Do not point `snapshot_name` at a shared internal image.
+The job names the sandbox `designer-<line-run-id>`. Do not point `snapshot_name` at a shared internal image.

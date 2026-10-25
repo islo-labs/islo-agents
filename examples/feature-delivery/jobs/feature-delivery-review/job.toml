@@ -27,12 +27,6 @@ required = false
 default = ""
 description = "Verbatim requirement text when there is no ticket. Leave empty when issue_id is set."
 
-[job.params.work_key]
-type = "string"
-required = true
-pattern = "^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$"
-description = "Stable identity for this unit of work. Names the sandbox and agent session. Identity only."
-
 [outputs.review_result]
 type = "string"
 required = true
@@ -47,7 +41,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "feature-delivery-review-{{work_key}}"
+name = "feature-delivery-review-{{line_run_id}}"
 image = "ghcr.io/islo-labs/islo-runner:latest"
 snapshot_name = "feature-delivery-code"
 vcpus = 4
@@ -77,7 +71,6 @@ You are reviewing these pull requests as one coherent feature:
 
 {{pull_requests}}
 
-Work key (identity only): {{work_key}}
 Ticket id (empty for standalone work): {{issue_id}}
 
 Standalone requirement (empty when a ticket id is set):
@@ -86,7 +79,7 @@ Standalone requirement (empty when a ticket id is set):
 {{task}}
 </task>
 
-You are inside an isolated sandbox VM with full root access. You can install packages, start services, run databases, build and run the app. This is your sandbox, use it freely. This sandbox persists across review rounds for this work key, so checkouts from an earlier round may already be on disk. Re-fetch every PR head instead of trusting what you find there.
+You are inside an isolated sandbox VM with full root access. You can install packages, start services, run databases, build and run the app. This is your sandbox, use it freely. This sandbox persists across review rounds for this line run, so checkouts from an earlier round may already be on disk. Re-fetch every PR head instead of trusting what you find there.
 
 ## Instructions
 
@@ -140,7 +133,7 @@ resume_prompt = { type = "literal", value = """Current pull requests: {{pull_req
 
 {{resume_prompt}}
 """ }
-session = "feature-delivery-review-{{work_key}}"
+session = "feature-delivery-review-{{line_run_id}}"
 
 [[run.tasks.steps]]
 name = "pause-sandbox"
