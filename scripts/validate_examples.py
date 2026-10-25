@@ -116,6 +116,7 @@ RESERVED_OPTION_NAMES = {"cancel", "stop"}
 EM_DASH = "—"
 SWEPT_SUFFIXES = {".md", ".toml", ".py", ".ts", ".json", ".sh", ".yml", ".yaml"}
 REMOVED_IDENTITY_PATTERN = re.compile(r"\bwork_key\b")
+LINE_RUN_SCOPE = "{{line_run_id}}"
 
 Edge = namedtuple("Edge", "transition_id origin source target params")
 Job = namedtuple("Job", "path name text doc")
@@ -218,6 +219,49 @@ def iter_run_agents(doc: dict):
                 yield step.get("name") or "?", agent
 
 
+def iter_sandboxes(doc: dict):
+    run = table(doc, "run")
+    sandbox = table(run, "sandbox")
+    if sandbox:
+        yield "run.sandbox", sandbox
+    for index, task in enumerate(rows(run, "tasks")):
+        if not isinstance(task, dict):
+            continue
+        sandbox = table(task, "sandbox")
+        if sandbox:
+            yield f"run.tasks[{index}].sandbox", sandbox
+
+
+def has_run_scoped_slot(value: object) -> bool:
+    if not isinstance(value, str) or value.count(LINE_RUN_SCOPE) != 1:
+        return False
+    slot = value.replace(LINE_RUN_SCOPE, "")
+    return any(char.isalnum() for char in slot)
+
+
+def validate_retained_identity(path: Path, doc: dict) -> None:
+    retained = [
+        (label, sandbox)
+        for label, sandbox in iter_sandboxes(doc)
+        if sandbox.get("mode") == "ensure"
+    ]
+    if not retained:
+        return
+    for label, sandbox in retained:
+        if not has_run_scoped_slot(sandbox.get("name")):
+            fail(
+                f"{path}: [{label}] ensure name must combine an explicit slot "
+                f"with {LINE_RUN_SCOPE}"
+            )
+    for step_name, agent in iter_run_agents(doc):
+        session = agent.get("session")
+        if session is not None and not has_run_scoped_slot(session):
+            fail(
+                f"{path}: step {step_name!r} named session must combine an explicit "
+                f"slot with {LINE_RUN_SCOPE}"
+            )
+
+
 def declares_checkout_step(doc: dict) -> bool:
     for task in rows(table(doc, "run"), "tasks"):
         if not isinstance(task, dict):
@@ -235,6 +279,7 @@ def declares_checkout_step(doc: dict) -> bool:
 def validate_job(path: Path, example_dir: Path, text: str, doc: dict) -> str | None:
     check_forbidden_text(path, text)
     walk_job_sections(path, "", "", doc)
+    validate_retained_identity(path, doc)
 
     job = table(doc, "job")
     name = job.get("name")

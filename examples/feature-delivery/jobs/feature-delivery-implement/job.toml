@@ -1,6 +1,6 @@
 [job]
 name = "feature-delivery-implement"
-version = "1.0.0"
+version = "1.1.0"
 description = "Implement one Linear issue or standalone task as a coherent feature across one or more repositories"
 
 [job.params.issue_id]

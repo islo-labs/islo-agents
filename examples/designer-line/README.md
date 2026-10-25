@@ -45,6 +45,8 @@ islo factory line deploy examples/designer-line/line.toml --dry-run
 islo factory line deploy examples/designer-line/line.toml
 ```
 
+Job and line versions are immutable. This job manifest is version `1.1.0`; redeploy it before redeploying the line. Existing runs keep their pinned older version and should be allowed to finish rather than being rewritten in place.
+
 ### 4. Test
 
 ```bash

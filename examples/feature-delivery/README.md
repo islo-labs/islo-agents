@@ -65,6 +65,8 @@ islo factory line deploy examples/feature-delivery/line.toml --dry-run
 islo factory line deploy examples/feature-delivery/line.toml
 ```
 
+Job and line versions are immutable. These manifests are version `1.1.0`; redeploy all three jobs before redeploying the line. Existing runs keep their pinned older versions and should be allowed to finish rather than being rewritten in place.
+
 ### 7. Test
 
 Add or toggle your label on a Linear issue. Inspect the run:

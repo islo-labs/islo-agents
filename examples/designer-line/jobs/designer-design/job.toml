@@ -1,6 +1,6 @@
 [job]
 name = "designer-design"
-version = "1.0.0"
+version = "1.1.0"
 description = "Design one UI request in a retained Storybook sandbox and reply with a public share. Publish is a later resume of this same job."
 
 [job.params.resume_prompt]
