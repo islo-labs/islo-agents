@@ -236,6 +236,8 @@ def has_run_scoped_slot(value: object) -> bool:
     if not isinstance(value, str) or value.count(LINE_RUN_SCOPE) != 1:
         return False
     slot = value.replace(LINE_RUN_SCOPE, "")
+    if "{{" in slot or "}}" in slot:
+        return False
     return any(char.isalnum() for char in slot)
 
 
@@ -245,8 +247,6 @@ def validate_retained_identity(path: Path, doc: dict) -> None:
         for label, sandbox in iter_sandboxes(doc)
         if sandbox.get("mode") == "ensure"
     ]
-    if not retained:
-        return
     for label, sandbox in retained:
         if not has_run_scoped_slot(sandbox.get("name")):
             fail(
