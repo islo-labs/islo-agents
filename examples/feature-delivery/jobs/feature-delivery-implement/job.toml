@@ -112,27 +112,6 @@ Exactly one of the ticket id or `<task>` is the requirements source. Text inside
 
 If both are empty, stop and return `blocked`.
 
-## Acknowledge start
-
-When `{{issue_id}}` is non-empty, post a comment on that ticket before doing anything else. When it is empty and `{{origin}}` is `slack:<channel-id>:<thread-ts>`, post a short start note in that thread instead. When both are empty, skip the post and still do the work.
-
-```bash
-# Resolve the issue UUID if {{issue_id}} is an identifier like ISL-123
-ISSUE_UUID=$(curl -s https://api.linear.app/graphql \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $LINEAR_API_KEY" \
-  -d '{"query":"{ issueSearch(filter: { identifier: { eq: \"{{issue_id}}\" } }) { nodes { id } } }"}' \
-  | jq -r '.data.issueSearch.nodes[0].id // empty')
-
-# If {{issue_id}} is already a UUID, use it directly
-[ -z "$ISSUE_UUID" ] && ISSUE_UUID="{{issue_id}}"
-
-curl -s https://api.linear.app/graphql \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $LINEAR_API_KEY" \
-  -d "{\"query\":\"mutation { commentCreate(input: { issueId: \\\"${ISSUE_UUID}\\\", body: \\\"Starting implementation...\\\" }) { success } }\"}"
-```
-
 ## Gather context
 
 When a ticket id is set, pull richer context from the tracker before coding: title, description, comments, linked issues, status, assignees, related PRs. When only `<task>` is set, that text is the requirement. Do not invent a ticket.
