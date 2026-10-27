@@ -7,7 +7,7 @@ description = "Design one UI request in a retained Storybook sandbox and reply w
 type = "string"
 required = false
 default = ""
-description = "Interaction routing context, as slack:<channel-id>:<thread-ts>."
+description = "Interaction URL used by the Factory backend."
 
 [job.params.resume_prompt]
 type = "string"
@@ -113,8 +113,6 @@ Request, verbatim:
 <task>
 {{task}}
 </task>
-
-Report origin: {{origin}}
 
 The work key is identity only. It names your sandbox (`designer-{{work_key}}`) and your agent session. Never look it up as a ticket.
 

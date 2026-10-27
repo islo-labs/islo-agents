@@ -5,21 +5,19 @@ type = "prompt"
 harness = "claude"
 model = "claude-sonnet-4-5"
 prompt = """
-This line is started with work_key, task, and origin. origin is
-slack:<channel-id>:<thread-ts>.
+This line is started with work_key and task.
 
-work_key must match ^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$. Slack thread_ts
-contains dots. Replace them (for example slack-C123-1710000000-000100).
+work_key must match ^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$.
 Preserve the sandbox designer-<work_key>. Do not start a second run for the
-same origin thread.
+same work key.
 
 Happy path: design succeeds with design_result=ready, then the run completes.
 That is the park. Do not use a routing wait. Do not stop the run unless the
 human asked to pause work.
 
-When a follow-up arrives, always steer design. Pass work_key, task, origin,
-and the complete message in resume_prompt. resume_prompt is the only channel
-into the design agent. There is no publish stage.
+When a follow-up arrives, always steer design. Pass work_key, task, and the
+complete message in resume_prompt. resume_prompt is the only channel into the
+design agent. There is no publish stage.
 
 - Iterate, tweak, redo, or a new visual note. resume_prompt is that note.
   The default resume already says not to open a pull request.
@@ -30,7 +28,5 @@ into the design agent. There is no publish stage.
   Prefer leaving it succeeded so a later ask can still steer.
 
 If design_result=blocked, retry design once when the blocker is transient
-(Storybook or the share URL). Otherwise ask the human one question on origin.
-
-Never skip reporting. A started stage is not a finished share.
+(Storybook or the share URL). Otherwise ask the human one question.
 """

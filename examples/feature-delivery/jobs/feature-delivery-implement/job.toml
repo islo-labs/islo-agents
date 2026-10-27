@@ -7,7 +7,7 @@ description = "Implement one Linear issue or standalone task as a coherent featu
 type = "string"
 required = false
 default = ""
-description = "Linear issue identifier when this work is ticket-backed. Non-empty means the tracker holds the requirements and is the reporting channel. Leave empty for standalone work, which takes its requirements from task and reports to origin."
+description = "Linear issue identifier when this work is ticket-backed. Non-empty means the tracker holds the requirements. Leave empty for standalone work, which takes its requirements from task."
 
 [job.params.origin]
 type = "string"
@@ -103,8 +103,6 @@ Standalone requirement (empty when a ticket id is set):
 <task>
 {{task}}
 </task>
-
-Report origin (empty when a ticket id is set): {{origin}}
 
 Feature pull requests so far: {{pull_requests}}
 

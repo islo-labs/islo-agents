@@ -5,6 +5,7 @@ category = "design"
 
 [trigger]
 type = "manual"
+origin_param = "origin"
 
 [limits]
 max_iterations = 12

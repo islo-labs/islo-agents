@@ -7,6 +7,7 @@ category = "engineering"
 type = "integration_trigger"
 provider = "linear"
 name = "issue.updated"
+origin_param = "origin"
 
 [trigger.selector]
 provider = "linear"
