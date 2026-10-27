@@ -3,12 +3,6 @@ name = "designer-design"
 version = "1.0.0"
 description = "Design one UI request in a retained Storybook sandbox and reply with a public share. Publish is a later resume of this same job."
 
-[job.params.origin]
-type = "string"
-required = false
-default = ""
-description = "Interaction URL used by the Factory backend."
-
 [job.params.resume_prompt]
 type = "string"
 required = false

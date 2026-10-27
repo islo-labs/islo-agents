@@ -8,7 +8,7 @@ Factory line that designs **one UI request** in a retained Storybook sandbox, po
 |-------|-----|----------|
 | `design` | `designer-design` | `designer` |
 
-**Trigger:** manual. Pass `work_key`, `task`, and `origin` when you start the run.
+**Trigger:** manual. Pass `work_key` and `task` when you start the run.
 
 The sandbox uses `ensure` mode, named `designer-<work_key>`, so a follow-up rejoins the same Storybook. When `design_result` is not `ready`, an agentic transition offers `retry-design`. Cancel stays a reserved line control.
 
@@ -35,9 +35,6 @@ islo agent create examples/designer-line/manager-agent.toml
 islo agent get designer-line-manager
 ```
 
-Connect Slack if `origin` is a Slack thread: `islo login --tool slack`. Use the
-full Slack thread permalink as the origin.
-
 ### 3. Deploy
 
 ```bash
@@ -53,11 +50,8 @@ islo factory line deploy examples/designer-line/line.toml
 ```bash
 islo factory line run designer-line \
   --param work_key=task-header \
-  --param task='Make the empty state match the nearest settings screen.' \
-  --param origin='https://slack.com/archives/REPLACE_WITH_YOUR_SLACK_CHANNEL_ID/p1710000000000100'
+  --param task='Make the empty state match the nearest settings screen.'
 ```
-
-`origin` may be empty. Then the share URL is only in the stage outputs.
 
 Inspect the run:
 
@@ -66,7 +60,7 @@ islo factory line runs designer-line
 islo factory line-run events <run-id>
 ```
 
-Expect `design_result=ready`, a `share_url`, and a backend-delivered Slack reply when `origin` is set. `pr_url` stays empty until a publish steer.
+Expect `design_result=ready` and a `share_url`. `pr_url` stays empty until a publish steer.
 
 ### 5. Remove
 
@@ -77,8 +71,8 @@ Delete the deployed line and job from your tenant when you no longer need this e
 Read this before copying the line into a tenant.
 
 - One stage. Do not add a publish stage. A human ask to ship is `islo factory line-run` steer of `design` with a `resume_prompt` that says to commit, push, and open the PR. The first visit ignores `resume_prompt`.
-- `work_key` names `designer-<work_key>` and the agent session. Pattern: `^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$`. Replace dots in a Slack `thread_ts`. Reusing a key rejoins that design. A second run for the same thread fights the same sandbox.
-- `task` is the verbatim request. `origin` is a full Slack thread permalink or empty.
+- `work_key` names `designer-<work_key>` and the agent session. Pattern: `^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$`. Reusing a key rejoins that design. A second run with the same key fights the same sandbox.
+- `task` is the verbatim request.
 - Happy path parks on `done` after `design_result=ready`. Leave the run succeeded so a later steer can still reach the sandbox. Cancel only when the human wants the work dead.
 - The prep step does not clone a repo. Bake `/workspace/app` and `/workspace/scripts/start-storybook.sh` into the snapshot named `designer`. That name is yours. Do not point `snapshot_name` at an internal image.
 - The prompt assumes Claude (`claude-sonnet-4-5`) via your connected Claude account. Swap `harness`, `model`, and `model_provider` if you want Islo inference instead.

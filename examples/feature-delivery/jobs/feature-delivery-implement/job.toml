@@ -9,12 +9,6 @@ required = false
 default = ""
 description = "Linear issue identifier when this work is ticket-backed. Non-empty means the tracker holds the requirements. Leave empty for standalone work, which takes its requirements from task."
 
-[job.params.origin]
-type = "string"
-required = false
-default = ""
-description = "Interaction routing context for standalone work."
-
 [job.params.pull_requests]
 type = "array"
 items = "string"

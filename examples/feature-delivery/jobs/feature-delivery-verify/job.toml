@@ -15,12 +15,6 @@ required = false
 default = ""
 description = "Linear issue identifier when this work is ticket-backed. Empty for standalone work."
 
-[job.params.origin]
-type = "string"
-required = false
-default = ""
-description = "Interaction routing context for standalone work."
-
 [job.params.pull_requests]
 type = "array"
 items = "string"
