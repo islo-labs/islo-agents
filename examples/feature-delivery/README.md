@@ -85,8 +85,8 @@ Delete the deployed line and jobs from your tenant when you no longer need this 
 Read this before copying the line into a tenant.
 
 - `work_key` names the sandbox and the agent session. It is identity only. Never treat it as the requirement. Pattern: `^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$`. Dots are rejected, so a Slack `thread_ts` must be rewritten (for example `slack-C123-1710000000-000100`).
-- Ticket-backed runs set `issue_id` and `work_key` from the Linear identifier. Standalone runs leave `issue_id` empty, put the verbatim request in `task`, and set `origin` to `slack:<channel-id>:<thread-ts>`. Exactly one of `issue_id` or `task` is the requirements source.
-- Start a standalone run with `islo factory line run feature-delivery --param work_key=task-slug --param task='...' --param origin=slack:C123:1710000000.000100`. Those params are line inputs. Later stages only see them because the transitions bind `type = "input"`.
+- Ticket-backed runs set `issue_id` and `work_key` from the Linear identifier. Standalone runs leave `issue_id` empty and put the verbatim request in `task`. Exactly one of `issue_id` or `task` is the requirements source.
+- Start a standalone run with `islo factory line run feature-delivery --param work_key=task-slug --param task='...'`. Stages receive line inputs through their transition bindings.
 - Implement must return `acceptance_criteria`. Verify treats every non-empty row as a mandatory scenario.
 - The first visit of a stage ignores `resume_prompt`. Steering must pass the full instruction as `--param resume_prompt='...'`. A blocked implement retry receives the `pull_requests` that entered the stage, not a list invented by the failed attempt.
 - Jobs use Codex on Islo inference (`openai/gpt-6-sol`). To use a connected Claude account instead, set `harness = "claude"`, `model = "claude-sonnet-4-5"`, and remove `model_provider`.

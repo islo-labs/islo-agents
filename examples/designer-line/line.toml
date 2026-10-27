@@ -27,10 +27,6 @@ type = "conditional"
 [transitions.when]
 op = "always"
 
-[transitions.params.origin]
-type = "input"
-name = "origin"
-
 [transitions.params.task]
 type = "input"
 name = "task"
@@ -67,10 +63,6 @@ only after a ready park and a human asking to ship.
 name = "retry-design"
 to = "design"
 label = "Retry design"
-
-[transitions.options.params.origin]
-type = "input"
-name = "origin"
 
 [transitions.options.params.task]
 type = "input"

@@ -59,10 +59,6 @@ op = "always"
 type = "input"
 name = "issue_id"
 
-[transitions.params.origin]
-type = "input"
-name = "origin"
-
 [transitions.params.pull_requests]
 type = "input"
 name = "pull_requests"
@@ -126,10 +122,6 @@ label = "Retry implementation"
 type = "input"
 name = "issue_id"
 
-[transitions.options.params.origin]
-type = "input"
-name = "origin"
-
 [transitions.options.params.pull_requests]
 type = "input"
 name = "pull_requests"
@@ -162,10 +154,6 @@ name = "acceptance_criteria"
 type = "input"
 name = "issue_id"
 
-[transitions.params.origin]
-type = "input"
-name = "origin"
-
 [transitions.params.pull_requests]
 type = "output"
 stage = "implement"
@@ -194,10 +182,6 @@ right = { type = "literal", value = "needs_changes" }
 [transitions.params.issue_id]
 type = "input"
 name = "issue_id"
-
-[transitions.params.origin]
-type = "input"
-name = "origin"
 
 [transitions.params.pull_requests]
 type = "output"
@@ -273,10 +257,6 @@ right = { type = "literal", value = "failed" }
 type = "input"
 name = "issue_id"
 
-[transitions.params.origin]
-type = "input"
-name = "origin"
-
 [transitions.params.pull_requests]
 type = "output"
 stage = "implement"
@@ -316,10 +296,6 @@ name = "acceptance_criteria"
 [transitions.options.params.issue_id]
 type = "input"
 name = "issue_id"
-
-[transitions.options.params.origin]
-type = "input"
-name = "origin"
 
 [transitions.options.params.pull_requests]
 type = "output"

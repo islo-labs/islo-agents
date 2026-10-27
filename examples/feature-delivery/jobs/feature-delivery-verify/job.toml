@@ -15,12 +15,6 @@ required = false
 default = ""
 description = "Linear issue identifier when this work is ticket-backed. Empty for standalone work."
 
-[job.params.origin]
-type = "string"
-required = false
-default = ""
-description = "Where to report when there is no ticket, as slack:<channel-id>:<thread-ts>."
-
 [job.params.pull_requests]
 type = "array"
 items = "string"
@@ -92,7 +86,6 @@ You are verifying the integrated feature represented by these pull requests:
 
 Work key (identity only): {{work_key}}
 Ticket id (empty for standalone work): {{issue_id}}
-Report origin (empty when a ticket id is set): {{origin}}
 
 Standalone requirement (empty when a ticket id is set):
 
