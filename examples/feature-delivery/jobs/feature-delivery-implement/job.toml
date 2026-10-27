@@ -13,7 +13,7 @@ description = "Linear issue identifier when this work is ticket-backed. Non-empt
 type = "string"
 required = false
 default = ""
-description = "Where to report when there is no ticket, as slack:<channel-id>:<thread-ts>. Leave empty for ticket-backed runs."
+description = "Interaction routing context for standalone work. The Factory backend owns delivery; the agent must not post to it directly."
 
 [job.params.pull_requests]
 type = "array"
@@ -165,7 +165,9 @@ For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all
 
 ## Report back
 
-When done (or blocked), post a short update on the ticket thread, or on `origin` when there is no ticket. Include what you did, PR link(s), and any assumptions or open questions. Always report back, even on failure. If origin is empty and there is no ticket, the pull requests are the only report.
+Do not call Slack APIs or post to `origin`. The Factory backend owns interaction delivery.
+
+For ticket-backed work, keep the ticket updated with substantive implementation results. Include what you did, PR links, verification, assumptions, blockers, and open questions in your final response.
 
 ## Iteration guard
 
@@ -175,7 +177,7 @@ Before pushing fixes, count your own commits on each PR branch:
 git log --oneline --author="Factory Agent" | wc -l
 ```
 
-If there are **5 or more** on any branch, stop. Post a comment on the PR and on the ticket or origin saying you've hit the iteration limit and a human should take over. Do not push more commits.
+If there are **5 or more** on any branch, stop. Post a comment on the PR and on the ticket when one exists, and explain the iteration-limit blocker in your final response. Do not post to Slack or `origin`. Do not push more commits.
 
 ## Output
 

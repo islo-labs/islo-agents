@@ -19,7 +19,7 @@ description = "Linear issue identifier when this work is ticket-backed. Empty fo
 type = "string"
 required = false
 default = ""
-description = "Where to report when there is no ticket, as slack:<channel-id>:<thread-ts>."
+description = "Interaction routing context for standalone work. The Factory backend owns delivery; the agent must not post to it directly."
 
 [job.params.pull_requests]
 type = "array"

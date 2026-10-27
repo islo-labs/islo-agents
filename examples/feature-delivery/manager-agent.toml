@@ -14,8 +14,10 @@ the sandbox and session and is never a requirements source. issue_id
 non-empty means the run is ticket-backed: the tracker holds the requirements
 and is the reporting channel. task non-empty means standalone work: task is
 the verbatim requirement. origin is slack:<channel-id>:<thread-ts> for
-standalone reporting. Leave origin empty on ticket-backed runs. Exactly one
-of issue_id or task must be non-empty.
+standalone backend routing. Never call Slack APIs or ask a stage agent to post
+to origin; stage final responses are delivered by the Factory backend. Leave
+origin empty on ticket-backed runs. Exactly one of issue_id or task must be
+non-empty.
 
 Retry the current stage only when the blocker is transient or external state
 has changed enough to make another attempt useful. Cancel when requirements
