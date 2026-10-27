@@ -88,16 +88,6 @@ Standalone requirement (empty when a ticket id is set):
 
 You are inside an isolated sandbox VM with full root access. You can install packages, start services, run databases, build and run the app. This is your sandbox, use it freely. This sandbox persists across review rounds for this work key, so checkouts from an earlier round may already be on disk. Re-fetch every PR head instead of trusting what you find there.
 
-## Acknowledge start
-
-Before doing anything else, post a brief comment on each PR so the team knows a review is underway:
-
-```bash
-for pr_url in <each PR URL>; do
-  gh pr comment "$pr_url" --body "Starting automated code review..."
-done
-```
-
 ## Instructions
 
 1. **Understand the full change.** Read the ticket, or `<task>` when there is no ticket, so you can judge whether the feature does what was actually asked for. Fetch every PR from GitHub and inspect its current head, diff, checks, existing threads, and cross-repository assumptions. Review all URLs before deciding.

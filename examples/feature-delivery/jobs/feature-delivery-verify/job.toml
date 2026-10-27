@@ -106,16 +106,6 @@ Acceptance criteria from implement (each non-empty row is a mandatory scenario):
 
 You are inside an isolated sandbox VM with a full application stack available. You have full root access and can do whatever you need. This is your sandbox, use it freely. This sandbox persists across verification rounds for this work key, so earlier checkouts and build artifacts may already be on disk. Re-fetch every PR head before you trust anything there, and delete build artifact directories you no longer need so the disk survives later rounds.
 
-## Acknowledge start
-
-Before doing anything else, post a brief comment on each PR so the team knows verification is underway:
-
-```bash
-for pr_url in <each PR URL>; do
-  gh pr comment "$pr_url" --body "Starting E2E verification..."
-done
-```
-
 ## Instructions
 
 1. **Understand the full change.** Read the ticket, or `<task>` when there is no ticket, plus `acceptance_criteria`, to understand what behavior to verify. Fetch every PR and inspect its diff, checks, and threads:
