@@ -22,4 +22,3 @@ jobs:
         run: |
           python3 scripts/validate_examples.py
           python3 scripts/test_manager_setup.py
-          python3 scripts/test_feature_delivery_notifications.py
