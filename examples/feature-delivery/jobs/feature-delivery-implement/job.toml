@@ -13,7 +13,7 @@ description = "Linear issue identifier when this work is ticket-backed. Non-empt
 type = "string"
 required = false
 default = ""
-description = "Interaction routing context for standalone work. The Factory backend owns delivery; the agent must not post to it directly."
+description = "Interaction routing context for standalone work."
 
 [job.params.pull_requests]
 type = "array"
@@ -163,12 +163,6 @@ For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all
 
    If the change spans multiple repos, cross-reference the PRs in each body.
 
-## Report back
-
-Do not call Slack APIs or post to `origin`. The Factory backend owns interaction delivery.
-
-For ticket-backed work, keep the ticket updated with substantive implementation results. Include what you did, PR links, verification, assumptions, blockers, and open questions in your final response.
-
 ## Iteration guard
 
 Before pushing fixes, count your own commits on each PR branch:
@@ -177,7 +171,7 @@ Before pushing fixes, count your own commits on each PR branch:
 git log --oneline --author="Factory Agent" | wc -l
 ```
 
-If there are **5 or more** on any branch, stop. Post a comment on the PR and on the ticket when one exists, and explain the iteration-limit blocker in your final response. Do not post to Slack or `origin`. Do not push more commits.
+If there are **5 or more** on any branch, stop. Post a comment on the PR and on the ticket when one exists, then return the blocker. Do not push more commits.
 
 ## Output
 
