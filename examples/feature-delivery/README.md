@@ -90,6 +90,7 @@ Read this before copying the line into a tenant.
 - Ticket-backed runs set `issue_id` from the Linear identifier. Standalone runs leave `issue_id` empty and put the verbatim request in `task`. Exactly one of `issue_id` or `task` is the requirements source.
 - Start a standalone run with `islo factory line run feature-delivery --param task='...'`. Stages receive line inputs through their transition bindings.
 - Implement must return `acceptance_criteria`. Verify treats every non-empty row as a mandatory scenario.
+- Every stage also returns a `summary`: a short plain-language account of what it did and the verdict. The run chat shows it as the stage's reply; without it a stage with only a `*_result` reads as nearly empty.
 - The first visit of a stage ignores `resume_prompt`. Steering must pass the full instruction as `--param resume_prompt='...'`. A blocked implement retry receives the `pull_requests` that entered the stage, not a list invented by the failed attempt.
 - Jobs use Codex on Islo inference (`openai/gpt-6-sol`). To use a connected Claude account instead, set `harness = "claude"`, `model = "claude-sonnet-4-5"`, and remove `model_provider`.
 - Snapshot names `feature-delivery-code` and `feature-delivery-platform` are names you create. Do not point them at someone else's snapshot.

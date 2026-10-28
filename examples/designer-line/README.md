@@ -78,3 +78,4 @@ Read this before copying the line into a tenant.
 - The prep step does not clone a repo. Bake `/workspace/app` and `/workspace/scripts/start-storybook.sh` into the snapshot named `designer`. That name is yours. Do not point `snapshot_name` at an internal image.
 - The prompt assumes Claude (`claude-sonnet-4-5`) via your connected Claude account. Swap `harness`, `model`, and `model_provider` if you want Islo inference instead.
 - `linear_issue_id` and `pr_url` are required outputs and stay empty until a publish resume creates them. Always return them.
+- `summary` is a required output: what was designed, where to see it, and any open question. The run chat shows it as the reply.

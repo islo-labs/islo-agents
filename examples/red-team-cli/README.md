@@ -74,6 +74,7 @@ Expect `slack_text` from `validate-and-report` and that same text posted by `sla
 
 Read this before copying the line into a tenant.
 
+- Each review job returns `summary` as its own output as well as inside `report_json`, so the run chat shows the stage's conclusion without parsing JSON.
 - The Slack stage posts `slack_text` and does not compose a message. Summary, Linear URLs, and status belong inside `slack_text`. Do not add those params back onto `slack-notify`.
 - `linear_mode` is a default on the report job (`report` validates only, `create` files issues). The line does not pass it, and the white-box jobs do not take it.
 - `REPLACE_WITH_YOUR_SLACK_CHANNEL_ID` and `REPLACE_WITH_YOUR_LINEAR_TEAM_NAME` are placeholders. The snapshot name `red-team-cli` is one you create, with your CLI at `/workspace/your-cli/`.

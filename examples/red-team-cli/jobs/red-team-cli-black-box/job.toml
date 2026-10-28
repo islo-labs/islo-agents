@@ -1,12 +1,17 @@
 [job]
 name = "red-team-cli-black-box"
-version = "0.4.1"
+version = "0.5.0"
 description = "Black-box adversarial testing of your CLI against a production API (no source access)"
 
 [outputs.report_json]
 type = "string"
 required = true
 description = "Minified JSON black-box security report"
+
+[outputs.summary]
+type = "string"
+required = true
+description = "The report's summary as a plain-text string, so a reader sees it without parsing report_json."
 
 [run]
 fail_fast = true
@@ -112,6 +117,7 @@ Skip areas the CLI does not have. Do not assume sandbox, factory, or Islo-specif
 1. Write `/workspace/black-box-report.json` following the shared contract (`agent` = `black-box-cli`, `target` = value of `TARGET_API_URL`).
 2. Set job output **`report_json`** to the minified JSON string (no markdown fences).
 3. Summarize attack coverage in `summary`.
+4. Also set the job output **`summary`** to that same summary string.
 
 If no issues are found, return `findings: []` and document what you attempted.
 
