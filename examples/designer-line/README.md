@@ -8,9 +8,9 @@ Factory line that designs **one UI request** in a retained Storybook sandbox, po
 |-------|-----|----------|
 | `design` | `designer-design` | `designer` |
 
-**Trigger:** manual. Pass `work_key` and `task` when you start the run.
+**Trigger:** manual. Pass `task` when you start the run.
 
-The sandbox uses `ensure` mode, named `designer-<work_key>`, so a follow-up rejoins the same Storybook. When `design_result` is not `ready`, an agentic transition offers `retry-design`. Cancel stays a reserved line control.
+The sandbox uses `ensure` mode, named `designer-<line-run-id>`, so a follow-up on the same line run rejoins the same Storybook while a new run gets a fresh sandbox. When `design_result` is not `ready`, an agentic transition offers `retry-design`. Cancel stays a reserved line control.
 
 ## Before you deploy
 
@@ -45,11 +45,12 @@ islo factory line deploy examples/designer-line/line.toml --dry-run
 islo factory line deploy examples/designer-line/line.toml
 ```
 
+Job and line versions are immutable. This job manifest is version `1.1.0`; redeploy it before redeploying the line. Existing runs keep their pinned older version and should be allowed to finish rather than being rewritten in place.
+
 ### 4. Test
 
 ```bash
 islo factory line run designer-line \
-  --param work_key=task-header \
   --param task='Make the empty state match the nearest settings screen.'
 ```
 
@@ -71,7 +72,7 @@ Delete the deployed line and job from your tenant when you no longer need this e
 Read this before copying the line into a tenant.
 
 - One stage. Do not add a publish stage. A human ask to ship is `islo factory line-run` steer of `design` with a `resume_prompt` that says to commit, push, and open the PR. The first visit ignores `resume_prompt`.
-- `work_key` names `designer-<work_key>` and the agent session. Pattern: `^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$`. Reusing a key rejoins that design. A second run with the same key fights the same sandbox.
+- The sandbox and named session use `designer-{{line_run_id}}`. Steering or retrying the same line run rejoins that design; starting another run for the same request gets a fresh sandbox and conversation.
 - `task` is the verbatim request.
 - Happy path parks on `done` after `design_result=ready`. Leave the run succeeded so a later steer can still reach the sandbox. Cancel only when the human wants the work dead.
 - The prep step does not clone a repo. Bake `/workspace/app` and `/workspace/scripts/start-storybook.sh` into the snapshot named `designer`. That name is yours. Do not point `snapshot_name` at an internal image.

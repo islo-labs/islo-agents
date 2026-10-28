@@ -1,6 +1,6 @@
 [job]
 name = "feature-delivery-verify"
-version = "1.0.0"
+version = "1.1.0"
 description = "Verify the integrated feature represented by a complete pull-request set"
 
 [job.params.acceptance_criteria]
@@ -33,12 +33,6 @@ required = false
 default = ""
 description = "Verbatim requirement text when there is no ticket. Leave empty when issue_id is set."
 
-[job.params.work_key]
-type = "string"
-required = true
-pattern = "^[A-Za-z0-9][A-Za-z0-9_-]{0,60}$"
-description = "Stable identity for this unit of work. Names the sandbox and agent session. Identity only."
-
 [outputs.verification_result]
 type = "string"
 required = true
@@ -53,7 +47,7 @@ teardown_on_complete = false
 
 [run.sandbox]
 mode = "ensure"
-name = "feature-delivery-verify-{{work_key}}"
+name = "feature-delivery-verify-{{line_run_id}}"
 image = "ghcr.io/islo-labs/islo-runner:latest"
 snapshot_name = "feature-delivery-platform"
 vcpus = 8
@@ -84,7 +78,6 @@ You are verifying the integrated feature represented by these pull requests:
 
 {{pull_requests}}
 
-Work key (identity only): {{work_key}}
 Ticket id (empty for standalone work): {{issue_id}}
 
 Standalone requirement (empty when a ticket id is set):
@@ -97,7 +90,7 @@ Acceptance criteria from implement (each non-empty row is a mandatory scenario):
 
 {{acceptance_criteria}}
 
-You are inside an isolated sandbox VM with a full application stack available. You have full root access and can do whatever you need. This is your sandbox, use it freely. This sandbox persists across verification rounds for this work key, so earlier checkouts and build artifacts may already be on disk. Re-fetch every PR head before you trust anything there, and delete build artifact directories you no longer need so the disk survives later rounds.
+You are inside an isolated sandbox VM with a full application stack available. You have full root access and can do whatever you need. This is your sandbox, use it freely. This sandbox persists across verification rounds for this line run, so earlier checkouts and build artifacts may already be on disk. Re-fetch every PR head before you trust anything there, and delete build artifact directories you no longer need so the disk survives later rounds.
 
 ## Instructions
 
@@ -192,7 +185,7 @@ resume_prompt = { type = "literal", value = """Current pull requests: {{pull_req
 
 {{resume_prompt}}
 """ }
-session = "feature-delivery-verify-{{work_key}}"
+session = "feature-delivery-verify-{{line_run_id}}"
 
 [[run.tasks.steps]]
 name = "pause-sandbox"

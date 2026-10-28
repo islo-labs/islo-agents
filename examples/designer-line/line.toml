@@ -31,10 +31,6 @@ op = "always"
 type = "input"
 name = "task"
 
-[transitions.params.work_key]
-type = "input"
-name = "work_key"
-
 [[transitions]]
 id = "design-ready"
 from = "design"
@@ -67,7 +63,3 @@ label = "Retry design"
 [transitions.options.params.task]
 type = "input"
 name = "task"
-
-[transitions.options.params.work_key]
-type = "input"
-name = "work_key"
