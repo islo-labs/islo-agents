@@ -1,6 +1,6 @@
 [job]
 name = "designer-design"
-version = "1.1.0"
+version = "1.2.0"
 description = "Design one UI request in a retained Storybook sandbox and reply with a public share. Publish is a later resume of this same job."
 
 [job.params.resume_prompt]
@@ -39,6 +39,11 @@ description = "Ensure name of the retained sandbox."
 type = "string"
 required = true
 description = "Public Storybook share URL, or empty."
+
+[outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable summary of the design: what was built, where to see it, and any open question."
 
 [run]
 fail_fast = true
@@ -149,6 +154,8 @@ Return `design_result=ready` when the story is on the live share and you have re
 Return `design_result=blocked` when you cannot proceed without a human.
 
 Always return `share_url` (from share.json, empty if none), `sandbox_name=designer-{{line_run_id}}`, `pr_url` (empty until a publish resume), and `linear_issue_id` (empty unless you created a card).
+
+Always return `summary`: two to four sentences on what you designed, where to see it (the share URL), and any open question. After a publish resume, say what was published.
 ''' }
 resume_prompt = { type = "literal", value = "{{resume_prompt}}" }
 session = "designer-{{line_run_id}}"

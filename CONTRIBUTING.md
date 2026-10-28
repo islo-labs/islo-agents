@@ -26,6 +26,22 @@ CI runs **only** `validate_examples.py` on every pull request (including forks).
 
 `validate_examples.py` checks naming, file layout, and forbidden strings — it does **not** validate manifests against the API schema. Passing the script is necessary but not sufficient.
 
+## Job outputs
+
+Every job that runs an agent should declare a `summary` output (or `<name>_summary`, such as `root_cause_summary`):
+
+```toml
+[outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable summary of what the job did and its verdict."
+```
+
+- Tell the agent to return it in the prompt's output section, for example: "Always return `summary`: two to four sentences on what you did and the outcome."
+- The Islo run chat shows an output whose key is `summary` or ends in `_summary` as the stage's reply. Keep the machine-readable verdict in a separate typed output such as `review_result`. A job that declares only a `*_result` ends on an almost empty stage.
+- Put the summary at the top level of the job outputs. A `summary` field inside a JSON blob output (for example `report_json`) is not shown; return it as its own output as well.
+- Jobs with no agent, such as a Slack notify job that only posts a string, do not need one.
+
 ## Pull requests
 
 1. Add or update one example directory under `examples/`.

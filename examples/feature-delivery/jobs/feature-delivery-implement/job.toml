@@ -1,6 +1,6 @@
 [job]
 name = "feature-delivery-implement"
-version = "1.1.0"
+version = "1.2.0"
 description = "Implement one Linear issue or standalone task as a coherent feature across one or more repositories"
 
 [job.params.issue_id]
@@ -42,6 +42,11 @@ enum = ["ready", "blocked"]
 type = "array"
 items = "string"
 required = true
+
+[outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable summary of what was implemented, which pull requests carry it, and any assumption or open question."
 
 [run]
 fail_fast = true
@@ -160,6 +165,8 @@ If there are **5 or more** on any branch, stop. Post a comment on the PR and on 
 ## Output
 
 Treat all pull requests as one feature. Do not report `ready` until every required repository change has a PR and the complete set is internally consistent. Always return the full current PR URL list, including unchanged PRs from prior iterations. Always return `acceptance_criteria`: one checkable sentence per scenario verify must run. Use an empty array only when the work cannot be tested. Return `blocked` only when progress requires a human decision or unavailable external dependency.
+
+Always return `summary`: two to four sentences, in plain language, on what you built, which pull requests carry it, and any assumption or open question. A reader should understand the result without opening the pull requests.
 
 ## Rules
 

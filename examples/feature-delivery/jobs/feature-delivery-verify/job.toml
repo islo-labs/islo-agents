@@ -1,6 +1,6 @@
 [job]
 name = "feature-delivery-verify"
-version = "1.1.0"
+version = "1.2.0"
 description = "Verify the integrated feature represented by a complete pull-request set"
 
 [job.params.acceptance_criteria]
@@ -37,6 +37,11 @@ description = "Verbatim requirement text when there is no ticket. Leave empty wh
 type = "string"
 required = true
 enum = ["passed", "failed", "blocked"]
+
+[outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable verification summary: what was verified, the verdict, and what could not be observed."
 
 [run]
 fail_fast = true
@@ -166,6 +171,8 @@ You are inside an isolated sandbox VM with a full application stack available. Y
 A `failed` verdict must include the command you ran and its real output so the implementer can reproduce it. Do not return `failed` without posting that evidence.
 
 Return `passed` only after every PR and the integrated feature pass. Return `failed` when any reproducible code or integration failure needs implementation work. Return `blocked` only when verification cannot run because required infrastructure or credentials are unavailable.
+
+Always return `summary`: two to four sentences on what you verified, the verdict, and anything you could not observe and why.
 
 ## Rules
 

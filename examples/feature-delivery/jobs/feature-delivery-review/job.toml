@@ -1,6 +1,6 @@
 [job]
 name = "feature-delivery-review"
-version = "1.1.0"
+version = "1.2.0"
 description = "Review every pull request in a feature as one aggregate change"
 
 [job.params.issue_id]
@@ -31,6 +31,11 @@ description = "Verbatim requirement text when there is no ticket. Leave empty wh
 type = "string"
 required = true
 enum = ["approved", "needs_changes", "blocked"]
+
+[outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable review summary: the verdict and the findings that matter."
 
 [run]
 fail_fast = true
@@ -120,6 +125,8 @@ Use `gh api graphql` to resolve threads (mutation `resolveReviewThread` with `th
 ## Output
 
 Return `approved` only when every PR passes and the combined feature is consistent. Return `needs_changes` when any actionable code change is needed. Return `blocked` only when review cannot complete because required information or infrastructure is unavailable.
+
+Always return `summary`: two to four sentences with the verdict and the findings that matter, matching what you posted on the pull requests.
 
 ## Rules
 

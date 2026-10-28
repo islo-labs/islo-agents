@@ -1,12 +1,17 @@
 [job]
 name = "red-team-cli-input-abuse"
-version = "0.3.1"
+version = "0.4.0"
 description = "Red-team input-abuse review of your CLI (transport, paths, shell, manifests)"
 
 [outputs.report_json]
 type = "string"
 required = true
 description = "Minified JSON security review report"
+
+[outputs.summary]
+type = "string"
+required = true
+description = "The report's summary as a plain-text string, so a reader sees it without parsing report_json."
 
 [run]
 fail_fast = true
@@ -90,6 +95,7 @@ Audit how **`your-cli`** handles untrusted input across HTTP/WebSocket transport
 1. Write the full report object to `/workspace/input-abuse-report.json` following the shared contract (`agent` = `input-abuse`).
 2. Set the job output **`report_json`** to the **minified JSON string** of that report (no markdown fences).
 3. Keep `summary` concise: counts by severity and status.
+4. Also set the job output **`summary`** to that same summary string.
 
 If no issues are found, return a valid report with `findings: []` and explain coverage in `summary`.
 
