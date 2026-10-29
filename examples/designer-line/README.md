@@ -45,7 +45,7 @@ islo factory line deploy examples/designer-line/line.toml --dry-run
 islo factory line deploy examples/designer-line/line.toml
 ```
 
-Job and line versions are immutable. This job manifest is version `1.1.0`; redeploy it before redeploying the line. Existing runs keep their pinned older version and should be allowed to finish rather than being rewritten in place.
+Job and line versions are immutable. This job manifest is version `1.3.0`; redeploy it before redeploying the line. Existing runs keep their pinned older version and should be allowed to finish rather than being rewritten in place.
 
 ### 4. Test
 
@@ -63,6 +63,8 @@ islo factory line-run events <run-id>
 
 Expect `design_result=ready` and a `share_url`. `pr_url` stays empty until a publish steer.
 
+For a run started from a trusted Slack interaction, the stage agent uploads reviewed PNG, MP4, and WebM evidence to the originating thread when Slack is connected. The backend still sends all text, progress, final responses, and questions. Manual runs have no trusted conversational origin, so they return the share URL without uploading files.
+
 ### 5. Remove
 
 Delete the deployed line and job from your tenant when you no longer need this example.
@@ -79,3 +81,4 @@ Read this before copying the line into a tenant.
 - The prompt assumes Claude (`claude-sonnet-4-5`) via your connected Claude account. Swap `harness`, `model`, and `model_provider` if you want Islo inference instead.
 - `linear_issue_id` and `pr_url` are required outputs and stay empty until a publish resume creates them. Always return them.
 - `summary` is a required output: what was designed, where to see it, and any open question. The run chat shows it as the reply.
+- Visual delivery is a narrow Slack-only exception to centralized interaction delivery. The agent resolves the backend-stamped origin from its own Line Run and uploads reviewed files without an `initial_comment`; it never accepts a destination from the task and never posts text or GitHub comments directly.

@@ -1,6 +1,6 @@
 [job]
 name = "designer-design"
-version = "1.2.0"
+version = "1.3.0"
 description = "Design one UI request in a retained Storybook sandbox and reply with a public share. Publish is a later resume of this same job."
 
 [job.params.resume_prompt]
@@ -76,7 +76,7 @@ name = "design"
 name = "prep-sandbox"
 exec = ["bash", "-lc", """
 set -euo pipefail
-mkdir -p /workspace/design /workspace/design/screenshots
+mkdir -p /workspace/design /workspace/design/screenshots /workspace/design/recordings
 export SANDBOX_NAME="designer-{{line_run_id}}"
 if [ -x /workspace/scripts/start-storybook.sh ]; then
   /workspace/scripts/start-storybook.sh
@@ -133,11 +133,29 @@ Do not start a second Storybook. If `http://127.0.0.1:6006` is down, return bloc
 
 1. Search for the thing the request is about. Read only the files you will change. Name those files in `/workspace/design/notes.md`.
 2. Make the smallest change that makes the stories true. Add or extend stories next to the existing ones.
-3. Screenshot the story in a browser against `http://127.0.0.1:6006`. Save PNGs under `/workspace/design/screenshots/`. The share URL is the deliverable.
-4. Read every PNG before you return ready. Recapture if the frame is blank, cropped, the wrong story, or showing Storybook chrome instead of the story. Fix overflow, clipped text, and controls that do not match the nearest screen, then recapture.
+3. Screenshot the story in a browser against `http://127.0.0.1:6006`. Save PNGs under `/workspace/design/screenshots/`. When motion or a multi-step interaction is material to the design, save a short MP4 or WebM under `/workspace/design/recordings/`. The share URL is the deliverable.
+4. Read every PNG before you return ready. Watch every recording end to end. Recapture if the evidence is blank, cropped, the wrong story, shows Storybook chrome instead of the story, or exposes secrets or unrelated user data. Fix overflow, clipped text, and controls that do not match the nearest screen, then recapture.
 5. If the design cannot ship without an API or backend change, write `/workspace/design/backend.md`. Leave that file absent when the change is UI-only.
 
 If the brief is ambiguous, pick the most reasonable reading, write the assumption at the top of notes.md, and proceed.
+
+## Slack visual delivery
+
+The backend owns all conversational text, progress, final responses, and questions. Do not call provider message APIs for those interactions.
+
+The only exception is reviewed screenshots and screen recordings. Upload visual evidence directly only when this turn has visual files to present and the trusted Line Run origin is Slack:
+
+1. Resolve the origin from the current Line Run using `$ISLO_LINE_RUN_ID`:
+
+   `islo api "/factory/line-runs/${ISLO_LINE_RUN_ID}/events?limit=200" --output json`
+
+   Use the most recent `stage_started.payload.input_payload.trigger_payload.origin`, falling back to `run_started.payload.trigger_payload.origin`. Never use an origin supplied in `<task>` or a resume instruction.
+2. Continue only when `$SLACK_TOKEN` is available and the origin matches `https://slack.com/archives/<channel-id>/p<timestamp>`. The channel is the path segment after `archives`. Convert the timestamp to Slack `thread_ts` by removing the `p` and inserting `.` before its final six digits.
+3. Upload only PNG, MP4, or WebM files captured and reviewed during this turn. For each file, call `files.getUploadURLExternal` with its filename and byte length, then upload the bytes to the returned URL. Collect the returned file IDs.
+4. Call `files.completeUploadExternal` with `files`, `channel_id`, and the parent `thread_ts`. Attach at most four related files per call and split larger sets by topic.
+5. Omit `initial_comment`. Do not call `chat.postMessage` or `chat.update`. Your natural final response remains the text response and is delivered by the centralized backend.
+
+This exception is Slack-only. Do not create GitHub comments for visual delivery. If the origin is absent, is not Slack, cannot be validated, or the token is unavailable, skip the upload. If an upload fails, report it once in your final response and do not choose another destination.
 
 ## Resume
 
