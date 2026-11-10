@@ -1,0 +1,7 @@
+name = "qa-web-core-report"
+description = "Validate and emit web-core findings"
+machine = "qa"
+type = "script"
+commands = [
+    "python3 /workspace/islo-agents/runtime/stages.py qa web-core-report",
+]

@@ -1,0 +1,7 @@
+name = "qa-report"
+description = "Dedupe QA agent reports and emit a Slack message"
+machine = "qa-report"
+type = "script"
+commands = [
+    "python3 /workspace/islo-agents/runtime/stages.py qa collect",
+]

@@ -11,52 +11,249 @@ cron = "0 7 * * *"
 timezone = "UTC"
 
 [[stages]]
-id = "qa"
-job = "qa"
-description = "Run three parallel QA agents and emit one report JSON each"
+id = "web-core"
+agent = "qa-web-core"
+sandbox_name = "qa-web-core-{{line_run_id}}"
+
+[stages.params.qa_base_url]
+type = "string"
+required = false
+default = "https://your-app.example.com"
+description = "Deployed web app URL to test"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+
+[[stages]]
+id = "web-core-report"
+agent = "qa-web-core-report"
+sandbox_name = "qa-web-core-{{line_run_id}}"
+
+[stages.params.qa_base_url]
+type = "string"
+required = false
+default = "https://your-app.example.com"
+description = "Deployed web app URL to test"
+
+[stages.outputs.web_core_report_json]
+type = "string"
+required = false
+description = "Minified web-core report JSON. Empty when that agent did not report."
+
+[[stages]]
+id = "web-platform"
+agent = "qa-web-platform"
+sandbox_name = "qa-web-platform-{{line_run_id}}"
+
+[stages.params.qa_base_url]
+type = "string"
+required = false
+default = "https://your-app.example.com"
+description = "Deployed web app URL to test"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+
+[[stages]]
+id = "web-platform-report"
+agent = "qa-web-platform-report"
+sandbox_name = "qa-web-platform-{{line_run_id}}"
+
+[stages.params.qa_base_url]
+type = "string"
+required = false
+default = "https://your-app.example.com"
+description = "Deployed web app URL to test"
+
+[stages.outputs.web_platform_report_json]
+type = "string"
+required = false
+description = "Minified web-platform report JSON. Empty when that agent did not report."
+
+[[stages]]
+id = "cli-cross"
+agent = "qa-cli-cross"
+sandbox_name = "qa-cli-cross-{{line_run_id}}"
+
+[stages.params.qa_base_url]
+type = "string"
+required = false
+default = "https://your-app.example.com"
+description = "Deployed web app URL to test"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+
+[[stages]]
+id = "cli-cross-report"
+agent = "qa-cli-cross-report"
+sandbox_name = "qa-cli-cross-{{line_run_id}}"
+
+[stages.params.qa_base_url]
+type = "string"
+required = false
+default = "https://your-app.example.com"
+description = "Deployed web app URL to test"
+
+[stages.outputs.cli_cross_report_json]
+type = "string"
+required = false
+description = "Minified cli-cross report JSON. Empty when that agent did not report."
 
 [[stages]]
 id = "collect"
-job = "qa-report"
 description = "Dedupe whatever reports arrived and emit a Slack message"
+agent = "qa-report"
+
+[stages.params.cli_cross_report_json]
+type = "string"
+required = false
+default = ""
+description = "JSON report string from the cli-cross agent"
+
+[stages.params.web_core_report_json]
+type = "string"
+required = false
+default = ""
+description = "JSON report string from the web-core agent"
+
+[stages.params.web_platform_report_json]
+type = "string"
+required = false
+default = ""
+description = "JSON report string from the web-platform agent"
+
+[stages.outputs.slack_text]
+type = "string"
+required = true
+description = "Entire Slack message: updates only, plus where a human should look"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable summary of the QA run"
 
 [[stages]]
 id = "slack-notify"
-job = "qa-slack-notify"
 description = "Post the Slack message"
+agent = "qa-slack-notify"
+
+[stages.params.slack_channel_id]
+type = "string"
+required = true
+description = "Slack channel ID for chat.postMessage"
+
+[stages.params.slack_text]
+type = "string"
+required = true
+description = "Entire Slack message from the collector"
+
+[stages.outputs]
 
 [[transitions]]
-id = "trigger-to-qa"
+id = "trigger-to-web-core"
 from = "trigger"
-to = "qa"
+to = "web-core"
 type = "conditional"
 
 [transitions.when]
 op = "always"
 
+[transitions.params.qa_base_url]
+type = "input"
+name = "qa_base_url"
+
 [[transitions]]
-id = "qa-to-collect"
-from = "qa"
+id = "web-core-to-web-core-report"
+from = "web-core"
+to = "web-core-report"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.qa_base_url]
+type = "input"
+name = "qa_base_url"
+
+[[transitions]]
+id = "web-core-report-to-web-platform"
+from = "web-core-report"
+to = "web-platform"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.qa_base_url]
+type = "input"
+name = "qa_base_url"
+
+[[transitions]]
+id = "web-platform-to-web-platform-report"
+from = "web-platform"
+to = "web-platform-report"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.qa_base_url]
+type = "input"
+name = "qa_base_url"
+
+[[transitions]]
+id = "web-platform-report-to-cli-cross"
+from = "web-platform-report"
+to = "cli-cross"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.qa_base_url]
+type = "input"
+name = "qa_base_url"
+
+[[transitions]]
+id = "cli-cross-to-cli-cross-report"
+from = "cli-cross"
+to = "cli-cross-report"
+type = "conditional"
+
+[transitions.when]
+op = "always"
+
+[transitions.params.qa_base_url]
+type = "input"
+name = "qa_base_url"
+
+[[transitions]]
+id = "cli-cross-report-to-collect"
+from = "cli-cross-report"
 to = "collect"
 type = "conditional"
 
 [transitions.when]
 op = "always"
 
-[transitions.params.cli_cross_report_json]
-type = "output"
-stage = "qa"
-name = "cli_cross_report_json"
-
 [transitions.params.web_core_report_json]
 type = "output"
-stage = "qa"
+stage = "web-core-report"
 name = "web_core_report_json"
 
 [transitions.params.web_platform_report_json]
 type = "output"
-stage = "qa"
+stage = "web-platform-report"
 name = "web_platform_report_json"
+
+[transitions.params.cli_cross_report_json]
+type = "output"
+stage = "cli-cross-report"
+name = "cli_cross_report_json"
 
 [[transitions]]
 id = "collect-to-slack"

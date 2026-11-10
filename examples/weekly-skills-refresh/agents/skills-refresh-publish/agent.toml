@@ -1,0 +1,7 @@
+name = "skills-refresh-publish"
+description = "publish the skills refresh"
+machine = "skills-refresh"
+type = "script"
+commands = [
+    "python3 /workspace/islo-agents/runtime/stages.py weekly-skills-refresh publish",
+]

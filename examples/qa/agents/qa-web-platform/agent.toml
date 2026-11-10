@@ -1,0 +1,10 @@
+name = "qa-web-platform"
+description = "Black-box QA for web-platform"
+machine = "qa"
+type = "prompt"
+harness = "claude"
+model = "claude-sonnet-4-5"
+prompt = '''
+Read and follow /workspace/prompts/web-platform.md.
+
+Use {{qa_base_url}} as QA_BASE_URL and ISLO_BASE_URL. Use $ISLO_LINE_RUN_ID as QA_RUN_ID and qa-agent-web-platform as QA_AGENT_ID. Pass values to tools through process environment dictionaries. Work in /workspace/qa-harness. Write /workspace/findings.json and evidence as the brief specifies. Return summary with your coverage and any infrastructure limit. Do not publish the report; the next script Agent validates it.'''

@@ -7,10 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  # Secret-free, so it runs on fork PRs too. Line manifests are structurally
-  # validated here rather than with `islo factory line validate`, because that
-  # command resolves each stage's `job` against deployed tenant state and so
-  # fails for any template not already deployed on the CI tenant.
+  # Validate local Agent packages without credentials or deployed tenant state.
   validate-examples:
     runs-on: ubuntu-latest
     permissions:
@@ -21,6 +18,4 @@ jobs:
       - name: Validate example packages
         run: |
           python3 scripts/validate_examples.py
-          python3 scripts/test_designer_delivery_policy.py
-          python3 scripts/test_manager_setup.py
-          python3 scripts/test_run_identity.py
+          python3 -m unittest discover -s scripts -p 'test_*.py'

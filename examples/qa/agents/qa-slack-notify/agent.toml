@@ -1,0 +1,7 @@
+name = "qa-slack-notify"
+description = "Post the QA Slack message"
+machine = "qa"
+type = "script"
+commands = [
+    "python3 /workspace/islo-agents/runtime/stages.py qa slack-notify",
+]

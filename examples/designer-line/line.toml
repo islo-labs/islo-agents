@@ -15,8 +15,54 @@ agent = "designer-line-manager"
 
 [[stages]]
 id = "design"
-job = "designer-design"
-description = "Prep starts Storybook and the share. The agent designs against the live URL. Publish is a later resume of this stage."
+description = "The Agent starts Storybook and the share. The agent designs against the live URL. Publish is a later resume of this stage."
+agent = "designer-design"
+sandbox_name = "designer-{{line_run_id}}"
+
+[stages.params.resume_prompt]
+type = "string"
+required = false
+default = "A follow-up arrived on this design. Read /workspace/design/notes.md, share.json, and PREP.md. Apply the instruction below. Do not open a pull request unless this instruction says to publish."
+description = "Complete instruction for a resumed design turn. Ignored on the first visit of this stage."
+
+[stages.params.task]
+type = "string"
+required = false
+default = ""
+description = "Verbatim design request. Paste it as written."
+
+[stages.outputs.design_result]
+type = "string"
+required = true
+enum = [
+    "ready",
+    "blocked",
+]
+
+[stages.outputs.linear_issue_id]
+type = "string"
+required = true
+description = "Tracker identifier when a publish resume created a backend card, or empty."
+
+[stages.outputs.pr_url]
+type = "string"
+required = true
+description = "Pull request URL after a publish resume, or empty."
+
+[stages.outputs.sandbox_name]
+type = "string"
+required = true
+description = "Ensure name of the retained sandbox."
+
+[stages.outputs.share_url]
+type = "string"
+required = true
+description = "Public Storybook share URL, or empty."
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable summary of the design: what was built, where to see it, and any open question."
 
 [[transitions]]
 id = "trigger-to-design"
@@ -38,9 +84,15 @@ to = "done"
 type = "conditional"
 
 [transitions.when]
-left = { type = "stage", path = "$.outputs.design_result" }
 op = "eq"
-right = { type = "literal", value = "ready" }
+
+[transitions.when.left]
+type = "stage"
+path = "$.outputs.design_result"
+
+[transitions.when.right]
+type = "literal"
+value = "ready"
 
 [[transitions]]
 id = "design-blocked"

@@ -1,28 +1,29 @@
-"""Check the Designer's centralized-text and direct-visual delivery contract."""
+"""Preserve the Designer's retained workspace and trusted visual delivery."""
 
+import tomllib
+import unittest
 from pathlib import Path
 
-job_path = (
-    Path(__file__).resolve().parents[1]
-    / "examples"
-    / "designer-line"
-    / "jobs"
-    / "designer-design"
-    / "job.toml"
-)
-manifest = job_path.read_text()
+ROOT = Path(__file__).resolve().parents[1]
 
-for required in (
-    "$ISLO_LINE_RUN_ID",
-    "files.getUploadURLExternal",
-    "files.completeUploadExternal",
-    "screenshots",
-    "screen recordings",
-    "Omit `initial_comment`",
-    "Do not call `chat.postMessage` or `chat.update`",
-):
-    assert required in manifest, required
 
-assert "[job.params.origin]" not in manifest
+class DesignerDeliveryTests(unittest.TestCase):
+    def test_delivery_contract(self):
+        path = ROOT / 'examples/designer-line/agents/designer-design/agent.toml'
+        manifest = tomllib.loads(path.read_text())
+        prompt = manifest['prompt']
+        for required in (
+            '$ISLO_LINE_RUN_ID', 'files.getUploadURLExternal', 'files.completeUploadExternal',
+            'screenshots', 'screen recordings', 'Omit `initial_comment`',
+            'Do not call `chat.postMessage` or `chat.update`',
+            '/workspace/scripts/start-storybook.sh',
+        ):
+            self.assertIn(required, prompt)
+        line = tomllib.loads((ROOT / 'examples/designer-line/line.toml').read_text())
+        self.assertEqual([s['id'] for s in line['stages']], ['design'])
+        self.assertNotIn('origin', line['stages'][0]['params'])
+        self.assertIn('resume_prompt', line['stages'][0]['params'])
 
-print("Designer delivery policy: OK")
+
+if __name__ == '__main__':
+    unittest.main()

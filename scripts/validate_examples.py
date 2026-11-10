@@ -26,74 +26,7 @@ FORBIDDEN_PATTERNS = [
     re.compile(r"qa-collector"),
 ]
 
-ALLOWED_PLACEHOLDER_MARKERS = [
-    "REPLACE_WITH_OWNER",
-    "REPLACE_WITH_REPOSITORY",
-    "REPLACE_WITH_YOUR_SLACK_CHANNEL_ID",
-    "REPLACE_WITH_YOUR_LINEAR_TEAM_NAME",
-    "REPLACE_WITH_YOUR_LINEAR_LABEL_NAME",
-    "your-org/",
-]
-
-PUBLIC_RUNNER_IMAGES = {
-    "ghcr.io/islo-labs/islo-runner:latest",
-    "docker.io/library/islo-runner:latest",
-}
-
 PLACEHOLDER_TOKEN = re.compile(r"REPLACE_WITH_[A-Z_]+")
-
-# Examples still binding prompts through Islo Knowledge. Convert them by putting
-# the stage brief in run_agent.prompt (job version == prompt version). Supporting
-# or fan-out briefs may stay in the snapshot. The set must reach empty.
-PENDING_PROMPT_SOURCE_MIGRATION = set()
-
-# Prompt files that live only in snapshot-src (supporting notes, or fan-out
-# briefs that would clutter the line/job view). Stage briefs live in run_agent
-# literals — do not keep a parallel examples/*/prompts/ copy.
-SNAPSHOT_ONLY_PROMPTS = {
-    "feature-delivery": {"integrations.md", "platform-env.md"},
-    "qa": {"web-core.md", "web-platform.md", "cli-cross.md"},
-    "red-team-cli": {"finding-contract.md"},
-}
-
-
-# Only [[run.tasks.steps]] and run_agent are extra="forbid" in the live API, so
-# everything else here is the repo's own gate: a typo'd `memory_mb` deploys
-# silently with the default.
-# `timeout` is the live step field. `islo schema job` still lists `timeout_secs`,
-# which the API rejects as an extra input; a reader checking the dump will think
-# this allow-list is wrong, and the dump is what is stale (both measured by
-# --dry-run probe). `sandbox.sources` and `sandbox.setup_scripts` are the mirror
-# image: absent from the dump, accepted by the API.
-JOB_SECTION_KEYS = {
-    "": {"job", "outputs", "run", "schedule", "verification"},
-    "job": {"name", "version", "description", "params"},
-    "job.params.*": {"type", "required", "default", "description", "enum", "pattern", "prefix", "items"},
-    "outputs.*": {"type", "required", "description", "enum", "items", "reduce"},
-    "run": {"concurrency", "fail_fast", "fanout", "region", "resume_on_start",
-            "teardown_on_complete", "timeout", "workdir", "sandbox", "tasks"},
-    "run.sandbox": {"cache_key", "disk_gb", "env", "environment",
-                    "gateway_profile", "image", "init", "internet_enabled", "memory_mb",
-                    "mode", "name", "snapshot_name", "vcpus", "workdir",
-                    "lifecycle", "sources", "setup_scripts"},
-    "run.sandbox.lifecycle": {"auto_resume", "delete_after", "pause_after", "pause_after_idle"},
-    "run.tasks[]": {"name", "sandbox", "steps"},
-    "run.tasks[].steps[]": {"name", "timeout", "user", "workdir",
-                            "exec", "pause", "resume", "delete", "snapshot", "run_agent",
-                            "upload", "download", "outputs"},
-    "run.tasks[].steps[].run_agent": {"mode", "harness", "model", "model_provider", "effort",
-                                      "prompt", "resume_prompt", "knowledge", "session", "command"},
-}
-
-JOB_SECTION_COLLECTIONS = {
-    "job.params": "job.params.*",
-    "outputs": "outputs.*",
-    "run.tasks": "run.tasks[]",
-    "run.tasks[].steps": "run.tasks[].steps[]",
-}
-
-# A per-task sandbox override carries the same field set as the shared sandbox.
-JOB_SECTION_ALIASES = {"run.tasks[].sandbox": "run.sandbox"}
 
 CONDITION_OPERANDS = {
     "always": (), "eq": ("left", "right"), "ne": ("left", "right"),
@@ -101,27 +34,23 @@ CONDITION_OPERANDS = {
     "exists": ("operand",), "missing": ("operand",), "truthy": ("operand",), "falsy": ("operand",),
     "all": ("conditions",), "any": ("conditions",), "not": ("condition",),
 }
-
-TRANSITION_TYPES = {"conditional", "agentic"}
 BINDING_TYPES = {"input", "output", "literal"}
 RESERVED_STAGE_IDS = {"trigger", "done", "wait"}
-
-# The API rejects these as agentic option names ("reserved for line controls").
-# Measured one name at a time against `islo factory line validate`; the rest of
-# the line-control vocabulary (retry, steer, follow-up, ask) is accepted.
 RESERVED_OPTION_NAMES = {"cancel", "stop"}
-
-# The skill repo syncs these examples verbatim and bans the character, so a
-# stray em-dash here fails a downstream drift check rather than this one.
 EM_DASH = "—"
 SWEPT_SUFFIXES = {".md", ".toml", ".py", ".ts", ".json", ".sh", ".yml", ".yaml"}
-REMOVED_IDENTITY_PATTERN = re.compile(r"\bwork_key\b")
 LINE_RUN_SCOPE = "{{line_run_id}}"
-
 Edge = namedtuple("Edge", "transition_id origin source target params")
-Job = namedtuple("Job", "path name text doc")
-
+Stage = namedtuple("Stage", "path name text doc")
 errors: list[str] = []
+
+
+def stage_params(doc: dict) -> dict:
+    return table(doc, "params")
+
+
+def stage_outputs(doc: dict) -> dict:
+    return table(doc, "outputs")
 
 
 def fail(msg: str) -> None:
@@ -157,29 +86,6 @@ def check_forbidden_text(path: Path, text: str) -> None:
             fail(f"{path}: forbidden pattern {pattern.pattern}")
 
 
-def walk_job_sections(path: Path, section: str, display: str, doc: dict) -> None:
-    allowed = JOB_SECTION_KEYS.get(section)
-    for key, value in doc.items():
-        if allowed is not None and key not in allowed:
-            where = f"in [{display}]" if display else "at top level"
-            fail(f"{path}: unknown key {key!r} {where}")
-        child = f"{section}.{key}" if section else key
-        child_display = f"{display}.{key}" if display else key
-        member = JOB_SECTION_COLLECTIONS.get(child)
-        if member is None:
-            target = JOB_SECTION_ALIASES.get(child, child)
-            if target in JOB_SECTION_KEYS and isinstance(value, dict):
-                walk_job_sections(path, target, child_display, value)
-        elif isinstance(value, dict):
-            for name, item in value.items():
-                if isinstance(item, dict):
-                    walk_job_sections(path, member, f"{child_display}.{name}", item)
-        elif isinstance(value, list):
-            for index, item in enumerate(value):
-                if isinstance(item, dict):
-                    walk_job_sections(path, member, f"{child_display}[{index}]", item)
-
-
 def check_condition(path: Path, label: str, cond: object) -> None:
     if not isinstance(cond, dict):
         fail(f"{path}: {label} must be a condition table")
@@ -197,228 +103,6 @@ def check_condition(path: Path, label: str, cond: object) -> None:
             check_condition(path, f"{label}.conditions[{index}]", nested)
     elif op == "not" and "condition" in cond:
         check_condition(path, f"{label}.condition", cond["condition"])
-
-
-def job_params(doc: dict) -> dict:
-    return table(table(doc, "job"), "params")
-
-
-def job_outputs(doc: dict) -> dict:
-    return table(doc, "outputs")
-
-
-def iter_run_agents(doc: dict):
-    for task in rows(table(doc, "run"), "tasks"):
-        if not isinstance(task, dict):
-            continue
-        for step in rows(task, "steps"):
-            if not isinstance(step, dict):
-                continue
-            agent = step.get("run_agent")
-            if isinstance(agent, dict):
-                yield step.get("name") or "?", agent
-
-
-def iter_sandboxes(doc: dict):
-    run = table(doc, "run")
-    sandbox = table(run, "sandbox")
-    if sandbox:
-        yield "run.sandbox", sandbox
-    for index, task in enumerate(rows(run, "tasks")):
-        if not isinstance(task, dict):
-            continue
-        sandbox = table(task, "sandbox")
-        if sandbox:
-            yield f"run.tasks[{index}].sandbox", sandbox
-
-
-def has_run_scoped_slot(value: object) -> bool:
-    if not isinstance(value, str) or value.count(LINE_RUN_SCOPE) != 1:
-        return False
-    slot = value.replace(LINE_RUN_SCOPE, "")
-    if "{{" in slot or "}}" in slot:
-        return False
-    return any(char.isalnum() for char in slot)
-
-
-def validate_retained_identity(path: Path, doc: dict) -> None:
-    retained = [
-        (label, sandbox)
-        for label, sandbox in iter_sandboxes(doc)
-        if sandbox.get("mode") == "ensure"
-    ]
-    for label, sandbox in retained:
-        if not has_run_scoped_slot(sandbox.get("name")):
-            fail(
-                f"{path}: [{label}] ensure name must combine an explicit slot "
-                f"with {LINE_RUN_SCOPE}"
-            )
-    for step_name, agent in iter_run_agents(doc):
-        session = agent.get("session")
-        if session is not None and not has_run_scoped_slot(session):
-            fail(
-                f"{path}: step {step_name!r} named session must combine an explicit "
-                f"slot with {LINE_RUN_SCOPE}"
-            )
-
-
-def declares_checkout_step(doc: dict) -> bool:
-    for task in rows(table(doc, "run"), "tasks"):
-        if not isinstance(task, dict):
-            continue
-        for step in rows(task, "steps"):
-            if not isinstance(step, dict):
-                continue
-            command = step.get("exec")
-            joined = " ".join(command) if isinstance(command, list) else str(command or "")
-            if "git clone" in joined or ("git" in joined and "fetch" in joined):
-                return True
-    return False
-
-
-def validate_job(path: Path, example_dir: Path, text: str, doc: dict) -> str | None:
-    check_forbidden_text(path, text)
-    walk_job_sections(path, "", "", doc)
-    validate_retained_identity(path, doc)
-
-    job = table(doc, "job")
-    name = job.get("name")
-    if not name:
-        fail(f"{path}: missing [job].name")
-        name = None
-    elif name != path.parent.name:
-        fail(f"{path}: [job].name {name!r} must match directory {path.parent.name!r}")
-
-    for param_name, param_block in job_params(doc).items():
-        if not isinstance(param_block, dict):
-            continue
-        param_type = param_block.get("type")
-        if param_type is None:
-            fail(f"{path}: job.params.{param_name} missing type")
-        if param_type == "array" and "items" not in param_block:
-            fail(f"{path}: job.params.{param_name} is an array param and requires items")
-        if "items" in param_block and param_type != "array":
-            fail(f"{path}: job.params.{param_name} sets items, which is only valid for array params")
-
-    for out_name, out_block in job_outputs(doc).items():
-        if isinstance(out_block, dict) and "type" not in out_block:
-            fail(f"{path}: outputs.{out_name} missing type")
-
-    sandbox = table(table(doc, "run"), "sandbox")
-    image = sandbox.get("image")
-    if image and image not in PUBLIC_RUNNER_IMAGES:
-        fail(f"{path}: image must be a public runner image, got {image!r}")
-
-    snapshot = sandbox.get("snapshot_name")
-    if snapshot:
-        snap_readme = example_dir / "snapshots" / snapshot / "README.md"
-        if not snap_readme.is_file():
-            fail(f"{path}: snapshot {snapshot!r} missing {snap_readme}")
-
-    # Fresh provision clones [[run.sandbox.sources]]. Exec clone remains valid
-    # for snapshot-restore jobs until compute restore-checkout lands.
-
-    if "npx tsx" in text or "git clone https://github.com/islo-labs/islo-agents" in text:
-        fail(f"{path}: must not clone this pack at runtime")
-
-    return name
-
-
-def collect_jobs(example_dir: Path) -> list[Job]:
-    jobs_root = example_dir / "jobs"
-    if not jobs_root.is_dir():
-        return []
-    found: list[Job] = []
-    for job_dir in sorted(jobs_root.iterdir()):
-        job_toml = job_dir / "job.toml"
-        if not job_toml.is_file():
-            continue
-        text = job_toml.read_text()
-        doc = load_toml(job_toml)
-        if doc is None:
-            continue
-        found.append(Job(job_toml, validate_job(job_toml, example_dir, text, doc), text, doc))
-    return found
-
-
-def validate_manager_agent(path: Path, doc: dict, agent_path: Path) -> None:
-    manager = doc.get("manager")
-    if manager is None:
-        return
-    if not isinstance(manager, dict) or set(manager) - {"agent", "prompt"}:
-        fail(f"{path}: [manager] permits only agent and prompt")
-        return
-    name = manager.get("agent")
-    if not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,62}", name):
-        fail(f"{path}: [manager].agent must name a prompt Agent")
-    prompt = manager.get("prompt")
-    if prompt is not None and (not isinstance(prompt, str) or not prompt.strip()):
-        fail(f"{path}: [manager].prompt must be nonblank")
-    if table(doc, "agent").get("instructions") is not None:
-        fail(f"{path}: [manager] cannot be combined with [agent.instructions]")
-    agent = load_toml(agent_path) if agent_path.is_file() else None
-    if agent is None:
-        fail(f"{agent_path}: Manager Agent manifest missing or invalid")
-        return
-    required = {"name", "machine", "type", "harness", "model", "prompt"}
-    allowed = required | {"description", "model_provider", "effort", "skills", "mcp"}
-    if missing := required - set(agent):
-        fail(f"{agent_path}: missing Agent fields {sorted(missing)}")
-    if extra := set(agent) - allowed:
-        fail(f"{agent_path}: unknown Agent fields {sorted(extra)}")
-    if agent.get("name") != name or agent.get("type") != "prompt":
-        fail(f"{agent_path}: must define prompt Agent {name!r}")
-    if not isinstance(agent.get("machine"), str) or not agent.get("machine", "").strip():
-        fail(f"{agent_path}: machine must name an existing Factory Machine")
-    if agent.get("harness") not in {"codex", "claude", "cursor", "opencode"}:
-        fail(f"{agent_path}: unsupported harness")
-    if any(not isinstance(agent.get(key), str) or not agent.get(key, "").strip() for key in ("model", "prompt")):
-        fail(f"{agent_path}: model and prompt must be nonblank")
-    provider = agent.get("model_provider")
-    if provider not in {None, "islo", "islo_inference"} or (provider == "islo" and agent.get("harness") != "codex") or (provider == "islo_inference" and agent.get("harness") not in {"codex", "claude"}):
-        fail(f"{agent_path}: invalid model_provider for harness")
-
-
-def validate_line(path: Path, text: str, doc: dict, job_names: set[str]) -> None:
-    check_forbidden_text(path, text)
-    line_name = table(doc, "line").get("name")
-    if not line_name:
-        fail(f"{path}: missing [line].name")
-    if line_name != path.parent.name:
-        fail(f"{path}: [line].name {line_name!r} must match directory {path.parent.name!r}")
-
-    stages = rows(doc, "stages")
-    if not stages:
-        fail(f"{path}: no [[stages]]")
-    for stage in stages:
-        if not isinstance(stage, dict):
-            continue
-        job = stage.get("job")
-        if job not in job_names:
-            fail(f"{path}: stage {stage.get('id')!r} references missing job {job!r}")
-
-    trigger = table(doc, "trigger")
-    if trigger.get("type") == "integration_trigger" and not trigger.get("outputs"):
-        fail(f"{path}: integration trigger must declare [trigger.outputs]")
-
-    if not rows(doc, "transitions"):
-        fail(f"{path}: no [[transitions]]")
-
-    validate_manager_agent(path, doc, path.parent / "manager-agent.toml")
-    if "decisions" in doc:
-        fail(f"{path}: [[decisions]] is not a line section; express the decision as an "
-             f"'agentic' transition with [[transitions.options]]")
-
-    for index, filt in enumerate(rows(trigger, "filters")):
-        label = f"trigger.filters[{index}]"
-        if not isinstance(filt, dict):
-            fail(f"{path}: {label} must be a table")
-        elif "path" in filt or "value" in filt:
-            fail(f"{path}: {label} uses the legacy {{path, op, value}} form; use the condition "
-                 f"AST, e.g. {{ op = \"eq\", left = {{ type = \"trigger\", path = \"$.action\" }}, "
-                 f"right = {{ type = \"literal\", value = \"opened\" }} }}")
-        else:
-            check_condition(path, label, filt)
 
 
 def validate_transitions(path: Path, doc: dict) -> list[Edge]:
@@ -527,7 +211,7 @@ def validate_transitions(path: Path, doc: dict) -> list[Edge]:
 
 
 def validate_stage_graph(path: Path, doc: dict, edges: list[Edge]) -> dict[str, object]:
-    stage_jobs: dict[str, object] = {}
+    stage_agents: dict[str, object] = {}
     stage_ids: Counter = Counter()
     for index, stage in enumerate(rows(doc, "stages")):
         if not isinstance(stage, dict):
@@ -540,25 +224,25 @@ def validate_stage_graph(path: Path, doc: dict, edges: list[Edge]) -> dict[str, 
         stage_ids[stage_id] += 1
         if stage_id in RESERVED_STAGE_IDS:
             fail(f"{path}: stage id {stage_id!r} is reserved")
-        stage_jobs[stage_id] = stage.get("job")
+        stage_agents[stage_id] = stage.get("agent")
 
     for stage_id, count in stage_ids.items():
         if count > 1:
             fail(f"{path}: stage id {stage_id!r} declared {count} times")
 
-    sources = set(stage_jobs) | {"trigger", "wait"}
-    targets = set(stage_jobs) | {"done", "wait"}
+    sources = set(stage_agents) | {"trigger", "wait"}
+    targets = set(stage_agents) | {"done", "wait"}
     for edge in edges:
         if edge.source not in sources:
             fail(f"{path}: {edge_label(edge)} leaves undeclared stage {edge.source!r}")
         if edge.target not in targets:
             fail(f"{path}: {edge_label(edge)} targets undeclared stage {edge.target!r}")
 
-    return stage_jobs
+    return stage_agents
 
 
 def check_binding(path: Path, edge: Edge, param: str, binding: object,
-                  stage_jobs: dict[str, object], stage_docs: dict[str, Job],
+                  stage_agents: dict[str, object], stage_docs: dict[str, Stage],
                   trigger_outputs: dict) -> None:
     where = f"{edge_label(edge)} param {param!r}"
     if not isinstance(binding, dict):
@@ -572,13 +256,13 @@ def check_binding(path: Path, edge: Edge, param: str, binding: object,
     if binding_type == "output":
         stage = binding.get("stage")
         name = binding.get("name")
-        if stage not in stage_jobs:
+        if stage not in stage_agents:
             fail(f"{path}: {where} reads an output of undeclared stage {stage!r}")
             return
-        job = stage_docs.get(stage)
-        if job is not None and name not in job_outputs(job.doc):
-            fail(f"{path}: {where} reads output {name!r}, which stage {stage!r} job "
-                 f"{job.name!r} does not declare")
+        agent = stage_docs.get(stage)
+        if agent is not None and name not in stage_outputs(agent.doc):
+            fail(f"{path}: {where} reads output {name!r}, which stage {stage!r} agent "
+                 f"{agent.name!r} does not declare")
     elif binding_type == "input":
         # Line inputs are the entry stage's params. An integration trigger maps
         # only the event fields it has; manual runs and later stages still pass
@@ -588,119 +272,33 @@ def check_binding(path: Path, edge: Edge, param: str, binding: object,
 
 
 def validate_contracts(path: Path, doc: dict, edges: list[Edge],
-                       stage_jobs: dict[str, object], jobs_by_name: dict[str, Job]) -> None:
+                       stage_agents: dict[str, object]) -> None:
     trigger_outputs = table(table(doc, "trigger"), "outputs")
     stage_docs = {
-        stage_id: jobs_by_name[job_name]
-        for stage_id, job_name in stage_jobs.items()
-        if job_name in jobs_by_name
+        stage["id"]: Stage(path, stage["agent"], "", stage)
+        for stage in rows(doc, "stages") if isinstance(stage, dict) and "id" in stage and "agent" in stage
     }
 
     for edge in edges:
-        target_job = stage_docs.get(edge.target)
-        declared = job_params(target_job.doc) if target_job else {}
+        target_agent = stage_docs.get(edge.target)
+        declared = stage_params(target_agent.doc) if target_agent else {}
         for param, binding in edge.params.items():
-            if target_job is not None and param not in declared:
+            if target_agent is not None and param not in declared:
                 fail(f"{path}: {edge_label(edge)} binds param {param!r}, which stage "
-                     f"{edge.target!r} job {target_job.name!r} does not declare")
-            check_binding(path, edge, param, binding, stage_jobs, stage_docs, trigger_outputs)
+                     f"{edge.target!r} agent {target_agent.name!r} does not declare")
+            check_binding(path, edge, param, binding, stage_agents, stage_docs, trigger_outputs)
 
-    for stage_id, job in stage_docs.items():
+    for stage_id, agent in stage_docs.items():
         inbound = [edge for edge in edges if edge.target == stage_id]
-        for param, block in job_params(job.doc).items():
+        for param, block in stage_params(agent.doc).items():
             if not isinstance(block, dict):
                 continue
             if block.get("required") is not True or "default" in block:
                 continue
             for edge in inbound:
                 if param not in edge.params:
-                    fail(f"{path}: stage {stage_id!r} job {job.name!r} requires param "
+                    fail(f"{path}: stage {stage_id!r} agent {agent.name!r} requires param "
                          f"{param!r}, which {edge_label(edge)} does not bind")
-
-
-def validate_prompt_bindings(example_dir: Path, jobs: list[Job], readme_text: str) -> None:
-    if not (example_dir / "prompts").is_dir():
-        return
-    for job in jobs:
-        for slug_match in re.finditer(r'slug = "([^"]+)"', job.text):
-            slug = slug_match.group(1)
-            if slug not in readme_text:
-                fail(f"{example_dir}: knowledge slug {slug!r} not documented in README.md")
-
-
-def validate_prompt_policy(example_dir: Path, jobs: list[Job], readme_text: str) -> None:
-    """Stage briefs live in run_agent so job versions change with the prompt.
-
-    Snapshot copies are only for supporting docs, or for many fan-out briefs
-    that would clutter the line/job view (see SNAPSHOT_ONLY_PROMPTS). Do not
-    keep a parallel examples/*/prompts/ tree.
-    """
-    prompts_dir = example_dir / "prompts"
-    prompt_files = sorted(p for p in prompts_dir.iterdir() if p.is_file()) if prompts_dir.is_dir() else []
-    exempt = example_dir.name in PENDING_PROMPT_SOURCE_MIGRATION
-    snapshot_only = SNAPSHOT_ONLY_PROMPTS.get(example_dir.name, set())
-    literal_prompts: list[str] = []
-    checkout_declared = False
-    pointer_re = re.compile(r"/workspace/prompts/([A-Za-z0-9_-]+\.md)")
-
-    for job in jobs:
-        checkout_declared = checkout_declared or declares_checkout_step(job.doc)
-        for step_name, agent in iter_run_agents(job.doc):
-            for field in ("prompt", "resume_prompt"):
-                binding = agent.get(field)
-                if not isinstance(binding, dict):
-                    continue
-                if binding.get("type") == "literal":
-                    literal_prompts.append(str(binding.get("value", "")))
-                elif binding.get("type") == "knowledge" and not exempt:
-                    fail(
-                        f"{job.path}: step {step_name!r} {field} binds knowledge slug "
-                        f"{binding.get('slug')!r}; put the stage brief in a literal "
-                        f"run_agent prompt so the job version tracks the prompt"
-                    )
-            if exempt:
-                continue
-            for item in rows(agent, "knowledge"):
-                if isinstance(item, dict) and item.get("type") == "knowledge":
-                    fail(f"{job.path}: step {step_name!r} knowledge binds slug "
-                         f"{item.get('slug')!r}; put the brief in run_agent instead")
-
-    if checkout_declared:
-        fail(f"{example_dir}: jobs must not git-clone prompts at runtime")
-
-    for job in jobs:
-        if "REPLACE_WITH_OWNER" in job.text or "checkout-prompts" in job.text:
-            fail(f"{job.path}: runtime git clone of customer prompts is not allowed")
-
-    snapshot_copies = {
-        p.name: p
-        for p in example_dir.glob("snapshots/*/snapshot-src/workspace/prompts/*")
-        if p.is_file()
-    }
-    pointed_names = set(pointer_re.findall("\n".join(literal_prompts)))
-
-    if prompt_files:
-        fail(
-            f"{prompts_dir}: do not keep a prompts/ copy. Stage briefs live in "
-            f"run_agent literals; snapshot-only docs live in "
-            f"snapshots/*/snapshot-src/workspace/prompts/"
-        )
-
-    for name in snapshot_only:
-        if name not in snapshot_copies:
-            fail(
-                f"{example_dir}: snapshot-only prompt {name!r} is missing from "
-                f"snapshots/*/snapshot-src/workspace/prompts/"
-            )
-        if name not in pointed_names and name not in readme_text:
-            fail(
-                f"{snapshot_copies[name]}: snapshot-only prompt is not referenced "
-                f"by a job pointer or README.md"
-            )
-
-    for name, copy in snapshot_copies.items():
-        if name not in snapshot_only:
-            fail(f"{copy}: snapshot prompt is not in SNAPSHOT_ONLY_PROMPTS")
 
 
 def validate_placeholders(manifests: list[tuple[Path, str]], readme: Path, readme_text: str) -> None:
@@ -725,52 +323,124 @@ def validate_em_dashes(example_dir: Path) -> None:
             fail(f"{path}: em-dash on line(s) {', '.join(lines)}; use a period or comma")
 
 
-def validate_removed_identity_conventions(example_dir: Path) -> None:
-    for path in sorted(example_dir.rglob("*")):
-        if not path.is_file() or path.suffix not in SWEPT_SUFFIXES:
-            continue
-        if "__pycache__" in path.parts:
-            continue
-        try:
-            text = path.read_text()
-        except UnicodeDecodeError:
-            continue
-        if REMOVED_IDENTITY_PATTERN.search(text):
-            fail(f"{path}: work_key must not identify first-party sandboxes or sessions")
+def validate_agent(path: Path, doc: dict, expected_name: str | None = None) -> None:
+    check_forbidden_text(path, path.read_text() if path.is_file() else "")
+    common = {'name', 'description', 'machine', 'type', 'icon', 'color'}
+    variants = {
+        'prompt': {'harness', 'model', 'model_provider', 'effort', 'prompt', 'skills', 'mcp'},
+        'script': {'commands'},
+    }
+    kind = doc.get('type')
+    if kind not in variants:
+        fail(f'{path}: type must be prompt or script')
+        return
+    for key in set(doc) - common - variants[kind]:
+        fail(f'{path}: unknown Agent key {key!r}')
+    for key in ('name', 'machine'):
+        if not isinstance(doc.get(key), str) or not re.fullmatch(r'[a-z][a-z0-9-]{0,62}', doc[key]):
+            fail(f'{path}: {key} must be a Factory resource name')
+    if doc.get('name') != (expected_name or path.parent.name):
+        fail(f'{path}: Agent name must match its directory')
+    if kind == 'prompt':
+        for key in ('model', 'prompt'):
+            if not isinstance(doc.get(key), str) or not doc[key].strip():
+                fail(f'{path}: {key} must be nonblank')
+        harness = doc.get('harness')
+        if harness not in {'codex', 'cursor', 'claude', 'opencode', 'grok'}:
+            fail(f'{path}: invalid harness')
+        provider = doc.get('model_provider')
+        providers = {'islo': {'codex', 'grok'}, 'islo_inference': {'codex', 'claude'}, 'subscription': {'codex', 'claude', 'grok'}}
+        if provider is not None and harness not in providers.get(provider, set()):
+            fail(f'{path}: invalid model_provider for harness')
+    elif not isinstance(doc.get('commands'), list) or not doc['commands'] or any(not isinstance(c, str) or not c.strip() for c in doc['commands']):
+        fail(f'{path}: commands must be a nonempty list of nonblank strings')
+    elif any('{{' in c for c in doc['commands']):
+        fail(f'{path}: script commands must read inputs as data through runtime/stages.py')
 
 
 def validate_example(example_dir: Path) -> None:
-    readme = example_dir / "README.md"
-    line_path = example_dir / "line.toml"
-    readme_text = readme.read_text() if readme.is_file() else ""
-    if not readme.is_file():
-        fail(f"{example_dir}: missing README.md")
-    else:
-        check_forbidden_text(readme, readme_text)
-
-    jobs = collect_jobs(example_dir)
-    if not jobs:
-        fail(f"{example_dir}: no jobs under jobs/")
-    jobs_by_name = {job.name: job for job in jobs if job.name}
-
-    manifests = [(job.path, job.text) for job in jobs]
-    if not line_path.is_file():
-        fail(f"{example_dir}: missing line.toml")
-    else:
-        line_text = line_path.read_text()
-        manifests.append((line_path, line_text))
-        line_doc = load_toml(line_path)
-        if line_doc is not None:
-            validate_line(line_path, line_text, line_doc, set(jobs_by_name))
-            edges = validate_transitions(line_path, line_doc)
-            stage_jobs = validate_stage_graph(line_path, line_doc, edges)
-            validate_contracts(line_path, line_doc, edges, stage_jobs, jobs_by_name)
-
-    validate_prompt_bindings(example_dir, jobs, readme_text)
-    validate_prompt_policy(example_dir, jobs, readme_text)
+    readme = example_dir / 'README.md'
+    readme_text = readme.read_text() if readme.is_file() else ''
+    if not readme_text:
+        fail(f'{example_dir}: missing README.md')
+    check_forbidden_text(readme, readme_text)
+    for legacy in ('jobs', 'snapshots'):
+        if (example_dir / legacy).exists():
+            fail(f'{example_dir}: remove legacy {legacy}/; use Agents and Machines')
+    agents = {}
+    manifests = []
+    for path in sorted(example_dir.glob('agents/*/agent.toml')):
+        doc = load_toml(path)
+        if doc is None:
+            continue
+        validate_agent(path, doc)
+        agents[doc.get('name')] = doc
+        manifests.append((path, path.read_text()))
+    if not agents:
+        fail(f'{example_dir}: no Agents under agents/')
+    manager_path = example_dir / 'manager-agent.toml'
+    if manager_path.exists():
+        manager = load_toml(manager_path)
+        if manager:
+            validate_agent(manager_path, manager, expected_name=f"{example_dir.name}-manager")
+            manager_name = manager.get('name')
+            if manager.get('type') != 'prompt':
+                fail(f'{manager_path}: Manager must be a prompt Agent')
+            agents[manager_name] = manager
+    path = example_dir / 'line.toml'
+    doc = load_toml(path) if path.is_file() else None
+    if doc is None:
+        fail(f'{path}: missing or invalid line.toml')
+        return
+    manifests.append((path, path.read_text()))
+    check_forbidden_text(path, path.read_text())
+    if table(doc, 'line').get('name') != example_dir.name:
+        fail(f'{path}: [line].name must match its directory')
+    if not rows(doc, 'stages'):
+        fail(f'{path}: no stages')
+    allowed_stage = {'id', 'agent', 'description', 'params', 'outputs', 'sandbox_name', 'max_attempts', 'prompt', 'harness', 'model', 'model_provider', 'effort', 'machine', 'skills', 'mcp'}
+    used = set()
+    for stage in rows(doc, 'stages'):
+        if not isinstance(stage, dict):
+            continue
+        for key in set(stage) - allowed_stage:
+            fail(f'{path}: unknown stage key {key!r}; use agent stages')
+        name = stage.get('agent')
+        used.add(name)
+        if name not in agents:
+            fail(f'{path}: stage {stage.get("id")!r} references missing Agent {name!r}')
+        identity = stage.get('sandbox_name')
+        if identity is not None and (not isinstance(identity, str) or identity.count(LINE_RUN_SCOPE) != 1 or '{{' in identity.replace(LINE_RUN_SCOPE, '')):
+            fail(f'{path}: sandbox_name must contain exactly one {LINE_RUN_SCOPE}')
+        for category in ('params', 'outputs'):
+            for key, spec in table(stage, category).items():
+                if not isinstance(spec, dict) or spec.get('type') not in {'string', 'integer', 'number', 'boolean', 'array', 'object'}:
+                    fail(f'{path}: stage {category}.{key} needs a valid type')
+                elif spec['type'] == 'array' and spec.get('items') not in {'string', 'integer', 'number', 'boolean', 'object'}:
+                    fail(f'{path}: stage {category}.{key} needs array items')
+        if agents.get(name, {}).get('type') == 'prompt' and 'summary' not in table(stage, 'outputs'):
+            fail(f'{path}: prompt stage {stage.get("id")} needs a summary output')
+    manager = table(doc, 'manager')
+    if manager:
+        if set(manager) - {'agent', 'prompt'} or agents.get(manager.get('agent'), {}).get('type') != 'prompt':
+            fail(f'{path}: manager must reference a local prompt Agent')
+        used.add(manager.get('agent'))
+    for name, agent in agents.items():
+        if name not in used:
+            fail(f'{path}: Agent {name!r} is not used by the line')
+        machine_readme = example_dir / 'machines' / str(agent.get('machine')) / 'README.md'
+        if not machine_readme.is_file():
+            fail(f'{path}: missing Machine setup guide {machine_readme}')
+    trigger = table(doc, 'trigger')
+    if trigger.get('type') == 'integration_trigger' and not trigger.get('outputs'):
+        fail(f'{path}: integration trigger must declare outputs')
+    for index, condition in enumerate(rows(trigger, 'filters')):
+        check_condition(path, f'trigger.filters[{index}]', condition)
+    edges = validate_transitions(path, doc)
+    stage_agents = validate_stage_graph(path, doc, edges)
+    validate_contracts(path, doc, edges, stage_agents)
     validate_placeholders(manifests, readme, readme_text)
     validate_em_dashes(example_dir)
-    validate_removed_identity_conventions(example_dir)
 
 
 def main(argv: list[str]) -> int:
@@ -807,7 +477,6 @@ def main(argv: list[str]) -> int:
 
     print(f"validate_examples: OK ({len(example_dirs)} example(s))")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

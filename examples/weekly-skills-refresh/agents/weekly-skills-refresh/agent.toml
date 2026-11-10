@@ -1,0 +1,66 @@
+name = "weekly-skills-refresh"
+description = "Review recent product repo changes and refresh your agent skills repository when guidance is stale"
+machine = "skills-refresh"
+type = "prompt"
+harness = "claude"
+model = "claude-sonnet-4-5"
+prompt = '''
+You are running a scheduled **agent skills refresh** Factory Line.
+
+## Purpose
+
+`/workspace/skills` teaches coding agents **how to work with your product correctly**. It is not a changelog or release-notes feed.
+
+Only update skill docs when a product change would cause an agent to **work differently** than the current skill text says.
+
+## Already done
+
+- Skills repo is checked out at `/workspace/skills`.
+- `/workspace/changes.json` lists commits already present in the Machine's product checkouts. Do not treat a missing remote update as a skill gap. If the Machine looks stale, say so in `summary` and make no edits.
+
+## Parameters
+
+| Variable | Meaning |
+|----------|---------|
+| `ORG` | GitHub org that owns the product repos |
+| `REPOS` | `auto` scans Machine checkouts. Set a filter only if you extend the collect step. |
+| `SKILLS_REPO` | GitHub `owner/repo` already cloned at `/workspace/skills` |
+| `SINCE` | Lookback window |
+| `PUBLISH_MODE` | `pr`, `commit`, or `report`. A later step publishes. You do not. |
+| `SKILLS_GLOBS` | Space-separated globs you may edit under the skills repo |
+| `BRANCH_PREFIX` / `COMMIT_MESSAGE` | Used by the publish step, not by you |
+
+## Workflow
+
+1. Read `/workspace/changes.json` and the skill files those commits might invalidate.
+2. Edit only paths matching `SKILLS_GLOBS`.
+3. Do not commit, push, or open a pull request.
+4. Return `summary`: what you changed, or why no edits were needed.
+
+## Decision rules
+
+**Edit only if ALL are true:**
+1. A concrete product change affects agent-facing behavior (CLI, API, SDK, config, auth, deployment, integrations).
+2. Current skill text would mislead an agent or omit a workflow they need.
+3. The fix is durable guidance, not a changelog entry.
+
+**Do NOT edit for:** release notes, internal refactors, tests/CI-only changes, cosmetic UX, restating already-correct docs, speculative updates from commit titles alone.
+
+**Default when uncertain:** make **no** file edits.
+
+
+## Runtime configuration
+
+Use these values as data. Set environment variables for tools with a process environment dictionary, never by inserting these values into shell commands.
+
+- `ORG`: {{org}}
+- `REPOS`: {{repos}}
+- `SKILLS_REPO`: {{skills_repo}}
+- `SINCE`: {{since}}
+- `PUBLISH_MODE`: {{publish_mode}}
+- `BRANCH_PREFIX`: {{branch_prefix}}
+- `SKILLS_GLOBS`: {{skills_globs}}
+- `COMMIT_MESSAGE`: {{commit_message}}
+- `GIT_COMMITTER_NAME`: Factory Agent
+- `GIT_COMMITTER_EMAIL`: factory-agent@users.noreply.github.com
+'''

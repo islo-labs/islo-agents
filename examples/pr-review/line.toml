@@ -11,12 +11,21 @@ name = "pull_request.opened"
 provider = "github"
 kind = "repository"
 scope = "selected"
-repositories = ["REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY"]
+repositories = [
+    "REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY",
+]
 
-[trigger.outputs]
-repository = { type = "trigger_path", path = "trigger.raw.repository.full_name" }
-pull_request_number = { type = "trigger_path", path = "trigger.raw.pull_request.number" }
-pull_request_url = { type = "trigger_path", path = "trigger.raw.pull_request.html_url" }
+[trigger.outputs.repository]
+type = "trigger_path"
+path = "trigger.raw.repository.full_name"
+
+[trigger.outputs.pull_request_number]
+type = "trigger_path"
+path = "trigger.raw.pull_request.number"
+
+[trigger.outputs.pull_request_url]
+type = "trigger_path"
+path = "trigger.raw.pull_request.html_url"
 
 [limits]
 max_iterations = 1
@@ -24,7 +33,42 @@ timeout = "2h"
 
 [[stages]]
 id = "review"
-job = "pr-review"
+agent = "pr-review"
+
+[stages.params.repository]
+type = "string"
+required = true
+pattern = "^[^/]+/[^/]+$"
+description = "GitHub repository in owner/name form"
+
+[stages.params.pull_request_number]
+type = "integer"
+required = true
+description = "Pull request number"
+
+[stages.params.pull_request_url]
+type = "string"
+required = true
+description = "Canonical GitHub pull request URL"
+
+[stages.outputs.review_result]
+type = "string"
+required = true
+enum = [
+    "approved",
+    "needs_changes",
+]
+description = "Aggregate review verdict"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable review summary"
+
+[stages.outputs.reviewed_head_sha]
+type = "string"
+required = true
+description = "PR head commit SHA reviewed"
 
 [[transitions]]
 id = "trigger-to-review"
@@ -35,10 +79,17 @@ type = "conditional"
 [transitions.when]
 op = "always"
 
-[transitions.params]
-repository = { type = "input", name = "repository" }
-pull_request_number = { type = "input", name = "pull_request_number" }
-pull_request_url = { type = "input", name = "pull_request_url" }
+[transitions.params.repository]
+type = "input"
+name = "repository"
+
+[transitions.params.pull_request_number]
+type = "input"
+name = "pull_request_number"
+
+[transitions.params.pull_request_url]
+type = "input"
+name = "pull_request_url"
 
 [[transitions]]
 id = "review-to-done"

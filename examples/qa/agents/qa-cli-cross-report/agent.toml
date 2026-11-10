@@ -1,0 +1,7 @@
+name = "qa-cli-cross-report"
+description = "Validate and emit cli-cross findings"
+machine = "qa"
+type = "script"
+commands = [
+    "python3 /workspace/islo-agents/runtime/stages.py qa cli-cross-report",
+]

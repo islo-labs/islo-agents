@@ -7,28 +7,112 @@ timeout = "6h"
 
 [[stages]]
 id = "trust-boundaries"
-job = "red-team-cli-trust-boundaries"
 description = "White box: audit OAuth, token storage, SSH artifacts, update trust, and error leakage"
+agent = "red-team-cli-trust-boundaries"
+
+[stages.params]
+
+[stages.outputs.report_json]
+type = "string"
+required = true
+description = "Minified JSON security review report"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "The report's summary as a plain-text string, so a reader sees it without parsing report_json."
 
 [[stages]]
 id = "input-abuse"
-job = "red-team-cli-input-abuse"
 description = "White box: audit transport, filesystem bridges, shell quoting, and manifest parsing"
+agent = "red-team-cli-input-abuse"
+
+[stages.params]
+
+[stages.outputs.report_json]
+type = "string"
+required = true
+description = "Minified JSON security review report"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "The report's summary as a plain-text string, so a reader sees it without parsing report_json."
 
 [[stages]]
 id = "black-box-cli"
-job = "red-team-cli-black-box"
 description = "Black box: adversarial CLI testing against your production API (no source access)"
+agent = "red-team-cli-black-box"
+
+[stages.params]
+
+[stages.outputs.report_json]
+type = "string"
+required = true
+description = "Minified JSON black-box security report"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "The report's summary as a plain-text string, so a reader sees it without parsing report_json."
 
 [[stages]]
 id = "validate-and-report"
-job = "red-team-cli-report"
 description = "Reconcile findings, optionally file Linear issues, and emit the Slack message"
+agent = "red-team-cli-report"
+
+[stages.params.trust_boundaries_report_json]
+type = "string"
+required = true
+description = "JSON report string from the trust-boundaries stage"
+
+[stages.params.input_abuse_report_json]
+type = "string"
+required = true
+description = "JSON report string from the input-abuse stage"
+
+[stages.params.black_box_report_json]
+type = "string"
+required = true
+description = "JSON report string from the black-box-cli stage"
+
+[stages.params.linear_mode]
+type = "string"
+required = false
+default = "report"
+description = "create files Linear issues; report validates only"
+
+[stages.outputs.report_json]
+type = "string"
+required = true
+description = "Minified combined validation report JSON"
+
+[stages.outputs.slack_text]
+type = "string"
+required = true
+description = "Entire Slack message: updates only, plus where a human should look"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "Human-readable run summary"
 
 [[stages]]
 id = "slack-notify"
-job = "red-team-cli-slack-notify"
 description = "Post the reconcile Slack message"
+agent = "red-team-cli-slack-notify"
+
+[stages.params.slack_channel_id]
+type = "string"
+required = true
+description = "Slack channel ID for chat.postMessage"
+
+[stages.params.slack_text]
+type = "string"
+required = true
+description = "Entire Slack message from validate-and-report"
+
+[stages.outputs]
 
 [trigger]
 type = "schedule"
