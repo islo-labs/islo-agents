@@ -4,13 +4,14 @@ Thank you for improving Islo Factory examples.
 
 ## Example contract
 
-Every example under `examples/<name>/` must be a **complete deployable package**:
+New examples use Machines, reusable Agents, and Agent-backed Line stages. Each package under `examples/<name>/` includes:
 
-- `README.md` — prerequisites, knowledge publication, snapshot steps, placeholders, deploy commands, verification, cleanup
-- `line.toml` — `[line].name` matches the directory name
-- `jobs/<job-name>/job.toml` — `[job].name` matches the job directory name
-- `snapshots/<snapshot-name>/README.md` when a job references `snapshot_name`
-- Stage briefs in the job `run_agent` literal (not a parallel `prompts/` tree). Snapshot-only supporting docs live under `snapshots/*/snapshot-src/workspace/prompts/`
+- `README.md` with Machine readiness, provider prerequisites, placeholders, Agent and Line validation/deployment, approved effects, verification, and cleanup.
+- `line.toml` whose `[line].name` matches the example directory.
+- `agents/<agent-name>.toml` whose immutable `name` matches the file stem.
+- Reusable prompts and supported harness, model, provider, Skills, and MCP settings in the Agent. Stage params and outputs belong in the Line.
+
+Existing Job-based packages retain their `jobs/`, snapshot recipes, and `run_agent` briefs for compatibility. Their maintenance checks remain in place.
 
 ## Validator
 
@@ -20,13 +21,17 @@ Run locally before opening a pull request:
 python3 scripts/validate_examples.py
 ```
 
-The validator checks TOML structure, line-to-job references, snapshot READMEs, forbidden internal IDs/domains, and that stage briefs are not duplicated under `prompts/`.
+The validator checks Agent and Job references, stage transition contracts, TOML structure, placeholders, snapshot prerequisites for existing Job packages, and forbidden internal identifiers. Regression checks cover both package styles.
 
-CI runs **only** `validate_examples.py` on every pull request (including forks). This public repo does not call the Islo API in GitHub Actions.
+CI runs the validator and its focused regression scripts on every pull request, including forks. This public repo does not call the Islo API in GitHub Actions.
 
 `validate_examples.py` checks naming, file layout, and forbidden strings — it does **not** validate manifests against the API schema. Passing the script is necessary but not sufficient.
 
-## Job outputs
+## Agent stage outputs
+
+Declare typed params and outputs on the Line stage. Prompt Agent stages should include a required string `summary` output alongside their machine-readable verdict. Tell the Agent to return each declared output. The run chat shows `summary` or `*_summary` as the stage reply.
+
+## Compatibility Job outputs
 
 Every job that runs an agent should declare a `summary` output (or `<name>_summary`, such as `root_cause_summary`):
 
@@ -48,10 +53,11 @@ description = "Short human-readable summary of what the job did and its verdict.
 2. Run `python3 scripts/validate_examples.py` — must pass.
 3. Run against your tenant (required for manifest changes):
    ```bash
-   islo job deploy --path examples/<name>/jobs/<job>/job.toml --dry-run
+   islo agent validate examples/<name>/agents/<agent>.toml
    islo factory line validate examples/<name>/line.toml
    ```
-4. Describe how you verified the example.
+   The Line validator resolves saved Agents. If they are not deployed, report the missing-resource lookup separately from schema results. For compatibility Job edits, retain the Job deploy dry-run check.
+4. Describe how you verified the example and whether inference or external effects were exercised.
 
 Do not add tenant-specific secrets, internal Islo URLs, or workflows that mutate production tenants.
 
@@ -61,5 +67,5 @@ Follow an existing example's shape. Prefer:
 
 - Public runner image `ghcr.io/islo-labs/islo-runner:latest`
 - Explicit placeholders (`REPLACE_WITH_*`, `your-org/`, `api.example.com`)
-- Typed job outputs where the line consumes stage results
+- Typed stage outputs where the Line consumes results
 - One README per example — customers should not need cross-directory context

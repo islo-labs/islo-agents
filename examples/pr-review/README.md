@@ -1,65 +1,70 @@
-# PR review line
+# PR review Line
 
-Factory line that reviews **newly opened** GitHub pull requests and posts one advisory review comment.
+A Machine-backed Prompt Agent reviews newly opened GitHub pull requests and posts one advisory comment. The Line binds event inputs to that Agent stage and returns `review_result`, `summary`, and `reviewed_head_sha`.
 
-## What you get
+## Prepare the Machine and Agent
 
-- GitHub `pull_request.opened` starts one line run.
-- One agent stage reviews the diff and posts a comment.
-- Typed outputs: `review_result`, `summary`, `reviewed_head_sha`.
+Connect GitHub locally and choose a repository you trust. In `line.toml`, replace `REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY`. Fork PR text and changed files are untrusted input.
 
-This line does not implement fixes, run verification loops, or mutate branches.
-
-## Before you deploy
-
-### 1. Connect GitHub
-
-Install and authorize the Islo GitHub integration for your organization. Select the repositories this line should watch.
-
-### 2. Edit the repository selector
-
-In `line.toml`, replace `REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY` with your repository (for example `my-org/my-service`).
-
-Scope the selector to repositories you trust. The agent runs with gateway-injected GitHub credentials in a rooted sandbox and reads PR diff content, so treat fork PR bodies and changed files as untrusted input.
-
-### 3. Deploy job, then line
+Select your intended Factory, then prepare the Agent's Machine:
 
 ```bash
-islo job deploy --path examples/pr-review/jobs/pr-review/job.toml --dry-run
-islo job deploy --path examples/pr-review/jobs/pr-review/job.toml
+islo factory current
+islo factory machine create pr-review --repo https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY --gateway-profile default
+islo factory machine get pr-review
+```
+
+Wait for a published, usable Machine version. If a suitable Machine already exists, set `machine` in `agents/pr-review.toml` to its name instead. The Machine owns repositories, environment, gateway profile, and lifecycle. Configure retention to suit your run history and cleanup needs.
+
+The Agent owns its reusable prompt, harness, model, provider, Skills, and MCP configuration. This example uses Claude with `claude-sonnet-4-5` and default provider routing. Ensure that the intended automation identity has a suitable provider connection. To use another provider or model, inspect the live schema and model catalog before editing those fields.
+
+```bash
+islo schema agent --short
+islo agent validate examples/pr-review/agents/pr-review.toml
+islo agent create examples/pr-review/agents/pr-review.toml
+```
+
+For an existing Agent, inspect it first with `islo agent get pr-review`. Use `islo agent update pr-review <update-file>` with a copy that omits the immutable `name` field.
+
+## Validate and deploy the Line
+
+The Line owns stage params and outputs, trigger selection, routing, and limits. Its review stage uses `agent = "pr-review"`. Agent sandboxes use the Agent's Machine and default to `pr-review-{{line_run_id}}`.
+
+```bash
+python3 scripts/validate_examples.py
+islo schema factory --short
 islo factory line validate examples/pr-review/line.toml
 islo factory line deploy examples/pr-review/line.toml --dry-run
 islo factory line deploy examples/pr-review/line.toml
 ```
 
-### 4. Test
+Obtain approval for deployment and the advisory GitHub comment before running the example.
 
-Open a pull request in the selected repository. Inspect the run:
+## Verify one run
+
+First make a local copy of `line.toml` with a manual trigger. Replace its entire `[trigger]` section, including selector and outputs, with `[trigger] type = "manual"` in valid TOML. Give `[line].name` a unique temporary name. Validate and deploy that copy, then pass representative values for the three review params. Running it posts one advisory comment on the selected PR.
 
 ```bash
-islo factory line runs pr-review
+islo factory line run <temporary-name> --param repository=OWNER/REPOSITORY --param-json pull_request_number=123 --param pull_request_url=https://github.com/OWNER/REPOSITORY/pull/123
+islo factory line-run status <run-id>
+islo factory line-run stages <run-id>
 islo factory line-run events <run-id>
 ```
 
-You should see one review comment on the PR and `review_result` in the stage output.
+When the manual check succeeds, open one PR in the approved repository to verify the integration trigger. Inspect `islo factory line runs pr-review`, followed by that run's status, stages, and events. Expect one advisory comment and all three declared outputs. A provider failure at inference establishes neither a review verdict nor successful comment delivery; report setup and routing evidence separately.
 
-### 5. Customize
+`line-run ask` addresses the Manager. `line-run agent-turn` sends a follow-up to the successful stage Agent session.
 
-Edit the prompt literal in `jobs/pr-review/job.toml` to match your team's review standards.
+## Customize and clean up
 
-### 6. Remove
+Change the reusable prompt in `agents/pr-review.toml` through an Agent update. Start a fresh Line run after updating it; an existing run retains the Agent configuration it first resolved. Validate and redeploy the Line after changing its contracts or trigger.
 
-Delete the deployed line and job from your tenant when you no longer need this example.
+Stop active temporary runs before removing their temporary Lines. Line removal does not delete run sandboxes. Inspect `islo ls -a` and remove only test sandboxes you created. Remove the deployed Line, Agent, and Machine only when no other workflow depends on them:
 
-## Adoption notes for agents
+```bash
+islo factory line rm pr-review --force
+islo agent delete pr-review
+islo factory machine delete pr-review
+```
 
-Read this before copying the line into a tenant.
-
-- This is the one-stage line. It reviews a newly opened PR and stops. It does not implement, re-review, or share a sandbox with feature-delivery.
-- Replace `REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY` in `line.toml`. The selector is the trust boundary. Fork PR text is untrusted input.
-- The prompt is a literal in `jobs/pr-review/job.toml`. Edit that file and redeploy the job before the line picks up new review rules.
-- Harness is Claude (`claude-sonnet-4-5`) through your connected Claude account. Change `harness` and `model` if you want a different provider. Do not point the job at a private snapshot name.
-
-## Limitations
-
-- Only `pull_request.opened` is wired. Reopened or updated PRs do not retrigger this line until you extend the trigger.
+Only `pull_request.opened` is configured. Updated or reopened PRs do not retrigger this Line unless you extend the trigger.

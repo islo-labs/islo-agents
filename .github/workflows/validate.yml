@@ -9,7 +9,7 @@ on:
 jobs:
   # Secret-free, so it runs on fork PRs too. Line manifests are structurally
   # validated here rather than with `islo factory line validate`, because that
-  # command resolves each stage's `job` against deployed tenant state and so
+  # command resolves each stage's Agent or Job against deployed tenant state and so
   # fails for any template not already deployed on the CI tenant.
   validate-examples:
     runs-on: ubuntu-latest
@@ -24,3 +24,4 @@ jobs:
           python3 scripts/test_designer_delivery_policy.py
           python3 scripts/test_manager_setup.py
           python3 scripts/test_run_identity.py
+          python3 scripts/test_agent_examples.py

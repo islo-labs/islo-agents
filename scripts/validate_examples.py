@@ -111,8 +111,7 @@ RESERVED_STAGE_IDS = {"trigger", "done", "wait"}
 # the line-control vocabulary (retry, steer, follow-up, ask) is accepted.
 RESERVED_OPTION_NAMES = {"cancel", "stop"}
 
-# The skill repo syncs these examples verbatim and bans the character, so a
-# stray em-dash here fails a downstream drift check rather than this one.
+# Keep example prose consistent across customer-facing references.
 EM_DASH = "—"
 SWEPT_SUFFIXES = {".md", ".toml", ".py", ".ts", ".json", ".sh", ".yml", ".yaml"}
 REMOVED_IDENTITY_PATTERN = re.compile(r"\bwork_key\b")
@@ -379,7 +378,39 @@ def validate_manager_agent(path: Path, doc: dict, agent_path: Path) -> None:
         fail(f"{agent_path}: invalid model_provider for harness")
 
 
-def validate_line(path: Path, text: str, doc: dict, job_names: set[str]) -> None:
+def collect_agents(example_dir: Path) -> dict[str, tuple[Path, str]]:
+    agents = {}
+    for path in sorted((example_dir / "agents").glob("*.toml")):
+        text = path.read_text()
+        check_forbidden_text(path, text)
+        doc = load_toml(path)
+        if doc is None:
+            continue
+        name = doc.get("name")
+        if not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,62}", name):
+            fail(f"{path}: invalid Agent name")
+            continue
+        if name != path.stem:
+            fail(f"{path}: Agent name must match filename")
+        if name in agents:
+            fail(f"{path}: duplicate Agent {name!r}")
+        agents[name] = (path, text)
+        required = {
+            "prompt": ("machine", "harness", "model", "prompt"),
+            "script": ("machine", "commands"),
+            "decision": ("machine", "questions"),
+        }.get(doc.get("type"))
+        if required is None:
+            fail(f"{path}: unsupported Agent type {doc.get('type')!r}")
+            continue
+        for field in required:
+            if not doc.get(field):
+                fail(f"{path}: Agent requires nonempty {field}")
+    return agents
+
+
+def validate_line(path: Path, text: str, doc: dict, job_names: set[str],
+                  agent_names: set[str]) -> None:
     check_forbidden_text(path, text)
     line_name = table(doc, "line").get("name")
     if not line_name:
@@ -393,9 +424,15 @@ def validate_line(path: Path, text: str, doc: dict, job_names: set[str]) -> None
     for stage in stages:
         if not isinstance(stage, dict):
             continue
-        job = stage.get("job")
-        if job not in job_names:
-            fail(f"{path}: stage {stage.get('id')!r} references missing job {job!r}")
+        if ("agent" in stage) == ("job" in stage):
+            fail(f"{path}: stage {stage.get('id')!r} must set exactly one of agent or job")
+        elif "agent" in stage:
+            if stage["agent"] not in agent_names:
+                fail(f"{path}: stage {stage.get('id')!r} references missing Agent {stage['agent']!r}")
+            if "sandbox_name" in stage and not has_run_scoped_slot(stage["sandbox_name"]):
+                fail(f"{path}: Agent sandbox_name needs a slot and {LINE_RUN_SCOPE}")
+        elif stage["job"] not in job_names:
+            fail(f"{path}: stage {stage.get('id')!r} references missing job {stage['job']!r}")
 
     trigger = table(doc, "trigger")
     if trigger.get("type") == "integration_trigger" and not trigger.get("outputs"):
@@ -540,7 +577,7 @@ def validate_stage_graph(path: Path, doc: dict, edges: list[Edge]) -> dict[str, 
         stage_ids[stage_id] += 1
         if stage_id in RESERVED_STAGE_IDS:
             fail(f"{path}: stage id {stage_id!r} is reserved")
-        stage_jobs[stage_id] = stage.get("job")
+        stage_jobs[stage_id] = stage.get("agent", stage.get("job"))
 
     for stage_id, count in stage_ids.items():
         if count > 1:
@@ -558,7 +595,7 @@ def validate_stage_graph(path: Path, doc: dict, edges: list[Edge]) -> dict[str, 
 
 
 def check_binding(path: Path, edge: Edge, param: str, binding: object,
-                  stage_jobs: dict[str, object], stage_docs: dict[str, Job],
+                  stage_jobs: dict[str, object], stage_contracts: dict[str, dict],
                   trigger_outputs: dict) -> None:
     where = f"{edge_label(edge)} param {param!r}"
     if not isinstance(binding, dict):
@@ -575,10 +612,9 @@ def check_binding(path: Path, edge: Edge, param: str, binding: object,
         if stage not in stage_jobs:
             fail(f"{path}: {where} reads an output of undeclared stage {stage!r}")
             return
-        job = stage_docs.get(stage)
-        if job is not None and name not in job_outputs(job.doc):
-            fail(f"{path}: {where} reads output {name!r}, which stage {stage!r} job "
-                 f"{job.name!r} does not declare")
+        contract = stage_contracts.get(stage)
+        if contract is not None and name not in table(contract, "outputs"):
+            fail(f"{path}: {where} reads output {name!r}, which stage {stage!r} does not declare")
     elif binding_type == "input":
         # Line inputs are the entry stage's params. An integration trigger maps
         # only the event fields it has; manual runs and later stages still pass
@@ -590,31 +626,39 @@ def check_binding(path: Path, edge: Edge, param: str, binding: object,
 def validate_contracts(path: Path, doc: dict, edges: list[Edge],
                        stage_jobs: dict[str, object], jobs_by_name: dict[str, Job]) -> None:
     trigger_outputs = table(table(doc, "trigger"), "outputs")
-    stage_docs = {
-        stage_id: jobs_by_name[job_name]
-        for stage_id, job_name in stage_jobs.items()
-        if job_name in jobs_by_name
-    }
+    stage_contracts = {}
+    for stage in rows(doc, "stages"):
+        if not isinstance(stage, dict) or not stage.get("id"):
+            continue
+        if "agent" in stage:
+            stage_contracts[stage["id"]] = {
+                "params": table(stage, "params"), "outputs": table(stage, "outputs"),
+            }
+        elif stage.get("job") in jobs_by_name:
+            job = jobs_by_name[stage["job"]]
+            stage_contracts[stage["id"]] = {
+                "params": job_params(job.doc), "outputs": job_outputs(job.doc),
+            }
 
     for edge in edges:
-        target_job = stage_docs.get(edge.target)
-        declared = job_params(target_job.doc) if target_job else {}
+        target = stage_contracts.get(edge.target)
+        declared = table(target, "params") if target is not None else {}
         for param, binding in edge.params.items():
-            if target_job is not None and param not in declared:
+            if target is not None and param not in declared:
                 fail(f"{path}: {edge_label(edge)} binds param {param!r}, which stage "
-                     f"{edge.target!r} job {target_job.name!r} does not declare")
-            check_binding(path, edge, param, binding, stage_jobs, stage_docs, trigger_outputs)
+                     f"{edge.target!r} does not declare")
+            check_binding(path, edge, param, binding, stage_jobs, stage_contracts, trigger_outputs)
 
-    for stage_id, job in stage_docs.items():
+    for stage_id, contract in stage_contracts.items():
         inbound = [edge for edge in edges if edge.target == stage_id]
-        for param, block in job_params(job.doc).items():
+        for param, block in table(contract, "params").items():
             if not isinstance(block, dict):
                 continue
             if block.get("required") is not True or "default" in block:
                 continue
             for edge in inbound:
                 if param not in edge.params:
-                    fail(f"{path}: stage {stage_id!r} job {job.name!r} requires param "
+                    fail(f"{path}: stage {stage_id!r} requires param "
                          f"{param!r}, which {edge_label(edge)} does not bind")
 
 
@@ -749,11 +793,12 @@ def validate_example(example_dir: Path) -> None:
         check_forbidden_text(readme, readme_text)
 
     jobs = collect_jobs(example_dir)
-    if not jobs:
-        fail(f"{example_dir}: no jobs under jobs/")
+    agents = collect_agents(example_dir)
+    if not jobs and not agents:
+        fail(f"{example_dir}: no Agents under agents/ or compatibility Jobs under jobs/")
     jobs_by_name = {job.name: job for job in jobs if job.name}
 
-    manifests = [(job.path, job.text) for job in jobs]
+    manifests = [(job.path, job.text) for job in jobs] + list(agents.values())
     if not line_path.is_file():
         fail(f"{example_dir}: missing line.toml")
     else:
@@ -761,7 +806,7 @@ def validate_example(example_dir: Path) -> None:
         manifests.append((line_path, line_text))
         line_doc = load_toml(line_path)
         if line_doc is not None:
-            validate_line(line_path, line_text, line_doc, set(jobs_by_name))
+            validate_line(line_path, line_text, line_doc, set(jobs_by_name), set(agents))
             edges = validate_transitions(line_path, line_doc)
             stage_jobs = validate_stage_graph(line_path, line_doc, edges)
             validate_contracts(line_path, line_doc, edges, stage_jobs, jobs_by_name)

@@ -24,7 +24,39 @@ timeout = "2h"
 
 [[stages]]
 id = "review"
-job = "pr-review"
+agent = "pr-review"
+
+[stages.params.repository]
+type = "string"
+required = true
+pattern = "^[^/]+/[^/]+$"
+description = "GitHub repository in owner/name form"
+
+[stages.params.pull_request_number]
+type = "integer"
+required = true
+description = "Pull request number"
+
+[stages.params.pull_request_url]
+type = "string"
+required = true
+description = "Canonical GitHub pull request URL"
+
+[stages.outputs.review_result]
+type = "string"
+required = true
+enum = ["approved", "needs_changes"]
+description = "Aggregate review verdict"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable review summary"
+
+[stages.outputs.reviewed_head_sha]
+type = "string"
+required = true
+description = "PR head commit SHA reviewed"
 
 [[transitions]]
 id = "trigger-to-review"

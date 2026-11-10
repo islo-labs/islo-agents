@@ -1,40 +1,43 @@
 # Islo Factory examples
 
-Runnable **Factory line** templates for Islo sandboxes. Each example is a self-contained package: `line.toml`, jobs, and snapshot recipes.
+Runnable Factory examples for Islo. Machines provide the environment, reusable Agents define execution and prompts, and Lines orchestrate Agent-backed stages. Start with the migrated [PR-review example](examples/pr-review/).
 
 ## Quick start (PR review)
 
-The fastest path to a working line:
-
-1. Install the CLI: `curl -fsSL https://islo.dev/install.sh | bash`
-2. Log in: `islo login`
-3. Connect GitHub in the Islo console and select your repository.
-4. Edit `examples/pr-review/line.toml` — replace `REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY`.
-5. Deploy:
+1. Install the CLI and authenticate locally.
+2. Connect GitHub and select your Factory and repository.
+3. Follow [PR-review setup](examples/pr-review/README.md) to create a Machine and wait for its published version.
+4. Edit the repository selector in `examples/pr-review/line.toml`.
+5. Validate and create the reusable Agent, then validate and deploy the Line:
 
 ```bash
-islo job deploy --path examples/pr-review/jobs/pr-review/job.toml --dry-run
-islo job deploy --path examples/pr-review/jobs/pr-review/job.toml
+islo agent validate examples/pr-review/agents/pr-review.toml
+islo agent create examples/pr-review/agents/pr-review.toml
 islo factory line validate examples/pr-review/line.toml
 islo factory line deploy examples/pr-review/line.toml
 ```
 
-6. Open a pull request and inspect `islo factory line runs pr-review`.
+Approve the expected advisory comment before the manual Line check and one GitHub trigger event. Inspect each run with `islo factory line-run status`, `stages`, and `events`.
 
-See [examples/pr-review/README.md](examples/pr-review/README.md) for details.
-
-## Examples
+## Agent-backed example
 
 | Example | Trigger | Outcome |
 |---------|---------|---------|
 | [pr-review](examples/pr-review/) | GitHub PR opened | Advisory review comment + typed verdict |
+
+## Existing Job-based examples
+
+The following templates retain their existing Job and snapshot configuration for compatibility. They have not migrated to Agent stages. Use PR review above for new Agent-backed Line setup.
+
+| Example | Trigger | Outcome |
+|---------|---------|---------|
 | [feature-delivery](examples/feature-delivery/) | Linear label on issue | Implement, review, and verify across a PR set |
 | [designer-line](examples/designer-line/) | Manual | Storybook design in a retained sandbox, publish on a later steer |
 | [qa](examples/qa/) | Schedule | Parallel black-box QA agents, then a Slack message |
 | [red-team-cli](examples/red-team-cli/) | Schedule | White-box + black-box CLI security review |
 | [weekly-skills-refresh](examples/weekly-skills-refresh/) | Schedule | Refresh agent skills repo from product changes |
 
-Each example README covers snapshot build, environment variables, placeholders, deploy order, and cleanup.
+Each example README covers its prerequisites, placeholders, validation, verification, and cleanup.
 
 ## Repository layout
 
@@ -42,11 +45,12 @@ Each example README covers snapshot build, environment variables, placeholders, 
 examples/<name>/
   README.md          # How to deploy this example
   line.toml          # Factory line manifest
-  jobs/<job>/job.toml
-  snapshots/<name>/  # Snapshot bake contract + snapshot-src/ (supporting prompts live here)
+  agents/<agent>.toml # Reusable Agent configuration
 scripts/
   validate_examples.py
 ```
+
+Existing Job-based examples retain `jobs/` and `snapshots/` for compatibility.
 
 ## Contributing
 
