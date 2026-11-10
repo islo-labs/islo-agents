@@ -25,3 +25,4 @@ jobs:
           python3 scripts/test_manager_setup.py
           python3 scripts/test_run_identity.py
           python3 scripts/test_agent_examples.py
+          python3 scripts/test_pr_review_inputs.py

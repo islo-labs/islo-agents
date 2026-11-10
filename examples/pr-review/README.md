@@ -16,7 +16,7 @@ islo factory machine get pr-review
 
 Wait for a published, usable Machine version. If a suitable Machine already exists, set `machine` in `agents/pr-review.toml` to its name instead. The Machine owns repositories, environment, gateway profile, and lifecycle. Configure retention to suit your run history and cleanup needs.
 
-The Agent owns its reusable prompt, harness, model, provider, Skills, and MCP configuration. This example uses Claude with `claude-sonnet-4-5` and default provider routing. Ensure that the intended automation identity has a suitable provider connection. To use another provider or model, inspect the live schema and model catalog before editing those fields.
+The Agent owns its reusable prompt, harness, model, provider, Skills, and MCP configuration. The prompt explicitly renders `{{repository}}`, `{{pull_request_number}}`, and `{{pull_request_url}}` from the Line stage params. Declaring those named params alone does not deliver their values to the Agent. This example uses Claude with `claude-sonnet-4-5` and default provider routing. Ensure that the intended automation identity has a suitable provider connection. To use another provider or model, inspect the live schema and model catalog before editing those fields.
 
 ```bash
 islo schema agent --short
@@ -32,6 +32,7 @@ The Line owns stage params and outputs, trigger selection, routing, and limits. 
 
 ```bash
 python3 scripts/validate_examples.py
+python3 scripts/test_pr_review_inputs.py
 islo schema factory --short
 islo factory line validate examples/pr-review/line.toml
 islo factory line deploy examples/pr-review/line.toml --dry-run
@@ -68,3 +69,13 @@ islo factory machine delete pr-review
 ```
 
 Only `pull_request.opened` is configured. Updated or reopened PRs do not retrigger this Line unless you extend the trigger.
+
+## Check input delivery without inference
+
+The CI regression checks that each PR identifier is declared by the stage and referenced in the prompt. With a local checkout of the current Web API and its Python environment installed, run the runtime check:
+
+```bash
+/path/to/islo-web-api/.venv/bin/python scripts/test_pr_review_inputs.py --api-repo /path/to/islo-web-api
+```
+
+This uses the API's Agent manifest generation and session prompt renderer. It checks that initial and resumed prompts contain representative repository, PR number, and URL values for manual and integration-trigger inputs. It needs no deployment, provider credentials, or inference.
