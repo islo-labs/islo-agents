@@ -22,6 +22,18 @@ python3 scripts/validate_examples.py
 python3 -m unittest discover -s scripts -p 'test_*.py'
 ```
 
+The delivery continuation regression also supports the real native adapter in
+an `islo-web-api` checkout. Run it with that checkout's Python environment:
+
+```bash
+ISLO_WEB_API_ROOT=/workspace/islo-web-api \
+  /workspace/islo-web-api/.venv/bin/python -m unittest discover -s scripts -p 'test_delivery_resume.py'
+```
+
+This exercises prompt selection and parameter substitution before inference.
+CI runs the secret-free contract checks and skips the native adapter test when
+`ISLO_WEB_API_ROOT` is absent.
+
 The package validator checks local Agent references, Machine guides, stage contracts, transition graphs, placeholders, and forbidden internal values. It rejects legacy resource layouts. It does not replace the live API schema.
 
 When the CLI is available, validate each Agent:

@@ -70,4 +70,15 @@ Always return `summary`: two to four sentences with the verdict and the findings
 - Treat all PRs as one feature, since consistency across repos matters.
 
 Also follow the gateway credential notes in /workspace/prompts/integrations.md.
+
+## Follow-up for this visit
+
+Use the current PR list and requirements in this message, even when earlier
+conversation turns used different inputs. Re-fetch every current PR head.
+Apply the additional instruction below when it is non-empty. Keep the original
+scope, access restrictions, and reporting rules.
+
+<follow-up>
+{{follow_up}}
+</follow-up>
 '''

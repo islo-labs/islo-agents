@@ -62,11 +62,11 @@ items = "string"
 default = []
 description = "Current complete feature PR set for feedback-loop iterations"
 
-[stages.params.resume_prompt]
+[stages.params.follow_up]
 type = "string"
 required = false
-default = "Feedback arrived on the pull requests. Address all review and verification comments, update the branches, and re-run checks."
-description = "Complete instruction for a resumed implementation stage. Ignored on the first visit."
+default = ""
+description = "Additional instruction for this visit, included with the current PR set and requirements on initial visits and continuations."
 
 [stages.params.task]
 type = "string"
@@ -115,11 +115,11 @@ items = "string"
 required = true
 description = "Complete list of GitHub pull request URLs for the feature"
 
-[stages.params.resume_prompt]
+[stages.params.follow_up]
 type = "string"
 required = false
-default = "The pull requests have been updated. Review the latest changes across all PRs."
-description = "Complete instruction for a resumed review stage. Ignored on the first visit."
+default = ""
+description = "Additional instruction for this visit, included with the current PR set and requirements on initial visits and continuations."
 
 [stages.params.task]
 type = "string"
@@ -164,11 +164,11 @@ items = "string"
 required = true
 description = "Complete list of GitHub pull request URLs for the feature"
 
-[stages.params.resume_prompt]
+[stages.params.follow_up]
 type = "string"
 required = false
-default = "The pull requests have been updated after verification failure. Re-fetch PR heads, re-run checks, and verify the integrated feature again."
-description = "Complete instruction for a resumed verification stage. Ignored on the first visit."
+default = ""
+description = "Additional instruction for this visit, included with the current PR set and requirements on initial visits and continuations."
 
 [stages.params.task]
 type = "string"

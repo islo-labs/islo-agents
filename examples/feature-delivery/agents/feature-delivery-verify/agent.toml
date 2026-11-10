@@ -115,4 +115,15 @@ Always return `summary`: two to four sentences on what you verified, the verdict
 - **Disk management.** Remove build artifacts and old checkouts you no longer need. The sandbox disk is fixed-size and must survive multiple rounds.
 
 Also follow /workspace/prompts/integrations.md for gateway credentials and /workspace/prompts/platform-env.md for the stack boot environment.
+
+## Follow-up for this visit
+
+Use the current PR list and requirements in this message, even when earlier
+conversation turns used different inputs. Re-fetch every current PR head.
+Apply the additional instruction below when it is non-empty. Keep the original
+scope, access restrictions, and reporting rules.
+
+<follow-up>
+{{follow_up}}
+</follow-up>
 '''

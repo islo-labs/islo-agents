@@ -100,4 +100,15 @@ Always return `summary`: two to four sentences, in plain language, on what you b
 - Don't guess silently: if something is ambiguous, pick the most reasonable interpretation and note it in the PR and the Linear comment.
 
 Also follow the gateway credential notes in /workspace/prompts/integrations.md.
+
+## Follow-up for this visit
+
+Use the current PR list and requirements in this message, even when earlier
+conversation turns used different inputs. Re-fetch every current PR head.
+Apply the additional instruction below when it is non-empty. Keep the original
+scope, access restrictions, and reporting rules.
+
+<follow-up>
+{{follow_up}}
+</follow-up>
 '''

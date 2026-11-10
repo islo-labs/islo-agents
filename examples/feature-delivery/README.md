@@ -16,6 +16,24 @@ Replace `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` in the trigger selector and connec
 
 The stage-specific workspaces include `{{line_run_id}}`. Retries and steering resume the same stage conversation and checkout. New runs receive separate workspaces. All three stages use Codex on Islo inference. Configure the Agent manifests to use your chosen model provider.
 
+## Steer a delivery stage
+
+Every visit sends the full Agent prompt with the current PR list, requirements,
+and verification criteria. Use `follow_up` for an additional instruction:
+
+```bash
+islo factory line-run steer <run-id> review --param follow_up='Focus on the queue retry change.'
+```
+
+If the PR set changed, pass the complete current list with
+`--param-json 'pull_requests=["https://github.com/your-org/your-repo/pull/123"]'`.
+When steering `verify`, also pass updated `acceptance_criteria` if they changed.
+The instruction applies on initial visits and continuations. With no instruction,
+the Agent follows its normal workflow using the current inputs.
+
+New deployments use `follow_up`. Existing runs pinned to the previous manifests
+keep their `resume_prompt` contract until they finish.
+
 ## Build the Machines
 
 Select your Factory with `islo factory set <factory>`. Follow each Machine guide and wait for successful published builds:
