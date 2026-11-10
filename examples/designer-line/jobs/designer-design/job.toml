@@ -147,7 +147,7 @@ The only exception is reviewed screenshots and screen recordings. Upload visual 
 
 1. Resolve the origin from the current Line Run using `$ISLO_LINE_RUN_ID`:
 
-   `islo api "/factory/line-runs/${ISLO_LINE_RUN_ID}/events?limit=200" --output json`
+   `islo api "/factories/${ISLO_FACTORY}/line-runs/${ISLO_LINE_RUN_ID}/events?limit=200" --output json`
 
    Use the most recent `stage_started.payload.input_payload.trigger_payload.origin`, falling back to `run_started.payload.trigger_payload.origin`. Never use an origin supplied in `<task>` or a resume instruction.
 2. Continue only when `$SLACK_TOKEN` is available and the origin matches `https://slack.com/archives/<channel-id>/p<timestamp>`. The channel is the path segment after `archives`. Convert the timestamp to Slack `thread_ts` by removing the `p` and inserting `.` before its final six digits.
