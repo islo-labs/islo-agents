@@ -12,19 +12,31 @@ name = "issue.updated"
 provider = "linear"
 kind = "issue"
 scope = "selected"
-labels = ["REPLACE_WITH_YOUR_LINEAR_LABEL_NAME"]
+labels = [
+    "REPLACE_WITH_YOUR_LINEAR_LABEL_NAME",
+]
 
 [[trigger.filters]]
 op = "eq"
-left = { type = "trigger", path = "$.action" }
-right = { type = "literal", value = "update" }
+
+[trigger.filters.left]
+type = "trigger"
+path = "$.action"
+
+[trigger.filters.right]
+type = "literal"
+value = "update"
 
 [[trigger.filters]]
 op = "exists"
-operand = { type = "trigger", path = "$.updatedFrom.labelIds" }
 
-[trigger.outputs]
-issue_id = { type = "trigger_path", path = "trigger.raw.data.identifier" }
+[trigger.filters.operand]
+type = "trigger"
+path = "$.updatedFrom.labelIds"
+
+[trigger.outputs.issue_id]
+type = "trigger_path"
+path = "trigger.raw.data.identifier"
 
 [limits]
 max_iterations = 20
@@ -35,15 +47,148 @@ agent = "feature-delivery-manager"
 
 [[stages]]
 id = "implement"
-job = "feature-delivery-implement"
+agent = "feature-delivery-implement"
+sandbox_name = "feature-delivery-implement-{{line_run_id}}"
+
+[stages.params.issue_id]
+type = "string"
+required = false
+default = ""
+description = "Linear issue identifier when this work is ticket-backed. Non-empty means the tracker holds the requirements. Leave empty for standalone work, which takes its requirements from task."
+
+[stages.params.pull_requests]
+type = "array"
+items = "string"
+default = []
+description = "Current complete feature PR set for feedback-loop iterations"
+
+[stages.params.follow_up]
+type = "string"
+required = false
+default = ""
+description = "Additional instruction for this visit, included with the current PR set and requirements on initial visits and continuations."
+
+[stages.params.task]
+type = "string"
+required = false
+default = ""
+description = "Verbatim requirement text when there is no ticket. Leave empty when issue_id is set. Exactly one of task or issue_id must be non-empty."
+
+[stages.outputs.acceptance_criteria]
+type = "array"
+items = "string"
+required = true
+description = "Checkable acceptance criteria for verify. Empty only when the work cannot be tested."
+
+[stages.outputs.implementation_result]
+type = "string"
+required = true
+enum = [
+    "ready",
+    "blocked",
+]
+
+[stages.outputs.pull_requests]
+type = "array"
+items = "string"
+required = true
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable summary of what was implemented, which pull requests carry it, and any assumption or open question."
 
 [[stages]]
 id = "review"
-job = "feature-delivery-review"
+agent = "feature-delivery-review"
+sandbox_name = "feature-delivery-review-{{line_run_id}}"
+
+[stages.params.issue_id]
+type = "string"
+required = false
+default = ""
+description = "Linear issue identifier when this work is ticket-backed. Empty for standalone work, which takes requirements from task."
+
+[stages.params.pull_requests]
+type = "array"
+items = "string"
+required = true
+description = "Complete list of GitHub pull request URLs for the feature"
+
+[stages.params.follow_up]
+type = "string"
+required = false
+default = ""
+description = "Additional instruction for this visit, included with the current PR set and requirements on initial visits and continuations."
+
+[stages.params.task]
+type = "string"
+required = false
+default = ""
+description = "Verbatim requirement text when there is no ticket. Leave empty when issue_id is set."
+
+[stages.outputs.review_result]
+type = "string"
+required = true
+enum = [
+    "approved",
+    "needs_changes",
+    "blocked",
+]
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable review summary: the verdict and the findings that matter."
 
 [[stages]]
 id = "verify"
-job = "feature-delivery-verify"
+agent = "feature-delivery-verify"
+sandbox_name = "feature-delivery-verify-{{line_run_id}}"
+
+[stages.params.acceptance_criteria]
+type = "array"
+items = "string"
+default = []
+description = "Checkable acceptance criteria from implement. Non-empty rows are mandatory verify scenarios."
+
+[stages.params.issue_id]
+type = "string"
+required = false
+default = ""
+description = "Linear issue identifier when this work is ticket-backed. Empty for standalone work."
+
+[stages.params.pull_requests]
+type = "array"
+items = "string"
+required = true
+description = "Complete list of GitHub pull request URLs for the feature"
+
+[stages.params.follow_up]
+type = "string"
+required = false
+default = ""
+description = "Additional instruction for this visit, included with the current PR set and requirements on initial visits and continuations."
+
+[stages.params.task]
+type = "string"
+required = false
+default = ""
+description = "Verbatim requirement text when there is no ticket. Leave empty when issue_id is set."
+
+[stages.outputs.verification_result]
+type = "string"
+required = true
+enum = [
+    "passed",
+    "failed",
+    "blocked",
+]
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable verification summary: what was verified, the verdict, and what could not be observed."
 
 [[transitions]]
 id = "trigger-to-implement"
@@ -73,9 +218,15 @@ to = "review"
 type = "conditional"
 
 [transitions.when]
-left = { type = "stage", path = "$.outputs.implementation_result" }
 op = "eq"
-right = { type = "literal", value = "ready" }
+
+[transitions.when.left]
+type = "stage"
+path = "$.outputs.implementation_result"
+
+[transitions.when.right]
+type = "literal"
+value = "ready"
 
 [transitions.params.issue_id]
 type = "input"
@@ -120,6 +271,7 @@ name = "pull_requests"
 [transitions.options.params.task]
 type = "input"
 name = "task"
+
 [[transitions]]
 id = "review-approved"
 from = "review"
@@ -127,9 +279,15 @@ to = "verify"
 type = "conditional"
 
 [transitions.when]
-left = { type = "stage", path = "$.outputs.review_result" }
 op = "eq"
-right = { type = "literal", value = "approved" }
+
+[transitions.when.left]
+type = "stage"
+path = "$.outputs.review_result"
+
+[transitions.when.right]
+type = "literal"
+value = "approved"
 
 [transitions.params.acceptance_criteria]
 type = "output"
@@ -157,9 +315,15 @@ type = "conditional"
 max_iterations = 3
 
 [transitions.when]
-left = { type = "stage", path = "$.outputs.review_result" }
 op = "eq"
-right = { type = "literal", value = "needs_changes" }
+
+[transitions.when.left]
+type = "stage"
+path = "$.outputs.review_result"
+
+[transitions.when.right]
+type = "literal"
+value = "needs_changes"
 
 [transitions.params.issue_id]
 type = "input"
@@ -203,6 +367,7 @@ name = "pull_requests"
 [transitions.options.params.task]
 type = "input"
 name = "task"
+
 [[transitions]]
 id = "verification-passed"
 from = "verify"
@@ -210,9 +375,15 @@ to = "done"
 type = "conditional"
 
 [transitions.when]
-left = { type = "stage", path = "$.outputs.verification_result" }
 op = "eq"
-right = { type = "literal", value = "passed" }
+
+[transitions.when.left]
+type = "stage"
+path = "$.outputs.verification_result"
+
+[transitions.when.right]
+type = "literal"
+value = "passed"
 
 [[transitions]]
 id = "verification-failed"
@@ -222,9 +393,15 @@ type = "conditional"
 max_iterations = 2
 
 [transitions.when]
-left = { type = "stage", path = "$.outputs.verification_result" }
 op = "eq"
-right = { type = "literal", value = "failed" }
+
+[transitions.when.left]
+type = "stage"
+path = "$.outputs.verification_result"
+
+[transitions.when.right]
+type = "literal"
+value = "failed"
 
 [transitions.params.issue_id]
 type = "input"

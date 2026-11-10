@@ -1,71 +1,55 @@
 # Weekly skills refresh line
 
-Scheduled Factory line that scans **product repos in a snapshot**, decides whether agent-facing skill docs are stale, and opens a PR (or commits) to your skills repository. Checkout, change collection, the edit, and publish are separate steps. The agent does not publish.
+Inspect product changes and refresh agent guidance. Separate script Agents prepare the checkout and publish changes after the edit Agent succeeds.
 
-## Stage
+## Stages
 
-| Stage | Job | Snapshot |
-|-------|-----|----------|
+| Stage | Agent | Machine |
+|-------|-------|---------|
+| `prepare` | `skills-refresh-prepare` | `skills-refresh` |
 | `refresh` | `weekly-skills-refresh` | `skills-refresh` |
+| `publish` | `skills-refresh-publish` | `skills-refresh` |
 
-## Before you deploy
+## Configure
 
-### 1. Build snapshot `skills-refresh`
+Set stage defaults for `skills_repo`, `since`, `skills_globs`, `branch_prefix`, and `commit_message` in `line.toml`. Use the same defaults on prepare, refresh, and publish. Pass a manual Line input to override a value consistently for all stages.
 
-Bake product repos under `/workspace/` per `snapshots/skills-refresh/snapshot-src/README.md`, then:
+`publish_mode` supports `pr`, `commit`, or `report`. The default opens a PR when guidance changed. Report mode performs no commit or push. The edit Agent only changes files matching `skills_globs`; the publish script checks that allowlist again. Product checkouts come from the Machine build; rebuild it for newer product revisions.
 
-```bash
-islo snapshot save <your-build-sandbox> --name skills-refresh
-```
+All three stages share `skills-refresh-{{line_run_id}}`, but the edit Agent has its own conversation. The publish transition requires a successful edit stage. Preparation refuses to discard uncommitted changes on retries.
 
-### 2. Configure the job
+## Build the Machines
 
-Edit `jobs/weekly-skills-refresh/job.toml` params as needed:
+Select your Factory with `islo factory set <factory>`. Follow each Machine guide and wait for successful published builds:
 
-| Param | Default | Purpose |
-|-------|---------|---------|
-| `org` | `your-org` | GitHub org that owns the product repos in the snapshot |
-| `repos` | `auto` | Scans git repos already in the snapshot |
-| `skills_repo` | `your-org/agent-skills` | GitHub `owner/repo` to update |
-| `since` | `7 days ago` | Commit lookback window |
-| `publish_mode` | `pr` | `pr`, `commit`, or `report` |
-| `branch_prefix` | `factory/skills-refresh` | PR branch prefix |
-| `skills_globs` | `skills/**` | Globs the agent may edit under the skills repo. Narrow this. |
-| `commit_message` | `chore: refresh agent skills from product changes` | Git commit message used by the publish step |
+- [skills-refresh](machines/skills-refresh/README.md)
 
-Ensure the sandbox has `gh` available. GitHub credentials are injected by the gateway at sandbox create. Do not bake tokens into the snapshot.
+## Create Agents and deploy the Line
 
-### 3. Deploy
+Run these commands from the repository root after configuring the placeholders and connections:
 
 ```bash
-islo job deploy --path examples/weekly-skills-refresh/jobs/weekly-skills-refresh/job.toml --dry-run
-islo job deploy --path examples/weekly-skills-refresh/jobs/weekly-skills-refresh/job.toml
+for manifest in examples/weekly-skills-refresh/agents/*/agent.toml; do
+  islo agent validate "$manifest"
+  islo agent create "$manifest"
+done
 islo factory line validate examples/weekly-skills-refresh/line.toml
 islo factory line deploy examples/weekly-skills-refresh/line.toml --dry-run
 islo factory line deploy examples/weekly-skills-refresh/line.toml
 ```
 
-### 4. Verify
+For an existing Agent, use the [update procedure](../../README.md#upgrade-an-existing-installation), then redeploy the Line. Active runs keep their pinned versions.
 
-After the scheduled run or a manual line run:
+## Check a run
 
 ```bash
+islo factory line run weekly-skills-refresh --param publish_mode=report --param skills_repo=your-org/agent-skills
 islo factory line runs weekly-skills-refresh
 islo factory line-run events <run-id>
 ```
 
-With `publish_mode = pr`, expect a PR on your skills repo when the agent edited files. With `report`, expect a summary and no push.
+Inspect the typed outputs listed in `line.toml` and the transitions they select. The schedule or integration trigger can also start the Line. A manual run uses the same stage contracts.
 
-## Adoption notes for agents
+## Remove the example
 
-Read this before copying the line into a tenant.
-
-- The agent must not commit or open the PR. The `publish` step does that from `publish_mode` and `commit_message`. If you put publish back into the prompt, a partial agent failure can push a bad branch.
-- `changes.json` is built from commits already in the snapshot. Rebake `skills-refresh` when you want a newer lookback. The collect step does not contact the remote.
-- `skills_globs` is the allowlist. The default `skills/**` is a starting point. Point it at the paths agents actually read.
-- `org` and `skills_repo` default to `your-org/...`. Change them. Do not hardcode a vendor org.
-- Snapshot name `skills-refresh` is one you create. Product checkouts live under `/workspace/`. The skills repo is cloned at runtime into `/workspace/skills`.
-
-### 5. Remove
-
-Delete the deployed line and job from your tenant when you no longer need this example.
+Delete the Line first with `islo factory line delete weekly-skills-refresh`. After active runs finish, delete its Agents with `islo agent delete <name>` and its Machines with `islo factory machine delete <name>`.

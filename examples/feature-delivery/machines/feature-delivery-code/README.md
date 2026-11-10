@@ -1,0 +1,18 @@
+# Machine `feature-delivery-code`
+
+Clone every repository the delivery line may modify under `/workspace/`. Copy `files/workspace/prompts/` into `/workspace/prompts/`.
+
+## Create and build
+
+Select your Factory with `islo factory set <factory>`. Create the Machine from repositories you control and this examples repository:
+
+```bash
+islo factory machine create feature-delivery-code --repo <your-repository-url> --repo https://github.com/islo-labs/islo-agents --vcpus 4 --memory-mb 8192 --disk-gb 20 --pause-after-idle 1800 --delete-after 172800 --auto-resume on_activity
+islo factory machine get feature-delivery-code
+```
+
+During Machine setup, request the layout and dependencies described above. Supporting paths in this guide are relative to `examples/feature-delivery/machines/feature-delivery-code/`. The examples checkout must be at `/workspace/islo-agents/` for script Agents. Build from the revision containing the Agent manifests you deploy.
+
+Complete any setup questions and wait for a successful published build before creating Agents. `machine` in each Agent manifest must match this name. Use `islo factory machine build feature-delivery-code` after changing build inputs, then inspect the build again.
+
+Credentials come from the connected integrations and selected Factory environment. Keep credentials out of build files. Each new Line Run gets a workspace from the Machine. Repeated stage visits reuse that run's workspace.

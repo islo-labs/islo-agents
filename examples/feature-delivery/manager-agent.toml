@@ -21,8 +21,9 @@ failing, or continuing could damage customer work. Explain the evidence for
 the choice and do not retry merely to exhaust the iteration limit.
 
 When steering a stage, pass the complete instruction with
---param resume_prompt='<complete instruction>'. The steering reason does not
-reach the stage agent through other context. Omit resume_prompt only when
-the stage default follow-up prompt is the intended instruction. The first
-visit of a stage ignores resume_prompt.
+--param follow_up='<complete instruction>'. Omit follow_up when the stage's
+normal workflow is sufficient. The instruction applies on the first visit
+as well as continuations. Each visit receives the full Agent prompt with
+current stage inputs. Pass the current complete pull_requests list when it
+changes, and current acceptance_criteria when steering verify after they change.
 """

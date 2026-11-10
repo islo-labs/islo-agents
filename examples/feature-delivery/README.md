@@ -1,100 +1,75 @@
 # Feature delivery line
 
-Factory line that **implements**, **reviews**, and **verifies** one Linear issue or one standalone task across its complete pull-request set, with loops back to implementation when review or verification fails.
+Implement, review, and verify one Linear issue or standalone task across its complete pull-request set. Failed reviews and verification route back to implementation.
 
 ## Stages
 
-| Stage | Job | Snapshot |
-|-------|-----|----------|
+| Stage | Agent | Machine |
+|-------|-------|---------|
 | `implement` | `feature-delivery-implement` | `feature-delivery-code` |
 | `review` | `feature-delivery-review` | `feature-delivery-code` |
 | `verify` | `feature-delivery-verify` | `feature-delivery-platform` |
 
-**Trigger:** Linear `issue.updated` when your label is added or changed (default placeholder `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` in `line.toml`).
+## Configure
 
-Each stage uses an `ensure` sandbox and named agent session scoped to the immutable line-run ID. A repeated stage visit in one line run resumes its own environment, while a new run for the same issue gets fresh environments. Implement, review, and verify keep separate names because they may use different snapshots and resource shapes. When no conditional transition matches, an agentic transition offers `retry-stage`. Cancel stays a reserved line control (requires the line routing agent, see step 4).
+Replace `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` in the trigger selector and connect Linear. Ticket-backed runs set `issue_id`; standalone runs leave it empty and pass the complete request in `task`. Implement returns `pull_requests` and `acceptance_criteria`, which review and verify consume. Each prompt stage returns a top-level `summary`.
 
-## Before you deploy
+The stage-specific workspaces include `{{line_run_id}}`. Retries and steering resume the same stage conversation and checkout. New runs receive separate workspaces. All three stages use Codex on Islo inference. Configure the Agent manifests to use your chosen model provider.
 
-### 1. Connect Linear
+## Steer a delivery stage
 
-Install the Islo Linear integration and select the teams/issues this line should watch.
-
-### 2. Supporting prompt files in the snapshots
-
-Stage briefs live in each job's `run_agent` prompt so a prompt edit is a new job version. Supporting notes live only under `snapshots/*/snapshot-src/workspace/prompts/` (`integrations.md` in both snapshots, `platform-env.md` in `feature-delivery-platform`). Bake those into `/workspace/prompts/` when you save the snapshot.
-
-### 3. Build snapshots
-
-- **Code** (`feature-delivery-code`). Clone repos under `/workspace/`. See `snapshots/feature-delivery-code/README.md`.
-- **Platform** (`feature-delivery-platform`). Full stack plus `boot-stack.sh`. See `snapshots/feature-delivery-platform/README.md`.
+Every visit sends the full Agent prompt with the current PR list, requirements,
+and verification criteria. Use `follow_up` for an additional instruction:
 
 ```bash
-islo snapshot save <your-code-build-sandbox> --name feature-delivery-code
-islo snapshot save <your-platform-build-sandbox> --name feature-delivery-platform
+islo factory line-run steer <run-id> review --param follow_up='Focus on the queue retry change.'
 ```
 
-### 4. Prepare the Manager Agent
+If the PR set changed, pass the complete current list with
+`--param-json 'pull_requests=["https://github.com/your-org/your-repo/pull/123"]'`.
+When steering `verify`, also pass updated `acceptance_criteria` if they changed.
+The instruction applies on initial visits and continuations. With no instruction,
+the Agent follows its normal workflow using the current inputs.
 
-Create the Manager Machine from a repository you control. Complete any Machine build setup questions, then wait until `islo factory machine get` shows a successful latest build before creating the Agent. If you already have a ready Machine in this Factory, set `machine` in `manager-agent.toml` to its name and skip the create command:
+New deployments use `follow_up`. Existing runs pinned to the previous manifests
+keep their `resume_prompt` contract until they finish.
+
+## Build the Machines
+
+Select your Factory with `islo factory set <factory>`. Follow each Machine guide and wait for successful published builds:
+
+- [feature-delivery-code](machines/feature-delivery-code/README.md)
+- [feature-delivery-manager](machines/feature-delivery-manager/README.md)
+- [feature-delivery-platform](machines/feature-delivery-platform/README.md)
+
+## Create Agents and deploy the Line
+
+Run these commands from the repository root after configuring the placeholders and connections:
 
 ```bash
-islo schema agent
-islo factory machine create feature-delivery-manager --repo <your-repository-url>
-islo factory machine get feature-delivery-manager
+for manifest in examples/feature-delivery/agents/*/agent.toml; do
+  islo agent validate "$manifest"
+  islo agent create "$manifest"
+done
 islo agent validate examples/feature-delivery/manager-agent.toml
 islo agent create examples/feature-delivery/manager-agent.toml
-islo agent get feature-delivery-manager
-```
-
-### 5. Replace placeholders
-
-| Placeholder | Where | Set it to |
-|-------------|-------|-----------|
-| `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` | `[trigger.selector].labels` in `line.toml` | the Linear label that starts a delivery loop, for example `factory-loop` |
-
-### 6. Deploy
-
-```bash
-for job in feature-delivery-implement feature-delivery-review feature-delivery-verify; do
-  islo job deploy --path "examples/feature-delivery/jobs/${job}/job.toml" --dry-run
-  islo job deploy --path "examples/feature-delivery/jobs/${job}/job.toml"
-done
 islo factory line validate examples/feature-delivery/line.toml
 islo factory line deploy examples/feature-delivery/line.toml --dry-run
 islo factory line deploy examples/feature-delivery/line.toml
 ```
 
-Job and line versions are immutable. These manifests are version `1.1.0`; redeploy all three jobs before redeploying the line. Existing runs keep their pinned older versions and should be allowed to finish rather than being rewritten in place.
+For an existing Agent, use the [update procedure](../../README.md#upgrade-an-existing-installation), then redeploy the Line. Active runs keep their pinned versions.
 
-### 7. Test
-
-Add or toggle your label on a Linear issue. Inspect the run:
+## Check a run
 
 ```bash
+islo factory line run feature-delivery --param task='Implement the requested feature.'
 islo factory line runs feature-delivery
 islo factory line-run events <run-id>
 ```
 
-Expect: Linear comment → PR(s) → review comments → verification report on PRs → `done` when verification passes.
+Inspect the typed outputs listed in `line.toml` and the transitions they select. The schedule or integration trigger can also start the Line. A manual run uses the same stage contracts.
 
-### 8. Remove
+## Remove the example
 
-Delete the deployed line and jobs from your tenant when you no longer need this example.
-
-## Adoption notes for agents
-
-Read this before copying the line into a tenant.
-
-- Sandbox and session names use a stage-specific slot plus `{{line_run_id}}`. The control plane supplies the same value to every stage visit in one line run and a different value to every new line run.
-- Ticket-backed runs set `issue_id` from the Linear identifier. Standalone runs leave `issue_id` empty and put the verbatim request in `task`. Exactly one of `issue_id` or `task` is the requirements source.
-- Start a standalone run with `islo factory line run feature-delivery --param task='...'`. Stages receive line inputs through their transition bindings.
-- Implement must return `acceptance_criteria`. Verify treats every non-empty row as a mandatory scenario.
-- Every stage also returns a `summary`: a short plain-language account of what it did and the verdict. The run chat shows it as the stage's reply; without it a stage with only a `*_result` reads as nearly empty.
-- The first visit of a stage ignores `resume_prompt`. Steering must pass the full instruction as `--param resume_prompt='...'`. A blocked implement retry receives the `pull_requests` that entered the stage, not a list invented by the failed attempt.
-- Jobs use Codex on Islo inference (`openai/gpt-6-sol`). To use a connected Claude account instead, set `harness = "claude"`, `model = "claude-sonnet-4-5"`, and remove `model_provider`.
-- Snapshot names `feature-delivery-code` and `feature-delivery-platform` are names you create. Do not point them at someone else's snapshot.
-
-## Compared to PR review
-
-[`pr-review`](../pr-review/) is **review-only** on newly opened GitHub PRs. This line is the full **implement → review → verify** loop driven by Linear.
+Delete the Line first with `islo factory line delete feature-delivery`. After active runs finish, delete its Agents with `islo agent delete <name>` and its Machines with `islo factory machine delete <name>`.

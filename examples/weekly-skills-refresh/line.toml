@@ -1,6 +1,6 @@
 [line]
 name = "weekly-skills-refresh"
-description = "Weekly refresh of your agent skills repo from stack snapshot changes (Monday 07:00 UTC)"
+description = "Weekly refresh of your agent skills repo from stack Machine changes (Monday 07:00 UTC)"
 
 [trigger]
 type = "schedule"
@@ -8,22 +8,296 @@ cron = "0 7 * * 1"
 timezone = "UTC"
 
 [[stages]]
-id = "refresh"
-job = "weekly-skills-refresh"
+id = "prepare"
 description = "Collect weekly stack changes, update skills repo, and open a PR"
+agent = "skills-refresh-prepare"
+sandbox_name = "skills-refresh-{{line_run_id}}"
+
+[stages.params.org]
+type = "string"
+default = "your-org"
+description = "GitHub organization that owns the product repos built into the Machine"
+
+[stages.params.repos]
+type = "string"
+default = "auto"
+description = "Reserved for filtering. auto scans every git repo already in the Machine except the skills checkout."
+
+[stages.params.branch_prefix]
+type = "string"
+default = "factory/skills-refresh"
+description = "Branch name prefix for PRs"
+
+[stages.params.publish_mode]
+type = "string"
+default = "pr"
+description = "How to publish updates: pr, commit, or report"
+
+[stages.params.since]
+type = "string"
+default = "7 days ago"
+description = "Human-readable lookback window for product repo changes"
+
+[stages.params.skills_repo]
+type = "string"
+default = "your-org/agent-skills"
+description = "Target skills repo to refresh (owner/name)"
+
+[stages.params.skills_globs]
+type = "string"
+default = "skills/**"
+description = "Space-separated globs (relative to the skills repo root) the agent may edit. Narrow this to the paths agents actually read."
+
+[stages.params.commit_message]
+type = "string"
+default = "chore: refresh agent skills from product changes"
+description = "Git commit message when publishing changes"
+
+[stages.outputs]
+
+[[stages]]
+id = "refresh"
+description = "Collect weekly stack changes, update skills repo, and open a PR"
+agent = "weekly-skills-refresh"
+sandbox_name = "skills-refresh-{{line_run_id}}"
+
+[stages.params.org]
+type = "string"
+default = "your-org"
+description = "GitHub organization that owns the product repos built into the Machine"
+
+[stages.params.repos]
+type = "string"
+default = "auto"
+description = "Reserved for filtering. auto scans every git repo already in the Machine except the skills checkout."
+
+[stages.params.branch_prefix]
+type = "string"
+default = "factory/skills-refresh"
+description = "Branch name prefix for PRs"
+
+[stages.params.publish_mode]
+type = "string"
+default = "pr"
+description = "How to publish updates: pr, commit, or report"
+
+[stages.params.since]
+type = "string"
+default = "7 days ago"
+description = "Human-readable lookback window for product repo changes"
+
+[stages.params.skills_repo]
+type = "string"
+default = "your-org/agent-skills"
+description = "Target skills repo to refresh (owner/name)"
+
+[stages.params.skills_globs]
+type = "string"
+default = "skills/**"
+description = "Space-separated globs (relative to the skills repo root) the agent may edit. Narrow this to the paths agents actually read."
+
+[stages.params.commit_message]
+type = "string"
+default = "chore: refresh agent skills from product changes"
+description = "Git commit message when publishing changes"
+
+[stages.outputs.summary]
+type = "string"
+required = true
+description = "Short human-readable summary of the refresh"
+
+[[stages]]
+id = "publish"
+description = "Collect weekly stack changes, update skills repo, and open a PR"
+agent = "skills-refresh-publish"
+sandbox_name = "skills-refresh-{{line_run_id}}"
+
+[stages.params.org]
+type = "string"
+default = "your-org"
+description = "GitHub organization that owns the product repos built into the Machine"
+
+[stages.params.repos]
+type = "string"
+default = "auto"
+description = "Reserved for filtering. auto scans every git repo already in the Machine except the skills checkout."
+
+[stages.params.branch_prefix]
+type = "string"
+default = "factory/skills-refresh"
+description = "Branch name prefix for PRs"
+
+[stages.params.publish_mode]
+type = "string"
+default = "pr"
+description = "How to publish updates: pr, commit, or report"
+
+[stages.params.since]
+type = "string"
+default = "7 days ago"
+description = "Human-readable lookback window for product repo changes"
+
+[stages.params.skills_repo]
+type = "string"
+default = "your-org/agent-skills"
+description = "Target skills repo to refresh (owner/name)"
+
+[stages.params.skills_globs]
+type = "string"
+default = "skills/**"
+description = "Space-separated globs (relative to the skills repo root) the agent may edit. Narrow this to the paths agents actually read."
+
+[stages.params.commit_message]
+type = "string"
+default = "chore: refresh agent skills from product changes"
+description = "Git commit message when publishing changes"
+
+[stages.outputs.summary]
+type = "string"
+required = true
 
 [[transitions]]
-id = "trigger-to-refresh"
+id = "trigger-to-prepare"
 from = "trigger"
-to = "refresh"
+to = "prepare"
 type = "conditional"
 
 [transitions.when]
 op = "always"
 
+[transitions.params.org]
+type = "input"
+name = "org"
+
+[transitions.params.repos]
+type = "input"
+name = "repos"
+
+[transitions.params.branch_prefix]
+type = "input"
+name = "branch_prefix"
+
+[transitions.params.publish_mode]
+type = "input"
+name = "publish_mode"
+
+[transitions.params.since]
+type = "input"
+name = "since"
+
+[transitions.params.skills_repo]
+type = "input"
+name = "skills_repo"
+
+[transitions.params.skills_globs]
+type = "input"
+name = "skills_globs"
+
+[transitions.params.commit_message]
+type = "input"
+name = "commit_message"
+
 [[transitions]]
-id = "refresh-to-done"
+id = "prepare-to-refresh"
+from = "prepare"
+to = "refresh"
+type = "conditional"
+
+[transitions.when]
+op = "eq"
+
+[transitions.when.left]
+type = "stage"
+path = "$.status"
+
+[transitions.when.right]
+type = "literal"
+value = "succeeded"
+
+[transitions.params.org]
+type = "input"
+name = "org"
+
+[transitions.params.repos]
+type = "input"
+name = "repos"
+
+[transitions.params.branch_prefix]
+type = "input"
+name = "branch_prefix"
+
+[transitions.params.publish_mode]
+type = "input"
+name = "publish_mode"
+
+[transitions.params.since]
+type = "input"
+name = "since"
+
+[transitions.params.skills_repo]
+type = "input"
+name = "skills_repo"
+
+[transitions.params.skills_globs]
+type = "input"
+name = "skills_globs"
+
+[transitions.params.commit_message]
+type = "input"
+name = "commit_message"
+
+[[transitions]]
+id = "refresh-to-publish"
 from = "refresh"
+to = "publish"
+type = "conditional"
+
+[transitions.when]
+op = "eq"
+
+[transitions.when.left]
+type = "stage"
+path = "$.status"
+
+[transitions.when.right]
+type = "literal"
+value = "succeeded"
+
+[transitions.params.org]
+type = "input"
+name = "org"
+
+[transitions.params.repos]
+type = "input"
+name = "repos"
+
+[transitions.params.branch_prefix]
+type = "input"
+name = "branch_prefix"
+
+[transitions.params.publish_mode]
+type = "input"
+name = "publish_mode"
+
+[transitions.params.since]
+type = "input"
+name = "since"
+
+[transitions.params.skills_repo]
+type = "input"
+name = "skills_repo"
+
+[transitions.params.skills_globs]
+type = "input"
+name = "skills_globs"
+
+[transitions.params.commit_message]
+type = "input"
+name = "commit_message"
+
+[[transitions]]
+id = "publish-to-done"
+from = "publish"
 to = "done"
 type = "conditional"
 

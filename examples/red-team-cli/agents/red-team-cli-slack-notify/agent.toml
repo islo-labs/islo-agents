@@ -1,0 +1,7 @@
+name = "red-team-cli-slack-notify"
+description = "Post the reconcile Slack message"
+machine = "red-team-cli"
+type = "script"
+commands = [
+    "python3 /workspace/islo-agents/runtime/stages.py red-team-cli slack-notify",
+]

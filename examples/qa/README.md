@@ -1,79 +1,61 @@
-# QA line
+# Qa line
 
-Scheduled Factory line that runs **three parallel black-box QA agents** against your deployed app, deduplicates their reports, and posts one Slack message.
+Run three black-box QA Agents against a deployed app, validate each report, deduplicate the results, and post the resulting Slack message.
 
 ## Stages
 
-| Stage | Job | Snapshot |
-|-------|-----|----------|
-| `qa` | `qa` | `qa` |
+| Stage | Agent | Machine |
+|-------|-------|---------|
+| `web-core` | `qa-web-core` | `qa` |
+| `web-core-report` | `qa-web-core-report` | `qa` |
+| `web-platform` | `qa-web-platform` | `qa` |
+| `web-platform-report` | `qa-web-platform-report` | `qa` |
+| `cli-cross` | `qa-cli-cross` | `qa` |
+| `cli-cross-report` | `qa-cli-cross-report` | `qa` |
 | `collect` | `qa-report` | `qa-report` |
-| `slack-notify` | `qa-slack-notify` | none |
+| `slack-notify` | `qa-slack-notify` | `qa` |
 
-The QA stage emits `web_core_report_json`, `web_platform_report_json`, and `cli_cross_report_json`. Collect turns those into `slack_text`. Slack-notify posts that text and nothing else.
+## Configure
 
-## Before you deploy
+Replace `REPLACE_WITH_YOUR_SLACK_CHANNEL_ID` in the final notification transition and connect Slack. Create the Factory environment `qa` for test credentials. Set `qa_base_url` on a manual run or change its default for scheduled runs.
 
-### 1. Bake the fan-out briefs into the `qa` snapshot
+The native Line runs `web-core`, `web-platform`, and `cli-cross` in order, each followed by a script Agent that validates findings. This replaces the previous parallel execution. Each exploration and its report share one run-scoped workspace; the three explorations stay isolated. Missing findings produce a `run_ok=false` report so collection can continue.
 
-This job runs three parallel agents. Keep `web-core.md`, `web-platform.md`, and `cli-cross.md` in the snapshot (`snapshots/qa/snapshot-src/workspace/prompts/`) so the line view is not three pasted briefs. Replace the brief lists in those files with your product's flows. Bake that directory into `/workspace/prompts/` when you save the snapshot.
+The collector consumes all three report strings and emits `slack_text` and `summary`. The notify Agent posts `slack_text` unchanged. It does not compose another summary. Customize the product flow briefs in the QA Machine files before scheduling.
 
-Also copy `snapshot-src/harness/stage.py` and `snapshot-src/harness/emit_report.py` to `/opt/qa-harness/harness/`.
+## Build the Machines
 
-### 2. Build snapshots
+Select your Factory with `islo factory set <factory>`. Follow each Machine guide and wait for successful published builds:
 
-See `snapshots/qa/README.md` and `snapshots/qa-report/README.md`. Save snapshots as `qa` and `qa-report`.
+- [qa](machines/qa/README.md)
+- [qa-report](machines/qa-report/README.md)
 
-### 3. Factory environment `qa`
+## Create Agents and deploy the Line
 
-Create a Factory environment named `qa` with whatever credentials your agents need (API token, test user). Do not put a channel id in the environment. The line passes the channel into `qa-slack-notify`.
-
-Set your app URL via job param `qa_base_url` (default `https://your-app.example.com`).
-
-### 4. Replace the Slack channel
-
-| Placeholder | Where | Set it to |
-|-------------|-------|-----------|
-| `REPLACE_WITH_YOUR_SLACK_CHANNEL_ID` | `collect-to-slack` in `line.toml` | Your Slack channel ID |
-
-Connect Slack: `islo login --tool slack`
-
-### 5. Deploy
+Run these commands from the repository root after configuring the placeholders and connections:
 
 ```bash
-for job in qa qa-report qa-slack-notify; do
-  islo job deploy --path "examples/qa/jobs/${job}/job.toml" --dry-run
-  islo job deploy --path "examples/qa/jobs/${job}/job.toml"
+for manifest in examples/qa/agents/*/agent.toml; do
+  islo agent validate "$manifest"
+  islo agent create "$manifest"
 done
 islo factory line validate examples/qa/line.toml
 islo factory line deploy examples/qa/line.toml --dry-run
 islo factory line deploy examples/qa/line.toml
 ```
 
-Adjust the schedule in `line.toml` (`cron`) for your timezone.
+For an existing Agent, use the [update procedure](../../README.md#upgrade-an-existing-installation), then redeploy the Line. Active runs keep their pinned versions.
 
-### 6. Verify
-
-After the scheduled run (or a manual line run), inspect events:
+## Check a run
 
 ```bash
+islo factory line run qa --param qa_base_url=https://your-app.example.com
 islo factory line runs qa
 islo factory line-run events <run-id>
 ```
 
-Expect three report strings on `qa`, a `slack_text` on `collect`, and one Slack post from `slack-notify`.
+Inspect the typed outputs listed in `line.toml` and the transitions they select. The schedule or integration trigger can also start the Line. A manual run uses the same stage contracts.
 
-### 7. Remove
+## Remove the example
 
-Delete the deployed line and jobs from your tenant when you no longer need this example.
-
-## Adoption notes for agents
-
-Read this before copying the line into a tenant.
-
-- Do not collapse collect and Slack back into one job. The collector's only job is `slack_text`. The notify job posts that string unchanged, so a bad message is a prompt bug, not a second rewrite.
-- Each QA task must claim its own output (`web_core_report_json`, `web_platform_report_json`, `cli_cross_report_json`). The explore steps list `outputs = []` so they are not writers. `emit_report.py` writes `$ISLO_OUTPUT` from `/workspace/reports/<agent>.json`.
-- Reports are optional. A missing agent still lets collect run. Collect prefers `/workspace/upstream/*.json` and only falls back to knowledge tagged `qa-findings`.
-- The three briefs still describe generic product flows. Rewrite them before a real schedule. Leave the shared findings JSON contract in place so `stage.py` can validate evidence.
-- `qa_base_url` is your deployed app. This line does not boot a local stack.
-- Snapshot names `qa` and `qa-report` are names you create.
+Delete the Line first with `islo factory line delete qa`. After active runs finish, delete its Agents with `islo agent delete <name>` and its Machines with `islo factory machine delete <name>`.

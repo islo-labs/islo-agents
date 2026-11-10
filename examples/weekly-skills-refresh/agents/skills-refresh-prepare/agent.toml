@@ -1,0 +1,7 @@
+name = "skills-refresh-prepare"
+description = "prepare the skills refresh"
+machine = "skills-refresh"
+type = "script"
+commands = [
+    "python3 /workspace/islo-agents/runtime/stages.py weekly-skills-refresh prepare",
+]

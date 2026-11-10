@@ -1,57 +1,57 @@
 # Islo Factory examples
 
-Runnable **Factory line** templates for Islo sandboxes. Each example is a self-contained package: `line.toml`, jobs, and snapshot recipes.
+Deployable Factory lines built from Agents and Machines. A Machine builds the workspace, an Agent defines the work, and a Line connects agent stages through typed inputs, outputs, and transitions.
 
-## Quick start (PR review)
+## Start with PR review
 
-The fastest path to a working line:
-
-1. Install the CLI: `curl -fsSL https://islo.dev/install.sh | bash`
-2. Log in: `islo login`
-3. Connect GitHub in the Islo console and select your repository.
-4. Edit `examples/pr-review/line.toml` — replace `REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY`.
-5. Deploy:
+1. Install the [Islo CLI](https://islo.dev) and connect GitHub in your Factory.
+2. Follow the [PR review Machine setup](examples/pr-review/machines/pr-review/README.md). Wait for its successful build.
+3. Replace `REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY` in [line.toml](examples/pr-review/line.toml).
+4. Create the Agent and deploy the Line:
 
 ```bash
-islo job deploy --path examples/pr-review/jobs/pr-review/job.toml --dry-run
-islo job deploy --path examples/pr-review/jobs/pr-review/job.toml
+islo agent validate examples/pr-review/agents/pr-review/agent.toml
+islo agent create examples/pr-review/agents/pr-review/agent.toml
 islo factory line validate examples/pr-review/line.toml
+islo factory line deploy examples/pr-review/line.toml --dry-run
 islo factory line deploy examples/pr-review/line.toml
 ```
 
-6. Open a pull request and inspect `islo factory line runs pr-review`.
-
-See [examples/pr-review/README.md](examples/pr-review/README.md) for details.
+Open a pull request and inspect `islo factory line runs pr-review`.
 
 ## Examples
 
 | Example | Trigger | Outcome |
 |---------|---------|---------|
-| [pr-review](examples/pr-review/) | GitHub PR opened | Advisory review comment + typed verdict |
-| [feature-delivery](examples/feature-delivery/) | Linear label on issue | Implement, review, and verify across a PR set |
-| [designer-line](examples/designer-line/) | Manual | Storybook design in a retained sandbox, publish on a later steer |
-| [qa](examples/qa/) | Schedule | Parallel black-box QA agents, then a Slack message |
-| [red-team-cli](examples/red-team-cli/) | Schedule | White-box + black-box CLI security review |
-| [weekly-skills-refresh](examples/weekly-skills-refresh/) | Schedule | Refresh agent skills repo from product changes |
+| [pr-review](examples/pr-review/) | GitHub PR opened | Advisory review comment and typed verdict |
+| [feature-delivery](examples/feature-delivery/) | Linear label on issue, or manual task | Implement, review, and verify a complete PR set |
+| [designer-line](examples/designer-line/) | Manual | Storybook design, then publish on a later steer |
+| [qa](examples/qa/) | Schedule | Three QA agent stages, validated reports, and a Slack message |
+| [red-team-cli](examples/red-team-cli/) | Schedule | Source review, CLI testing, and reconciled findings |
+| [weekly-skills-refresh](examples/weekly-skills-refresh/) | Schedule | Refresh agent guidance from product changes |
 
-Each example README covers snapshot build, environment variables, placeholders, deploy order, and cleanup.
-
-## Repository layout
+## Layout
 
 ```text
 examples/<name>/
-  README.md          # How to deploy this example
-  line.toml          # Factory line manifest
-  jobs/<job>/job.toml
-  snapshots/<name>/  # Snapshot bake contract + snapshot-src/ (supporting prompts live here)
-scripts/
-  validate_examples.py
+  README.md
+  line.toml                 # Stage contracts and routing
+  agents/<name>/agent.toml   # Prompt or script Agent
+  manager-agent.toml        # Optional prompt Agent for Manager turns
+  machines/<name>/README.md # Build instructions and workspace contract
+  machines/<name>/files/    # Supporting files to install during the build
+runtime/stages.py            # Deterministic reporting and publishing
+scripts/validate_examples.py # Secret-free package validation
 ```
 
-## Contributing
+## Upgrade an existing installation
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). CI runs `scripts/validate_examples.py` on every pull request.
+Build the Machines and create the Agents before deploying the replacement Line. Existing runs keep their pinned versions. Let those runs finish before deleting their old resources. Prompt changes belong in `agent.toml`; parameter and output changes belong in `line.toml`.
+
+For an existing Agent, copy its manifest to an update file, remove the top-level `name`, and run `islo agent update <name> <update-file>`. Deploy the Line again to use the updated Agent version.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for validation and contribution rules.
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE).
+[Apache-2.0](LICENSE).
