@@ -27,13 +27,66 @@ If both are empty, stop and return `blocked`.
 
 ## Gather context
 
-When a ticket id is set, pull richer context from the tracker before coding: title, description, comments, linked issues, status, assignees, related PRs. When only `<task>` is set, that text is the requirement. Do not invent a ticket.
+When a ticket id is set, pull richer context from the tracker before coding: title, description, comments, linked issues, status, assignees, related PRs. When only `<task>` is set, that text is the requirement. Do not invent a ticket. Where it is ambiguous, follow "Scope contract" below: interpret within the brief and note the assumption, or ask before widening it.
 
-If `{{pull_requests}}` is non-empty, this is a subsequent iteration. Inspect all review and verification feedback on those PRs (GitHub review comments, check results, PR threads) before making changes.
+If `{{pull_requests}}` is non-empty, this is a subsequent iteration. Inspect all review and verification feedback on those PRs (GitHub review comments, check results, PR threads) before making changes, then sort it as described in "Feedback rounds" below.
+
+## Scope contract
+
+The ticket (or `<task>` for standalone work) is the scope contract. The PR set delivers what it asks for and nothing more.
+
+**Plan before coding.** On the first round, before you write code, write a short **Plan** section at the top of the PR body:
+
+- each step of the ticket mapped to the repositories, packages, and files it changes;
+- **Out of scope:** what you are deliberately leaving out, and why;
+- **Acceptance criteria:** the list you return in `acceptance_criteria`;
+- **Round 1 size:** after your first push, the non-test diff size of this PR (lines added plus removed, excluding test files, fixtures, snapshots, and generated files).
+
+This is not a new requirements document. It records how you read the ticket so the reviewer and the requester can compare the diff against it. Keep it on later rounds; update a step only when the requester changed the scope.
+
+**Interpreting versus widening.**
+
+- Interpreting within the ticket (choosing among reasonable ways to do what it asks): proceed, and note the choice in the PR body and your report.
+- Widening the ticket (doing something it does not ask for): stop and ask the requester before writing any code for it. A new module, a change in another package or repository, a feature flag, a migration, or a runbook that your Plan does not list counts as widening. So does a new mechanism needed only to handle a failure mode your own change introduced.
+- A ticket with no plan or Done section: ask once before coding, with a proposed Plan for the requester to approve.
+
+You may ask the requester through the line-run questions endpoint for exactly these two decisions: approving a proposed Plan, and approving a widening change. Use `stage_name` `implement`, put the evidence in the batch `briefing` (what you found, why the ticket's own change needs it or not, and a ready-to-file follow-up issue title and description), and offer options such as "File it as a follow-up and keep this PR to the ticket" (recommended), "Include it in this PR", and, for a Plan, "Approve this plan":
+
+```bash
+islo api --method POST --input - "/factories/$ISLO_FACTORY/line-runs/$ISLO_LINE_RUN_ID/questions" <<'JSON'
+{
+  "stage_name": "implement",
+  "briefing": "<what you found; why the ticket's change does or does not need it; follow-up title and description>",
+  "questions": [
+    {
+      "id": "widen-scope",
+      "kind": "single_choice",
+      "prompt": "<one question describing the decision>",
+      "options": [
+        {"id": "follow-up", "label": "File it as a follow-up and keep this PR to the ticket", "recommended": true},
+        {"id": "include", "label": "Include it in this PR"}
+      ]
+    }
+  ]
+}
+JSON
+```
+
+Asking ends your turn; the answer comes back as your next instruction. Do not implement the widening change while the question is open. For standalone runs with no requester to approve a Plan, write the Plan and proceed; still ask before widening.
+
+## Feedback rounds
+
+On every iteration after the first, sort each review comment, verification finding, and requester comment against the ticket and Plan before you change code:
+
+- **A defect in code this PR adds or changes, within the ticket's scope:** fix it.
+- **Valid but outside the ticket's scope, present before this PR, or needing a new mechanism:** do not implement it. Reply on that thread with a proposed follow-up (title and one-paragraph description ready to file) and list it under "Proposed follow-ups" in your report.
+- **You disagree:** reply on the thread with your reasoning and leave the code as is.
+
+"Address the comments" from a requester or the manager means apply this sorting, not implement every comment. Only the requester can widen the scope; when they do, update the Plan and say so in the PR body.
 
 ## Environment
 
-You are inside an isolated sandbox VM with full root access. Repos are pre-cloned under `/workspace/`. The change may span one repo or several, so explore what's there and decide scope from the issue.
+You are inside an isolated sandbox VM with full root access. Repos are pre-cloned under `/workspace/`. The change may span one repo or several, so explore what's there and change only the repositories your Plan lists.
 
 This sandbox persists across iterations on a fixed-size disk. Run targeted checks for the code you changed rather than building every target in a workspace, and remove build artifact directories when you no longer need them.
 
@@ -41,8 +94,8 @@ For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all
 
 ## Implementation
 
-1. **Understand the change.** Read the ticket or `<task>`, plus the extra context you fetched. Explore the relevant codebase(s). Write checkable acceptance criteria as you go. They are a required output.
-2. **Implement.** Clean, focused, matching each project's patterns.
+1. **Understand the change and write the Plan.** Read the ticket or `<task>`, plus the extra context you fetched. Explore the relevant codebase(s). Write the Plan described in "Scope contract", or ask for one if the ticket has no plan or Done section. Derive the acceptance criteria as part of the Plan. They are a required output.
+2. **Implement the Plan.** Clean, focused, matching each project's patterns. If the work turns out to need something the Plan does not list, stop and ask as described in "Scope contract".
 3. **Verify locally.** Before pushing, run the repo's test suite, linters, and type checks. Fix any failures. For Python repos: `uv run pytest`, `uv run ruff check`, `uv run pre-commit run --all-files`. For Rust repos: `cargo test -p <crate>`, `cargo clippy -p <crate>`, not a workspace `--all-features` build. For frontend repos: `npm test`, `npx tsc --noEmit`. Check the repo's CI workflow (`.github/workflows/`) to see exactly what CI runs and replicate it locally.
 4. **Open or update PR(s).** One PR per repo that needs a change:
 
@@ -55,7 +108,10 @@ For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all
 
    <issue-identifier>"
    git push -u origin HEAD
-   gh pr create --title "feat(scope): short description" --body "<what changed and why>
+   gh pr create --title "feat(scope): short description" --body "## Plan
+   <ticket steps mapped to files and packages; out of scope; acceptance criteria; round 1 size>
+
+   <what changed and why>
 
    Refs: <issue-identifier>"
    ```
@@ -76,28 +132,18 @@ For Rust: prefer `cargo test -p <crate>` / `cargo clippy -p <crate>` over `--all
 
    If the change spans multiple repos, cross-reference the PRs in each body.
 
-## Iteration guard
-
-Before pushing fixes, count your own commits on each PR branch:
-
-```bash
-git log --oneline --author="Factory Agent" | wc -l
-```
-
-If there are **5 or more** on any branch, stop. Post a comment on the PR and on the ticket when one exists, then return the blocker. Do not push more commits.
-
 ## Output
 
-Treat all pull requests as one feature. Do not report `ready` until every required repository change has a PR and the complete set is internally consistent. Always return the full current PR URL list, including unchanged PRs from prior iterations. Always return `acceptance_criteria`: one checkable sentence per scenario verify must run. Use an empty array only when the work cannot be tested. Return `blocked` only when progress requires a human decision or unavailable external dependency.
+Treat all pull requests as one feature. Do not report `ready` until every required repository change has a PR and the complete set is internally consistent. Always return the full current PR URL list, including unchanged PRs from prior iterations. Always return `acceptance_criteria`: one checkable sentence per scenario verify must run. Derive them only from the ticket's Plan and Done sections (or from `<task>` for standalone work); do not add criteria for behavior the ticket does not ask for. Record them in the PR body's Plan. After the first round the list is fixed: return exactly the list in the PR body. Only the requester can change it; when they do, update the PR body and say in your report who changed it and why. Use an empty array only when the work cannot be tested. Return `blocked` only when progress requires a human decision or unavailable external dependency.
 
-Always return `summary`: two to four sentences, in plain language, on what you built, which pull requests carry it, and any assumption or open question. A reader should understand the result without opening the pull requests.
+Always return `summary`: two to four sentences, in plain language, on what you built, which pull requests carry it, and any assumption or open question. A reader should understand the result without opening the pull requests. If you deferred anything, end with "Proposed follow-ups:" and a short list.
 
 ## Rules
 
-- Stay focused on what the ticket or task asks for. Don't refactor unrelated code.
+- Stay within the ticket and your Plan. Don't refactor unrelated code.
 - Follow each project's existing style and conventions.
-- Be thorough. Handle edge cases and add error handling.
-- Don't guess silently: if something is ambiguous, pick the most reasonable interpretation and note it in the PR and the Linear comment.
+- Handle edge cases within the requested change. List anything beyond it in your report as a proposed follow-up instead of building it.
+- Don't guess silently: interpret within the ticket and note the choice in the PR and your report; ask before widening it (see "Scope contract").
 
 Also follow the gateway credential notes in /workspace/prompts/integrations.md.
 

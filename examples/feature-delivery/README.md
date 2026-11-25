@@ -16,6 +16,14 @@ Replace `REPLACE_WITH_YOUR_LINEAR_LABEL_NAME` in the trigger selector and connec
 
 The stage-specific workspaces include `{{line_run_id}}`. Retries and steering resume the same stage conversation and checkout. New runs receive separate workspaces. All three stages use Codex on Islo inference. Configure the Agent manifests to use your chosen model provider.
 
+## Scope contract
+
+The ticket, or `task` for standalone runs, is the scope contract. Implement writes a Plan at the top of each PR body: ticket steps mapped to files and packages, what is out of scope, the acceptance criteria, and the round 1 non-test diff size. The acceptance criteria come only from the ticket and stay fixed after round 1 unless the requester changes them. Review comments and verification findings outside the ticket become proposed follow-ups instead of new work, and review returns `needs_changes` only for blocking findings.
+
+Before widening the ticket, or before coding when the ticket has no plan or Done section, implement asks the requester through the line-run questions endpoint with a ready-to-file follow-up. The answer arrives as its next instruction.
+
+Review also reports `scope_drift` (`none`, `scope`, `size`, or `non_convergence`) and `drift_summary` on every round. Any value other than `none` routes to the manager, which asks the requester whether to ship the ticket's part and file the rest, continue, or undo the last round. The `max_iterations` limit is a cost guard, not the scope control.
+
 ## Steer a delivery stage
 
 Every visit sends the full Agent prompt with the current PR list, requirements,

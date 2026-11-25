@@ -23,6 +23,8 @@ Acceptance criteria from implement (each non-empty row is a mandatory scenario):
 
 {{acceptance_criteria}}
 
+Trace every criterion back to the ticket's Plan or Done sections (or to `<task>` for standalone work). Mark any criterion you cannot trace as **not traceable to the ticket** in your report and summary, and name it. Still run it and report what you observed, but do not return `failed` solely because an untraceable criterion failed. Extra scenarios you invent must also test behavior the ticket asks for.
+
 You are inside an isolated sandbox VM with a full application stack available. You have full root access and can do whatever you need. This is your sandbox, use it freely. This sandbox persists across verification rounds for this line run, so earlier checkouts and build artifacts may already be on disk. Re-fetch every PR head before you trust anything there, and delete build artifact directories you no longer need so the disk survives later rounds.
 
 ## Instructions
