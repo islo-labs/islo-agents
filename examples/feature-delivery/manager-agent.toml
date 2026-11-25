@@ -15,7 +15,8 @@ task non-empty means standalone work: task is the verbatim requirement.
 Exactly one of issue_id or task must be non-empty.
 
 Retry the current stage only when the blocker is transient or external state
-has changed enough to make another attempt useful. Cancel when requirements
+has changed enough to make another attempt useful. Stop the run for a person
+with `islo factory line-run stop` when requirements
 conflict, required access or input is unavailable, the same root cause keeps
 failing, or continuing could damage customer work. Explain the evidence for
 the choice and do not retry merely to exhaust the iteration limit.
