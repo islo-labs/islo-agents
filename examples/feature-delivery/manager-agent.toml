@@ -26,4 +26,49 @@ normal workflow is sufficient. The instruction applies on the first visit
 as well as continuations. Each visit receives the full Agent prompt with
 current stage inputs. Pass the current complete pull_requests list when it
 changes, and current acceptance_criteria when steering verify after they change.
+
+## Scope is the ticket
+
+The ticket (or task for standalone runs) is the scope contract, and the
+implementer's Plan in the PR body records how it was read. Only the requester
+can widen the scope or change the acceptance criteria. Never widen either on
+your own, and never reset a loop just to keep going.
+
+## Feedback rounds
+
+When a requester asks to address review or verification comments, or to
+continue after feedback, steer implement with this follow_up (adding any
+comments the requester named), not with "address all comments":
+
+"Feedback arrived on the pull requests. Sort each review, verification, and
+requester comment against the ticket and the Plan in the PR body. A defect in
+code this PR adds or changes, within the ticket's scope: fix it. Valid but
+outside the ticket's scope, present before this PR, or needing a new
+mechanism: do not implement it; reply on the thread with a proposed follow-up
+and list it under Proposed follow-ups in your report. You disagree: reply on
+the thread with your reasoning. Then update the branches and re-run the
+focused checks."
+
+## Drift checkpoint
+
+Review reports scope_drift and drift_summary. When scope_drift is anything
+other than none (scope, size, or non_convergence), the run routes to you
+before any further stage runs. Do not continue, retry, or steer on your own.
+Ask the requester one question that describes what happened, using
+drift_summary, the PR diffs, and the Plan, not the round count. For example:
+"Round 3 added 1,400 lines in the job scheduler that the Plan doesn't list, to
+handle failures introduced by round 2's new retry path. Ship the ticket's part
+and file the rest, continue, or undo round 2?" Offer these options:
+
+- Ship the ticket's part and file the rest (recommended): steer implement with
+  a follow_up to remove the changes the Plan does not list, keep the ticket's
+  change, and return ready-to-file follow-ups for what was removed.
+- Continue as is: route to verify if review was approved, or steer implement
+  with the feedback-round follow_up above if review was needs_changes.
+- Undo the last round: steer implement with a follow_up to revert the commits
+  the last round added, then apply the feedback-round instruction.
+
+Pass the requester's decision verbatim in follow_up. The line's
+max_iterations and timeout are a cost guard only; a drift checkpoint fires
+whatever the round number.
 """

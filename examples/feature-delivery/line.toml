@@ -141,6 +141,22 @@ type = "string"
 required = true
 description = "Short human-readable review summary: the verdict and the findings that matter."
 
+[stages.outputs.scope_drift]
+type = "string"
+required = true
+description = "Drift checkpoint: none, or the first of scope, size, non_convergence that applies. Anything other than none routes to the manager, which asks the requester."
+enum = [
+    "none",
+    "scope",
+    "size",
+    "non_convergence",
+]
+
+[stages.outputs.drift_summary]
+type = "string"
+required = false
+description = "When scope_drift is not none: what happened (which round added what, where, and why), for the requester's question."
+
 [[stages]]
 id = "verify"
 agent = "feature-delivery-verify"
@@ -279,15 +295,29 @@ to = "verify"
 type = "conditional"
 
 [transitions.when]
+op = "all"
+
+[[transitions.when.conditions]]
 op = "eq"
 
-[transitions.when.left]
+[transitions.when.conditions.left]
 type = "stage"
 path = "$.outputs.review_result"
 
-[transitions.when.right]
+[transitions.when.conditions.right]
 type = "literal"
 value = "approved"
+
+[[transitions.when.conditions]]
+op = "eq"
+
+[transitions.when.conditions.left]
+type = "stage"
+path = "$.outputs.scope_drift"
+
+[transitions.when.conditions.right]
+type = "literal"
+value = "none"
 
 [transitions.params.acceptance_criteria]
 type = "output"
@@ -312,18 +342,31 @@ id = "review-needs-changes"
 from = "review"
 to = "implement"
 type = "conditional"
-max_iterations = 3
 
 [transitions.when]
+op = "all"
+
+[[transitions.when.conditions]]
 op = "eq"
 
-[transitions.when.left]
+[transitions.when.conditions.left]
 type = "stage"
 path = "$.outputs.review_result"
 
-[transitions.when.right]
+[transitions.when.conditions.right]
 type = "literal"
 value = "needs_changes"
+
+[[transitions.when.conditions]]
+op = "eq"
+
+[transitions.when.conditions.left]
+type = "stage"
+path = "$.outputs.scope_drift"
+
+[transitions.when.conditions.right]
+type = "literal"
+value = "none"
 
 [transitions.params.issue_id]
 type = "input"
@@ -339,21 +382,66 @@ type = "input"
 name = "task"
 
 [[transitions]]
-id = "review-blocked-route"
+id = "review-checkpoint"
 from = "review"
 type = "agentic"
 
 [transitions.instructions]
 type = "literal"
 value = """
-No conditional transition matched after review. Retry review when missing
-context or infrastructure is transient. Cancel remains a reserved line control.
+No conditional transition matched after review. Either review returned
+blocked, or it reported scope_drift other than none. For scope_drift, follow
+the Drift checkpoint section of the manager instructions: ask the requester
+before choosing any option, and pass their decision in follow_up. For blocked,
+retry review only when the blocker is transient; otherwise cancel. Cancel
+remains a reserved line control.
 """
 
 [[transitions.options]]
-name = "retry-stage"
+name = "retry-review"
 to = "review"
 label = "Retry review"
+
+[transitions.options.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[transitions.options.params.pull_requests]
+type = "output"
+stage = "implement"
+name = "pull_requests"
+
+[transitions.options.params.task]
+type = "input"
+name = "task"
+
+[[transitions.options]]
+name = "implement"
+to = "implement"
+label = "Steer implement with the requester's decision"
+
+[transitions.options.params.issue_id]
+type = "input"
+name = "issue_id"
+
+[transitions.options.params.pull_requests]
+type = "output"
+stage = "implement"
+name = "pull_requests"
+
+[transitions.options.params.task]
+type = "input"
+name = "task"
+
+[[transitions.options]]
+name = "verify"
+to = "verify"
+label = "Continue to verify (requester chose to continue an approved PR set)"
+
+[transitions.options.params.acceptance_criteria]
+type = "output"
+stage = "implement"
+name = "acceptance_criteria"
 
 [transitions.options.params.issue_id]
 type = "input"
@@ -390,7 +478,6 @@ id = "verification-failed"
 from = "verify"
 to = "implement"
 type = "conditional"
-max_iterations = 2
 
 [transitions.when]
 op = "eq"
