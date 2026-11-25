@@ -266,9 +266,10 @@ type = "agentic"
 type = "literal"
 value = """
 No conditional transition matched after implement. Retry implement when the
-blocker is transient. Cancel remains a reserved line control, so do not add
-it as an option. A blocked retry receives the pull_requests that entered the
-stage, not a new list from the failed attempt.
+blocker is transient; otherwise stop the run for a person with
+`islo factory line-run stop RUN_ID --reason "<the blocker>"`. A blocked retry
+receives the pull_requests that entered the stage, not a new list from the
+failed attempt.
 """
 
 [[transitions.options]]
@@ -393,8 +394,8 @@ No conditional transition matched after review. Either review returned
 blocked, or it reported scope_drift other than none. For scope_drift, follow
 the Drift checkpoint section of the manager instructions: ask the requester
 before choosing any option, and pass their decision in follow_up. For blocked,
-retry review only when the blocker is transient; otherwise cancel. Cancel
-remains a reserved line control.
+retry review only when the blocker is transient; otherwise stop the run for a
+person with `islo factory line-run stop RUN_ID --reason "<the blocker>"`.
 """
 
 [[transitions.options]]
@@ -512,8 +513,8 @@ type = "agentic"
 type = "literal"
 value = """
 No conditional transition matched after verify. Retry verify when
-infrastructure or credentials are transiently unavailable. Cancel remains a
-reserved line control.
+infrastructure or credentials are transiently unavailable; otherwise stop the
+run for a person with `islo factory line-run stop RUN_ID --reason "<the blocker>"`.
 """
 
 [[transitions.options]]
